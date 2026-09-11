@@ -16,10 +16,14 @@ import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.combat.AttackingComponent
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
 import com.wingedsheep.gym.GameEnvironment
+import com.wingedsheep.engine.state.components.battlefield.TappedComponent
+import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.AdditionalCostPayment
+import com.wingedsheep.sdk.scripting.AlternativePaymentChoice
+import com.wingedsheep.sdk.scripting.ConvokePayment
 import kotlin.random.Random
 
 /**
@@ -184,8 +188,13 @@ class Reconstructor(
                 action is CastSpell && la.affordable -> {
                     val name = snapshotter.name(s, action.cardId) ?: continue
                     if (!plan.canCast(side, name)) continue
+                    val after = plan.cast(side, name)
+                    // which lands pay only matters if this side casts again this half-turn
+                    val more = after.spells[side].orEmpty().isNotEmpty()
                     for (a in withTargets(s, la, player)) for (b in withCostPayments(la, a)) {
-                        apply(s, b)?.let { out += Node(it, plan.cast(side, name)) }
+                        for (c in withManaChoices(s, player, la, b, more)) {
+                            apply(s, c)?.let { out += Node(it, after) }
+                        }
                     }
                 }
                 la.actionType == "DeclareAttackers" && active && !plan.attacksDone ->
@@ -260,6 +269,45 @@ class Reconstructor(
         }
         return payments.take(MAX_TARGET_COMBOS).map { cast.copy(additionalCostPayment = it) }
     }
+
+    /**
+     * Ways to pay the mana: autopay first, then convoke with 1..N creatures (which creatures tap
+     * decides who can block next turn), then — when [more] casts follow this half-turn — explicit
+     * sets of lands, because autopay can tap the colour a later spell needed. One option per
+     * distinct set of names.
+     */
+    private fun withManaChoices(
+        s: GameState, player: EntityId, la: LegalAction, action: GameAction, more: Boolean,
+    ): List<GameAction> {
+        val cast = action as? CastSpell ?: return listOf(action)
+        val cost = la.manaCostString?.let { runCatching { ManaCost.parse(it) }.getOrNull() }
+        val out = mutableListOf<GameAction>(cast)
+        val convoke = la.convokeCreatures.orEmpty()
+        if (la.hasConvoke && convoke.isNotEmpty() && cost != null) {
+            val ids = convoke.map { it.entityId }
+            for (k in 1..minOf(cost.cmc, ids.size)) {
+                for (pick in distinctByName(s, subsets(ids, k, k, cap = MAX_PAYMENT_OPTIONS * 4))) {
+                    val payment = (cast.alternativePayment ?: AlternativePaymentChoice.NONE)
+                        .copy(convokedCreatures = pick.associateWith { ConvokePayment() })
+                    out += cast.copy(alternativePayment = payment)
+                }
+            }
+        }
+        if (more && cost != null && cost.cmc > 0) {
+            val lands = s.controlledBattlefield(player).filter {
+                s.projectedState.hasType(it, "LAND") && s.getEntity(it)?.has<TappedComponent>() != true
+            }
+            if (cost.cmc <= lands.size) {
+                for (pick in distinctByName(s, subsets(lands, cost.cmc, cost.cmc, cap = MAX_PAYMENT_OPTIONS * 4))) {
+                    out += cast.copy(paymentStrategy = PaymentStrategy.Explicit(pick))
+                }
+            }
+        }
+        return out.take(MAX_PAYMENT_OPTIONS)
+    }
+
+    private fun distinctByName(s: GameState, picks: List<List<EntityId>>): List<List<EntityId>> =
+        picks.distinctBy { pick -> pick.map { snapshotter.name(s, it) }.sortedBy { it ?: "" } }
 
     private fun attacks(s: GameState, la: LegalAction, player: EntityId, seats: Seats, plan: Plan): List<GameAction> {
         if (plan.attacked.isEmpty()) return listOf(DeclareAttackers(player, emptyMap()))
@@ -449,6 +497,7 @@ class Reconstructor(
         const val MAX_NUMBER_OPTIONS = 10
         const val MAX_FALLBACK_ACTIONS = 6
         const val MAX_SELECT_OPTIONS = 8
+        const val MAX_PAYMENT_OPTIONS = 12
         val BASICS = mapOf('W' to "Plains", 'U' to "Island", 'B' to "Swamp", 'R' to "Mountain", 'G' to "Forest")
 
         /** Subsets of [items] with size in [min, max], smallest first; capped. */
