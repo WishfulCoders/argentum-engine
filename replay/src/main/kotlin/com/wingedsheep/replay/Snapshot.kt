@@ -78,10 +78,25 @@ class Snapshotter(definitions: Iterable<CardDefinition>, private val compareToke
         return out
     }
 
-    private fun isToken(state: GameState, id: EntityId): Boolean =
+    fun isToken(state: GameState, id: EntityId): Boolean =
         state.getEntity(id)?.has<TokenComponent>() == true
 
+    /**
+     * Whether entity [id] is the card the replay calls [key]. Combat lists name tokens as
+     * `token:<name>` (17Lands `cards.csv` token names); anything else is a non-token card name.
+     */
+    fun matches(state: GameState, id: EntityId, key: String): Boolean {
+        val name = name(state, id) ?: return false
+        return if (key.startsWith(TOKEN_PREFIX)) {
+            isToken(state, id) && name.removeSuffix(" Token") == key.removePrefix(TOKEN_PREFIX)
+        } else {
+            !isToken(state, id) && name == key
+        }
+    }
+
     companion object {
+        const val TOKEN_PREFIX = "token:"
+
         fun counts(names: List<String>): Map<String, Int> = names.groupingBy { it }.eachCount()
 
         /** "label +extra -missing" relative to the record, or null when equal. */

@@ -16,8 +16,10 @@ import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.combat.AttackingComponent
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
 import com.wingedsheep.gym.GameEnvironment
+import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
+import com.wingedsheep.sdk.scripting.AdditionalCostPayment
 import kotlin.random.Random
 
 /**
@@ -104,7 +106,8 @@ class Reconstructor(
                     search.near(listOf("could not write the opponent's cards into hidden slots"))
                     continue
                 }
-                searchHalfTurn(revealed, ht, i + 1, seats, search)
+                val ready = if (ht.active == "user") restackUser(revealed, seats, ht) ?: revealed else revealed
+                searchHalfTurn(ready, ht, i + 1, seats, search)
             }
             nodeCounts += search.nodes
             if (search.ends.isEmpty()) {
@@ -181,7 +184,9 @@ class Reconstructor(
                 action is CastSpell && la.affordable -> {
                     val name = snapshotter.name(s, action.cardId) ?: continue
                     if (!plan.canCast(side, name)) continue
-                    for (a in withTargets(s, la, player)) apply(s, a)?.let { out += Node(it, plan.cast(side, name)) }
+                    for (a in withTargets(s, la, player)) for (b in withCostPayments(la, a)) {
+                        apply(s, b)?.let { out += Node(it, plan.cast(side, name)) }
+                    }
                 }
                 la.actionType == "DeclareAttackers" && active && !plan.attacksDone ->
                     for (a in attacks(s, la, player, seats, plan)) {
@@ -228,6 +233,34 @@ class Reconstructor(
         return combos.map { TargetSelection.applyTargets(la.action, it) }
     }
 
+    /**
+     * One action per way to pay the cast's additional cost ([LegalAction.additionalCostInfo]):
+     * behold a Kithkin, blight a creature, sacrifice, discard. Unlike the AI, which takes the first
+     * candidate, the search branches, because which creature gets the -1/-1 counter changes the
+     * game. The "or pay {2}" alternative arrives as its own legal action.
+     */
+    private fun withCostPayments(la: LegalAction, action: GameAction): List<GameAction> {
+        val info = la.additionalCostInfo ?: return listOf(action)
+        val cast = action as? CastSpell ?: return listOf(action)
+        val base = cast.additionalCostPayment ?: AdditionalCostPayment()
+        val payments = when (info.costType) {
+            "Blight" -> info.validBlightTargets.map { base.copy(blightTargets = listOf(it)) }
+            "Behold" -> subsets(info.validBeholdTargets, info.beholdCount, info.beholdCount)
+                .map { base.copy(beheldCards = it) }
+            "TapPermanents" -> subsets(info.validTapTargets, info.tapCount, info.tapCount)
+                .map { base.copy(tappedPermanents = it) }
+            "DiscardCard" -> subsets(info.validDiscardTargets, info.discardCount, info.discardCount)
+                .map { base.copy(discardedCards = it) }
+            "SacrificePermanent" -> subsets(info.validSacrificeTargets, info.sacrificeCount, info.sacrificeCount)
+                .map { base.copy(sacrificedPermanents = it) }
+            "BouncePermanent" -> subsets(info.validBounceTargets, info.bounceCount, info.bounceCount)
+                .map { base.copy(bouncedPermanents = it) }
+            "ExileFromGraveyard" -> listOf(base.copy(exiledCards = info.validExileTargets.take(info.exileMinCount)))
+            else -> return listOf(action)
+        }
+        return payments.take(MAX_TARGET_COMBOS).map { cast.copy(additionalCostPayment = it) }
+    }
+
     private fun attacks(s: GameState, la: LegalAction, player: EntityId, seats: Seats, plan: Plan): List<GameAction> {
         if (plan.attacked.isEmpty()) return listOf(DeclareAttackers(player, emptyMap()))
         val defender = if (player == seats.user) seats.oppo else seats.user
@@ -265,8 +298,13 @@ class Reconstructor(
             is ChooseOptionDecision -> d.options.indices.map { OptionChosenResponse(d.id, it) }
             is ChooseTargetsDecision -> targetResponses(d)
             is SelectCardsDecision ->
-                if (d.minSelections == 1 && d.maxSelections == 1 && !d.ordered) {
-                    d.options.map { CardsSelectedResponse(d.id, listOf(it)) }
+                if (!d.ordered && d.options.size <= MAX_SELECT_OPTIONS && d.maxSelections <= 2) {
+                    // Small picks (including "you may": min 0) are enumerated, the recorded tutored
+                    // card first — Eclipsed Kithkin's "reveal a Kithkin, Forest, or Plains".
+                    val wanted = ht.tutored.toSet()
+                    subsets(d.options, d.minSelections, d.maxSelections)
+                        .sortedByDescending { pick -> pick.count { snapshotter.name(s, it) in wanted } }
+                        .map { CardsSelectedResponse(d.id, it) }
                 } else heuristic(s, d)
             is SearchLibraryDecision -> tutor(s, d, ht) ?: heuristic(s, d)
             else -> heuristic(s, d)
@@ -302,7 +340,7 @@ class Reconstructor(
     private fun pickByName(s: GameState, candidates: List<EntityId>, names: List<String>): List<List<EntityId>> {
         var combos: List<List<EntityId>> = listOf(emptyList())
         for ((name, k) in Snapshotter.counts(names)) {
-            val pool = candidates.filter { snapshotter.name(s, it) == name }
+            val pool = candidates.filter { snapshotter.matches(s, it, name) }
             val picks = subsets(pool, k, k)
             if (picks.isEmpty()) return emptyList()
             combos = combos.flatMap { prefix -> picks.map { prefix + it } }.take(MAX_COMBAT_OPTIONS)
@@ -335,6 +373,37 @@ class Reconstructor(
         if (hand.size != spec.openingHand.size || library.size != draws.size + rest.size) return null
         val order = draws + rest.shuffled(Random(seed))   // index 0 is the top of the library
         return materialize(state, hand.zip(spec.openingHand).toMap() + library.zip(order).toMap())
+    }
+
+    /**
+     * Put this half-turn's recorded draws on top of the user's library, then its tutored cards (so a
+     * "look at the top N" effect finds the card the record says it took). Library effects — Eclipsed
+     * Kithkin sending cards to the bottom, surveil, a shuffle — move cards after [stackUser] ran, so
+     * the order is re-forced every half-turn. Cards change places by swapping identities, which keeps
+     * the library's contents; a card no longer in the library overwrites the slot instead.
+     */
+    private fun restackUser(state: GameState, seats: Seats, ht: HalfTurnSpec): GameState? {
+        // Past the upkeep, this turn's draw-step draw has already happened.
+        val drawn = if (state.step.ordinal > Step.UPKEEP.ordinal) ht.drawn.drop(1) else ht.drawn
+        val want = drawn + ht.tutored
+        if (want.isEmpty()) return state
+        val library = state.getLibrary(seats.user)
+        if (library.size < want.size) return null
+        val current = library.map { snapshotter.name(state, it) }.toMutableList()
+        val assignment = mutableMapOf<EntityId, String>()
+        for ((k, name) in want.withIndex()) {
+            if (current[k] == name) continue
+            val j = (k + 1 until library.size).firstOrNull { current[it] == name }
+            if (j != null) {
+                val displaced = current[k] ?: continue
+                assignment[library[j]] = displaced
+                current[j] = displaced
+            }
+            assignment[library[k]] = name
+            current[k] = name
+        }
+        if (assignment.isEmpty()) return state
+        return materialize(state, assignment)
     }
 
     /**
@@ -379,6 +448,7 @@ class Reconstructor(
         const val MAX_COMBAT_OPTIONS = 24
         const val MAX_NUMBER_OPTIONS = 10
         const val MAX_FALLBACK_ACTIONS = 6
+        const val MAX_SELECT_OPTIONS = 8
         val BASICS = mapOf('W' to "Plains", 'U' to "Island", 'B' to "Swamp", 'R' to "Mountain", 'G' to "Forest")
 
         /** Subsets of [items] with size in [min, max], smallest first; capped. */
