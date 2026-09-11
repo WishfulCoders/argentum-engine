@@ -66,6 +66,8 @@ include(":gym")
 include(":gym-server")
 include(":gym-trainer")
 include(":mtgish-tooling")
+// Rebuilds real games from 17Lands replay summaries (Wishful Coders fork).
+include(":replay")
 
 // Argentum Assay — the first-party Oracle-text parser (docs/oracle-assay.md). Depends on :mtg-sdk
 // only: the grammar parses directly into SDK types, and it is not a runtime card loader.
