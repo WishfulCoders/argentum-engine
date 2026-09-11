@@ -18,6 +18,7 @@ import com.wingedsheep.engine.state.components.stack.ChosenTarget
 import com.wingedsheep.gym.GameEnvironment
 import com.wingedsheep.engine.state.components.battlefield.TappedComponent
 import com.wingedsheep.sdk.core.ManaCost
+import com.wingedsheep.sdk.core.ManaSymbol
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
@@ -284,6 +285,19 @@ class Reconstructor(
         val out = mutableListOf<GameAction>(cast)
         val convoke = la.convokeCreatures.orEmpty()
         if (la.hasConvoke && convoke.isNotEmpty() && cost != null) {
+            // The AI's policy — each coloured symbol by a creature of that colour, then generic —
+            // is the only option here that pays coloured mana with creatures ({4}{W}{W}).
+            val coloured = mutableMapOf<EntityId, ConvokePayment>()
+            val unused = convoke.toMutableList()
+            for (symbol in cost.symbols.filterIsInstance<ManaSymbol.Colored>()) {
+                val i = unused.indexOfFirst { symbol.color in it.colors }
+                if (i >= 0) coloured[unused.removeAt(i).entityId] = ConvokePayment(symbol.color)
+            }
+            repeat(minOf(cost.genericAmount, unused.size)) { coloured[unused.removeAt(0).entityId] = ConvokePayment() }
+            if (coloured.isNotEmpty()) {
+                val payment = (cast.alternativePayment ?: AlternativePaymentChoice.NONE).copy(convokedCreatures = coloured)
+                out += cast.copy(alternativePayment = payment)
+            }
             val ids = convoke.map { it.entityId }
             for (k in 1..minOf(cost.cmc, ids.size)) {
                 for (pick in distinctByName(s, subsets(ids, k, k, cap = MAX_PAYMENT_OPTIONS * 4))) {
