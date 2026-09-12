@@ -4,6 +4,8 @@ import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.mtg.sets.MtgSetCatalog
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
 import java.io.File
 import java.util.concurrent.Callable
 import java.util.concurrent.Executors
@@ -14,8 +16,12 @@ import java.util.concurrent.Executors
  * Reconstructs each game spec (from `mtgdraft replay-export`) and writes one [GameResult] per line,
  * then prints a summary: how many games were reproduced end to end, what share of half-turns were
  * reproduced in order, and the most common reasons a game stopped.
+ *
+ * `replay trace <specs.jsonl> <gameId> [halfTurn] [nodeBudget] [tracedNodes] [beamWidth]` prints the
+ * search of one half-turn node by node ([Tracer]); without a half-turn, the one where the game fails.
  */
 fun main(args: Array<String>) {
+    if (args.firstOrNull() == "trace") return trace(args.drop(1))
     require(args.size >= 2) {
         "usage: replay <specs.jsonl> <results.jsonl> [maxGames] [beamWidth] [nodeBudget] [threads]"
     }
@@ -26,19 +32,7 @@ fun main(args: Array<String>) {
     val nodeBudget = args.getOrNull(4)?.toInt() ?: 20_000
     val threads = args.getOrNull(5)?.toInt() ?: Runtime.getRuntime().availableProcessors()
 
-    // Every set, so Special Guests printed elsewhere resolve; ECL last so its printings win.
-    val sets = MtgSetCatalog.all
-    val ecl = MtgSetCatalog.requireByCode("ECL")
-    val registry = CardRegistry().apply {
-        for (set in sets) if (set.code != ecl.code) {
-            register(set.cards)
-            register(set.basicLands)
-        }
-        register(ecl.cards)
-        register(ecl.basicLands)
-    }
-    val snapshotter = Snapshotter(sets.flatMap { it.cards })
-
+    val (registry, snapshotter) = engineCards()
     val specs = input.readLines().filter { it.isNotBlank() }.take(maxGames)
         .map { specJson.decodeFromString<GameSpec>(it) }
     println("replay: ${specs.size} games, beam $beamWidth, budget $nodeBudget nodes/half-turn, $threads threads")
@@ -69,6 +63,43 @@ fun main(args: Array<String>) {
     }
     pool.shutdown()
     summarize(results)
+}
+
+/** Every set, so Special Guests printed elsewhere resolve; ECL last so its printings win. */
+private fun engineCards(): Pair<CardRegistry, Snapshotter> {
+    val sets = MtgSetCatalog.all
+    val ecl = MtgSetCatalog.requireByCode("ECL")
+    val registry = CardRegistry().apply {
+        for (set in sets) if (set.code != ecl.code) {
+            register(set.cards)
+            register(set.basicLands)
+        }
+        register(ecl.cards)
+        register(ecl.basicLands)
+    }
+    return registry to Snapshotter(sets.flatMap { it.cards })
+}
+
+private fun trace(args: List<String>) {
+    require(args.size >= 2) {
+        "usage: replay trace <specs.jsonl> <gameId> [halfTurn] [nodeBudget] [tracedNodes] [beamWidth]"
+    }
+    val line = File(args[0]).useLines { lines -> lines.firstOrNull { "\"${args[1]}\"" in it } }
+        ?: error("game ${args[1]} not in ${args[0]}")
+    val spec = specJson.decodeFromString<GameSpec>(line)
+    val nodeBudget = args.getOrNull(3)?.toInt() ?: 40_000
+    val tracedNodes = args.getOrNull(4)?.toInt() ?: 300
+    val beamWidth = args.getOrNull(5)?.toInt() ?: 8
+    val (registry, snapshotter) = engineCards()
+    val halfTurn = args.getOrNull(2)?.toInt()
+        ?: Reconstructor(registry, snapshotter, beamWidth, nodeBudget).run(spec).let { r ->
+            println("untraced run: ${r.status}, ${r.reproduced}/${r.halfTurns} half-turns; ${r.reason}")
+            r.failedAt ?: return
+        }
+    val record = specJson.parseToJsonElement(line).jsonObject["half_turns"]!!.jsonArray[halfTurn].toString()
+    val tracer = Tracer(halfTurn, record, maxNodes = tracedNodes)
+    val r = Reconstructor(registry, snapshotter, beamWidth, nodeBudget, tracer = tracer).run(spec)
+    println("result: ${r.status}, ${r.reproduced}/${r.halfTurns} half-turns; ${r.reason}")
 }
 
 private fun summarize(results: List<GameResult>) {

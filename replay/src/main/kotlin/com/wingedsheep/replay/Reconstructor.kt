@@ -53,6 +53,8 @@ class Reconstructor(
     private val beamWidth: Int = 8,
     private val nodeBudget: Int = 20_000,
     private val seed: Long = 20260911L,
+    /** Prints the search of one half-turn; see [Tracer]. */
+    private val tracer: Tracer? = null,
 ) {
     private val processor = ActionProcessor(EngineServices(registry), computeUndo = false)
     private val enumerator = LegalActionEnumerator.create(registry)
@@ -60,14 +62,19 @@ class Reconstructor(
         DecisionResponder(GameSimulator(registry, processor, enumerator), GameEnvironment.defaultEvaluator())
     private val materializer = HiddenWorldMaterializer(registry)
 
+    /** Why the last [apply] or [materialize] was refused, for the trace and the failure reason. */
+    private var lastError: String? = null
+
     private data class Node(val state: GameState, val plan: Plan)
 
     private class Search {
         val ends = mutableListOf<GameState>()
         var nodes = 0
         var closest: List<String>? = null
+        var tracer: Tracer? = null
 
         fun near(diff: List<String>) {
+            tracer?.line("    end check: ${diff.joinToString("; ")}")
             if (closest == null || diff.size < closest!!.size) closest = diff
         }
     }
@@ -104,17 +111,21 @@ class Reconstructor(
         var beam = listOf(stacked)
         for ((i, ht) in spec.halfTurns.withIndex()) {
             val search = Search()
+            val tracing = tracer?.halfTurn == i
+            if (tracing) tracer!!.begin(spec, i, beam.size)
+            search.tracer = tracer.takeIf { tracing }
             for (start in beam) {
                 if (search.nodes >= nodeBudget || search.ends.size >= beamWidth) break
                 val revealed = revealOppo(start, seats, ht)
                 if (revealed == null) {
-                    search.near(listOf("could not write the opponent's cards into hidden slots"))
+                    search.near(listOf("could not write the opponent's cards into hidden slots: $lastError"))
                     continue
                 }
                 val ready = if (ht.active == "user") restackUser(revealed, seats, ht) ?: revealed else revealed
                 searchHalfTurn(ready, ht, i + 1, seats, search)
             }
             nodeCounts += search.nodes
+            if (tracing) tracer!!.end(search.nodes, search.ends.size, search.closest)
             if (search.ends.isEmpty()) {
                 val why = search.closest?.joinToString("; ") ?: "no line reached the end of the half-turn"
                 return result("failed", i, i, why)
@@ -149,7 +160,12 @@ class Reconstructor(
                 }
                 search.near(diff)
             }
-            val children = expand(node, ht, seats)
+            val notes = search.tracer?.takeIf { it.wants(search.nodes) }?.let { t ->
+                t.line(t.header(search.nodes, s, seats, snapshotter, describe(node.plan)))
+                mutableListOf<String>()
+            }
+            val children = expand(node, ht, seats, notes)
+            notes?.forEach { search.tracer!!.line(it) }
             // Push in reverse so the first child — a recorded action, passes come last — is
             // explored first.
             for (child in children.asReversed()) {
@@ -160,7 +176,10 @@ class Reconstructor(
                         continue
                     }
                     val diff = snapshotter.diff(snapshotter.take(s, seats), ht.eot)
-                    if (diff.isEmpty()) search.ends += child.state else search.near(diff)
+                    if (diff.isEmpty()) {
+                        search.tracer?.line("    end check: matches the snapshot")
+                        search.ends += child.state
+                    } else search.near(diff)
                 } else {
                     stack.addLast(child)
                 }
@@ -168,61 +187,119 @@ class Reconstructor(
         }
     }
 
-    private fun expand(node: Node, ht: HalfTurnSpec, seats: Seats): List<Node> {
+    /**
+     * The children of [node]. With [notes] (tracing), also says for every legal action whether the
+     * plan allowed it and, for each variant tried, whether the engine took it or why it refused.
+     */
+    private fun expand(node: Node, ht: HalfTurnSpec, seats: Seats, notes: MutableList<String>? = null): List<Node> {
         val s = node.state
-        s.pendingDecision?.let { return decide(node, it, ht) }
-        val player = s.priorityPlayerId ?: return emptyList()
+        s.pendingDecision?.let { return decide(node, it, ht, notes) }
+        val player = s.priorityPlayerId ?: return emptyList<Node>().also { notes?.add("  no priority player") }
         val side = seats.sideOf(player)
         val active = side == ht.active
         val plan = node.plan
         val legal = enumerator.enumerate(s, player, EnumerationMode.ACTIONS_ONLY)
         val out = mutableListOf<Node>()
         var pass: PassPriority? = null
+        fun skip(la: LegalAction, why: String) = notes?.add("  - ${la.description} [${la.actionType}]: $why")
         for (la in legal) {
             val action = la.action
             when {
                 action is PassPriority -> pass = action
-                action is PlayLand && active -> {
+                action is PlayLand -> {
                     val name = snapshotter.name(s, action.cardId) ?: continue
-                    if (plan.canPlayLand(name)) apply(s, action)?.let { out += Node(it, plan.playLand(name)) }
+                    when {
+                        !active -> skip(la, "not the active player")
+                        !plan.canPlayLand(name) -> skip(la, "not in the plan")
+                        else -> tryAll(s, la, listOf(action), notes).forEach { out += Node(it, plan.playLand(name)) }
+                    }
                 }
-                action is CastSpell && la.affordable -> {
+                action is CastSpell -> {
                     val name = snapshotter.name(s, action.cardId) ?: continue
-                    if (!plan.canCast(side, name)) continue
-                    val after = plan.cast(side, name)
-                    // which lands pay only matters if this side casts again this half-turn
-                    val more = after.spells[side].orEmpty().isNotEmpty()
-                    for (a in withTargets(s, la, player)) for (b in withCostPayments(la, a)) {
-                        for (c in withManaChoices(s, player, la, b, more)) {
-                            apply(s, c)?.let { out += Node(it, after) }
+                    when {
+                        !plan.canCast(side, name) -> skip(la, "not in the plan")
+                        !la.affordable -> skip(la, "in the plan, NOT AFFORDABLE")
+                        else -> {
+                            val after = plan.cast(side, name)
+                            // which lands pay only matters if this side casts again this half-turn
+                            val more = after.spells[side].orEmpty().isNotEmpty()
+                            val variants = withTargets(s, la, player)
+                                .flatMap { withCostPayments(la, it) }
+                                .flatMap { withManaChoices(s, player, la, it, more) }
+                            tryAll(s, la, variants, notes).forEach { out += Node(it, after) }
                         }
                     }
                 }
-                la.actionType == "DeclareAttackers" && active && !plan.attacksDone ->
-                    for (a in attacks(s, la, player, seats, plan)) {
-                        apply(s, a)?.let { out += Node(it, plan.copy(attacksDone = true)) }
+                la.actionType == "DeclareAttackers" -> when {
+                    !active || plan.attacksDone -> skip(la, "attacks already declared or not the active player")
+                    else -> {
+                        val options = attacks(s, la, player, seats, plan)
+                        if (options.isEmpty()) {
+                            skip(la, "no attackers match ${plan.attacked} among ${names(s, la.validAttackers)}")
+                        }
+                        tryAll(s, la, options, notes).forEach { out += Node(it, plan.copy(attacksDone = true)) }
                     }
-                la.actionType == "DeclareBlockers" && !active && !plan.blocksDone ->
-                    for (a in blocks(s, la, player, plan)) {
-                        apply(s, a)?.let { out += Node(it, plan.copy(blocksDone = true)) }
+                }
+                la.actionType == "DeclareBlockers" -> when {
+                    active || plan.blocksDone -> skip(la, "blocks already declared or the active player")
+                    else -> {
+                        val options = blocks(s, la, player, plan)
+                        if (options.isEmpty()) {
+                            skip(la, "no blockers match ${plan.blocking} -> ${plan.blocked} among " +
+                                "${names(s, la.validBlockers)}")
+                        }
+                        tryAll(s, la, options, notes).forEach { out += Node(it, plan.copy(blocksDone = true)) }
                     }
+                }
+                else -> skip(la, "not modelled")
             }
         }
-        pass?.let { p -> apply(s, p)?.let { out += Node(it, plan) } }
+        pass?.let { p ->
+            val passed = apply(s, p)
+            if (passed != null) out += Node(passed, plan) else notes?.add("  ! pass refused: $lastError")
+        }
         if (out.isEmpty()) {
             // A mandatory action the plan does not model (damage assignment order, a second
             // combat's declaration): let each legal action through.
-            for (la in legal.take(MAX_FALLBACK_ACTIONS)) apply(s, la.action)?.let { out += Node(it, plan) }
+            notes?.add("  fallback: trying the first $MAX_FALLBACK_ACTIONS legal actions")
+            for (la in legal.take(MAX_FALLBACK_ACTIONS)) {
+                tryAll(s, la, listOf(la.action), notes).forEach { out += Node(it, plan) }
+            }
         }
         return out
     }
+
+    /** Applies each variant of [la]; with [notes], reports how many the engine took and why it refused the rest. */
+    private fun tryAll(s: GameState, la: LegalAction, variants: List<GameAction>, notes: MutableList<String>?): List<GameState> {
+        val taken = mutableListOf<GameState>()
+        val refusals = mutableListOf<String>()
+        for (v in variants) {
+            val next = apply(s, v)
+            if (next != null) taken += next else refusals += lastError ?: "?"
+        }
+        notes?.add(buildString {
+            append("  + ${la.description} [${la.actionType}]: ${taken.size}/${variants.size} taken")
+            if (refusals.isNotEmpty()) {
+                append("; refused: ")
+                append(refusals.groupingBy { it }.eachCount().entries.joinToString("; ") { (why, n) ->
+                    if (n > 1) "$why (x$n)" else why
+                })
+            }
+        })
+        return taken
+    }
+
+    private fun names(s: GameState, ids: List<EntityId>?): List<String> =
+        ids.orEmpty().map { id -> snapshotter.name(s, id)?.let { if (snapshotter.isToken(s, id)) "token:$it" else it } ?: "?" }
 
     private fun apply(s: GameState, action: GameAction): GameState? {
         val r = try {
             processor.process(s, action).result
         } catch (e: Exception) {
+            lastError = "exception ${e::class.simpleName}: ${e.message?.take(160)}"
             return null
         }
+        lastError = r.error
         return if (r.error != null) null else r.state
     }
 
@@ -346,7 +423,7 @@ class Reconstructor(
         return out
     }
 
-    private fun decide(node: Node, d: PendingDecision, ht: HalfTurnSpec): List<Node> {
+    private fun decide(node: Node, d: PendingDecision, ht: HalfTurnSpec, notes: MutableList<String>? = null): List<Node> {
         val s = node.state
         val responses: List<DecisionResponse> = when (d) {
             is YesNoDecision -> listOf(YesNoResponse(d.id, true), YesNoResponse(d.id, false))
@@ -371,7 +448,16 @@ class Reconstructor(
             is SearchLibraryDecision -> tutor(s, d, ht) ?: heuristic(s, d)
             else -> heuristic(s, d)
         }
-        return responses.mapNotNull { r -> apply(s, SubmitDecision(d.playerId, r))?.let { Node(it, node.plan) } }
+        val out = mutableListOf<Node>()
+        val refusals = mutableListOf<String>()
+        for (r in responses) {
+            val next = apply(s, SubmitDecision(d.playerId, r))
+            if (next != null) out += Node(next, node.plan) else refusals += lastError ?: "?"
+        }
+        notes?.add("  decision ${d::class.simpleName} (${d.context.sourceName}: ${d.prompt.take(80)}): " +
+            "${out.size}/${responses.size} responses taken" +
+            if (refusals.isEmpty()) "" else "; refused: ${refusals.distinct().joinToString("; ")}")
+        return out
     }
 
     private fun targetResponses(d: ChooseTargetsDecision): List<DecisionResponse> {
@@ -493,7 +579,11 @@ class Reconstructor(
         val request = HiddenWorldMaterializationRequest(names.mapValues { registry.requireCard(it.value) }, state.rng)
         return when (val r = materializer.materialize(state, request)) {
             is HiddenWorldMaterializationResult.Materialized -> r.state
-            is HiddenWorldMaterializationResult.Unsupported -> null
+            is HiddenWorldMaterializationResult.Unsupported -> {
+                val slot = r.reason.entityId?.let { id -> "${snapshotter.name(state, id)} (${id.value})" }
+                lastError = "${r.reason.kind} $slot ${r.reason.details.joinToString()}"
+                null
+            }
         }
     }
 
