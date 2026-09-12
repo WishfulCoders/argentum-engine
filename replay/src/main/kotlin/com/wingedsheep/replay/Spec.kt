@@ -33,9 +33,15 @@ data class HalfTurnSpec(
     val turn: Int,
     /** The game's final half-turn: its snapshot is taken when the game ended, often mid-turn. */
     val last: Boolean,
-    /** The active user's draws in order (tutors excluded); empty on the opponent's half-turns. */
+    /**
+     * The user's draws: on their half-turns, in order (tutors excluded); on the opponent's, the
+     * cards that arrived in their hand with nothing logged (a rummage, a cantrip), inferred, so
+     * possibly a card returned from the graveyard instead.
+     */
     val drawn: List<String> = emptyList(),
     val tutored: List<String> = emptyList(),
+    /** Cards the user played or cast that were not in their hand: from exile (an impulse draw), the graveyard, a bounce. */
+    val outsideHand: List<String> = emptyList(),
     val lands: List<String> = emptyList(),
     val creatures: List<String> = emptyList(),
     val noncreatures: List<String> = emptyList(),

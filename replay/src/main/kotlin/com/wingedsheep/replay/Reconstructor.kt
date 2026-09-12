@@ -16,7 +16,11 @@ import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.ZoneKey
 import com.wingedsheep.engine.state.components.identity.RevealedToComponent
 import com.wingedsheep.engine.state.components.combat.AttackingComponent
+import com.wingedsheep.engine.state.components.identity.CardComponent
+import com.wingedsheep.engine.state.components.stack.ActivatedAbilityOnStackComponent
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
+import com.wingedsheep.engine.state.components.stack.SpellOnStackComponent
+import com.wingedsheep.engine.state.components.stack.TriggeredAbilityOnStackComponent
 import com.wingedsheep.gym.GameEnvironment
 import com.wingedsheep.engine.state.components.battlefield.TappedComponent
 import com.wingedsheep.sdk.core.Keyword
@@ -74,6 +78,8 @@ class Reconstructor(
     private var lastError: String? = null
     /** The hidden slot the materializer last refused, if it named one. */
     private var lastRefused: EntityId? = null
+    /** The side whose untapped lands this half-turn leaves matter: it casts in the next one. */
+    private var keepMana: String? = null
 
     private data class Node(val state: GameState, val plan: Plan)
 
@@ -83,6 +89,35 @@ class Reconstructor(
         var closest: List<String>? = null
         var tracer: Tracer? = null
         var nodeCap = Int.MAX_VALUE
+        /** The user's cards played from outside the hand this half-turn and the next two ([impulseTop]). */
+        var outside: List<String> = emptyList()
+        /** The user's recorded draws and outside-hand plays from this half-turn on: an impulse's spares must not be these. */
+        var draws: List<String> = emptyList()
+        /** What the opponent plays in the next two half-turns, which their impulse may have exiled. */
+        var oppoLater: List<String> = emptyList()
+        /** What the snapshot cannot see about an end state ([Reconstructor.unseen]); the beam is picked across it. */
+        var groupOf: (GameState) -> List<String> = { emptyList() }
+        var perGroup = 0
+        private val groupSizes = HashMap<List<String>, Int>()
+        private val digests = HashSet<Any>()
+
+        /**
+         * Keeps a matching end state, unless [perGroup] of its unseen-state group are kept already: a
+         * subtree that differs only in what nobody can see (every colour an aura's land could be,
+         * on the wrong host) must not fill [MAX_ENDS] before the other hosts are looked at.
+         */
+        fun end(s: GameState) {
+            if (!digests.add(StateProgress.digest(s))) return
+            val k = groupOf(s)
+            val n = groupSizes[k] ?: 0
+            if (n < perGroup) {
+                groupSizes[k] = n + 1
+                ends += s
+            }
+        }
+
+        /** States already given their opponent-impulse branch ([oppoImpulse]), by identity. */
+        val branched: MutableSet<GameState> = java.util.Collections.newSetFromMap(java.util.IdentityHashMap())
 
         fun near(diff: List<String>) {
             tracer?.line("    end check: ${diff.joinToString("; ")}")
@@ -120,61 +155,102 @@ class Reconstructor(
             ?: return result("skipped", 0, reason = "the recorded draws do not fit the user's deck")
 
         var beam = listOf(stacked)
-        for ((i, ht) in spec.halfTurns.withIndex()) {
-            val search = Search()
-            val tracing = tracer?.halfTurn == i
-            if (tracing) tracer!!.begin(spec, i, beam.size)
-            search.tracer = tracer.takeIf { tracing }
-            // start states grouped by what the snapshot cannot see, in beam order
-            val groups = linkedMapOf<List<String>, MutableList<ArrayDeque<Node>>>()
-            var starts = 0
-            for (start in beam) {
-                val written = revealOppo(start, seats, ht)
-                if (written == null) {
-                    search.near(listOf("could not write the opponent's cards into hidden slots: $lastError"))
-                    continue
-                }
-                for ((v, revealed) in oppoLibraryVariants(written, seats, ht).withIndex()) {
-                    val readies = if (ht.active == "user") {
-                        val restacked = restackUser(revealed, seats, ht, laterDraws(spec, i))
-                            ?: revealed.also { search.tracer?.line("restack failed: $lastError") }
-                        listOf(restacked) + listOfNotNull(userLibraryVariant(restacked, seats, ht, laterDraws(spec, i)))
-                    } else listOf(revealed)
-                    for ((u, ready) in readies.withIndex()) {
-                        search.tracer?.line("start ${starts++}: user hand ${ready.getHand(seats.user).map { snapshotter.name(ready, it) }}, " +
-                            "oppo hand ${ready.getHand(seats.oppo).map { snapshotter.name(ready, it) }}, " +
-                            "user library top ${ready.getLibrary(seats.user).take(3).map { snapshotter.name(ready, it) }}")
-                        search.tracer?.line("       unseen: ${snapshotter.hidden(ready, seats)}")
-                        revealNote?.let { search.tracer?.line("       opponent: $it") }
-                        // a library variant is a group of its own: its search must not wait on the other's
-                        groups.getOrPut(snapshotter.hidden(ready, seats) + "library variant $v/$u") { mutableListOf() } +=
-                            ArrayDeque(listOf(Node(ready, Plan.of(ht))))
-                    }
-                }
-            }
-            // Groups of start states that differ in what the snapshot cannot see (a land's colour,
-            // an aura's host) advance in turn, a slice of nodes each, so that one with many
-            // equivalent lines cannot use up the budget or the end states before the others are
-            // looked at. Within a group the starts are near-duplicates and are searched one by one.
-            while (search.nodes < nodeBudget && search.ends.size < MAX_ENDS &&
-                groups.values.any { g -> g.any { it.isNotEmpty() } }) {
-                for ((k, group) in groups.values.withIndex()) {
-                    val stack = group.firstOrNull { it.isNotEmpty() } ?: continue
-                    search.tracer?.line("-- group $k")
-                    search.nodeCap = minOf(nodeBudget, search.nodes + SLICE_NODES)
-                    searchHalfTurn(stack, ht, i + 1, seats, search)
-                }
-            }
+        // the previous half-turn's matching end states left out of the beam
+        var spare = emptyList<GameState>()
+        for (i in spec.halfTurns.indices) {
+            var search = searchStep(spec, i, beam, seats)
             nodeCounts += search.nodes
-            if (tracing) tracer!!.end(search.nodes, search.ends.size, search.closest)
+            if (search.ends.isEmpty() && spare.isNotEmpty()) {
+                // Backtrack one half-turn: the beam kept the wrong lines of the previous one (an
+                // unseen choice diverged here), so the half-turn is searched again from the rest.
+                tracer?.takeIf { it.halfTurn == i }?.line("### retry from the previous half-turn's other ${spare.size} matching states")
+                val retry = searchStep(spec, i, spare, seats)
+                nodeCounts[nodeCounts.lastIndex] += retry.nodes
+                if (retry.ends.isNotEmpty()) search = retry
+            }
+            spare = emptyList()
             if (search.ends.isEmpty()) {
                 val why = search.closest?.joinToString("; ") ?: "no line reached the end of the half-turn"
                 return result("failed", i, i, why)
             }
-            beam = pickBeam(search.ends, seats)
+            beam = pickBeam(search.ends, search.groupOf)
+            spare = search.ends.filter { e -> beam.none { it === e } }
             beamSizes += beam.size
         }
         return result("reproduced", spec.halfTurns.size)
+    }
+
+    /** Searches half-turn [i] from the [beam]'s states; the [Search] holds the matching end states. */
+    private fun searchStep(spec: GameSpec, i: Int, beam: List<GameState>, seats: Seats): Search {
+        val ht = spec.halfTurns[i]
+        val search = Search()
+        search.outside = spec.halfTurns.drop(i).take(3).flatMap { it.outsideHand }
+        search.draws = spec.halfTurns.drop(i).flatMap { it.drawn + it.tutored + it.outsideHand }
+        // The active player's lands stay tapped through the next half-turn: if they cast there,
+        // which lands pay now matters, and end states differing in it are kept apart.
+        keepMana = spec.halfTurns.getOrNull(i + 1)
+            ?.takeIf { it.instants[ht.active].orEmpty().isNotEmpty() || it.flash[ht.active].orEmpty().isNotEmpty() }
+            ?.let { ht.active }
+        search.groupOf = { s -> unseen(s, seats) }
+        search.perGroup = beamWidth
+        search.oppoLater = spec.halfTurns.drop(i + 1).take(2).flatMap { h ->
+            (if (h.active == "oppo") h.lands + h.creatures + h.noncreatures else emptyList()) +
+                h.instants["oppo"].orEmpty() + h.flash["oppo"].orEmpty()
+        }
+        val tracing = tracer?.halfTurn == i
+        if (tracing) tracer!!.begin(spec, i, beam.size)
+        search.tracer = tracer.takeIf { tracing }
+        // start states grouped by what the snapshot cannot see, in beam order
+        val groups = linkedMapOf<List<String>, MutableList<ArrayDeque<Node>>>()
+        var starts = 0
+        for (start in beam) {
+            val written = revealOppo(start, seats, ht)
+            if (written == null) {
+                search.near(listOf("could not write the opponent's cards into hidden slots: $lastError"))
+                continue
+            }
+            for ((v, revealed) in oppoLibraryVariants(written, seats, ht).withIndex()) {
+                val readies = if (ht.active == "user" || ht.drawn.isNotEmpty()) {
+                    val restacked = restackUser(revealed, seats, ht, laterDraws(spec, i))
+                        ?: revealed.also { search.tracer?.line("restack failed: $lastError") }
+                    listOf(restacked) + if (ht.active == "user") {
+                        listOfNotNull(userLibraryVariant(restacked, seats, ht, laterDraws(spec, i))) +
+                            drawOrders(ht).mapNotNull { restackUser(revealed, seats, it, laterDraws(spec, i)) }
+                                .filter { it.getLibrary(seats.user) != restacked.getLibrary(seats.user) }
+                    } else emptyList()
+                } else listOf(revealed)
+                for ((u, ready) in readies.withIndex()) {
+                    search.tracer?.line("start ${starts++}: user hand ${ready.getHand(seats.user).map { snapshotter.name(ready, it) }}, " +
+                        "oppo hand ${ready.getHand(seats.oppo).map { snapshotter.name(ready, it) }}, " +
+                        "user library top ${ready.getLibrary(seats.user).take(3).map { snapshotter.name(ready, it) }}")
+                    search.tracer?.line("       unseen: ${snapshotter.hidden(ready, seats)}")
+                    revealNote?.let { search.tracer?.line("       opponent: $it") }
+                    // a library variant is a group of its own: its search must not wait on the other's;
+                    // so are the non-active player's untapped lands when they cast this half-turn
+                    val other = if (ht.active == "user") "oppo" else "user"
+                    val lands = if (ht.instants[other].orEmpty().isNotEmpty() || ht.flash[other].orEmpty().isNotEmpty()) {
+                        untappedLands(ready, seats.of(other))
+                    } else emptyList()
+                    groups.getOrPut(snapshotter.hidden(ready, seats) + lands + "library variant $v/$u") { mutableListOf() } +=
+                        ArrayDeque(listOf(Node(ready, Plan.of(ht))))
+                }
+            }
+        }
+        // Groups of start states that differ in what the snapshot cannot see (a land's colour,
+        // an aura's host) advance in turn, a slice of nodes each, so that one with many
+        // equivalent lines cannot use up the budget or the end states before the others are
+        // looked at. Within a group the starts are near-duplicates and are searched one by one.
+        while (search.nodes < nodeBudget && search.ends.size < MAX_ENDS &&
+            groups.values.any { g -> g.any { it.isNotEmpty() } }) {
+            for ((k, group) in groups.values.withIndex()) {
+                val stack = group.firstOrNull { it.isNotEmpty() } ?: continue
+                search.tracer?.line("-- group $k")
+                search.nodeCap = minOf(nodeBudget, search.nodes + SLICE_NODES)
+                searchHalfTurn(stack, ht, i + 1, seats, search)
+            }
+        }
+        if (tracing) tracer!!.end(search.nodes, search.ends.size, search.closest)
+        return search
     }
 
     // =========================================================================
@@ -184,18 +260,30 @@ class Reconstructor(
     /** Advances one start state's depth-first search until its [stack] empties or [Search.nodeCap]. */
     private fun searchHalfTurn(stack: ArrayDeque<Node>, ht: HalfTurnSpec, turn: Int, seats: Seats, search: Search) {
         while (stack.isNotEmpty() && search.nodes < search.nodeCap && search.ends.size < MAX_ENDS) {
-            val node = stack.removeLast()
+            val node = stack.removeLast().let { n ->
+                impulseTop(n.state, seats, search)?.let { n.copy(state = it) } ?: n
+            }
+            // The opponent's impulse may or may not have exiled the cards they play next: the line
+            // where it did is searched first, then this one.
+            if (node.state !in search.branched) {
+                oppoImpulse(node, ht, seats, search)?.let { exiled ->
+                    search.branched += listOf(node.state, exiled)
+                    stack.addLast(node)
+                    stack.addLast(node.copy(state = exiled))
+                    continue
+                }
+            }
             search.nodes++
             val s = node.state
             if (s.gameOver) {
-                if (ht.last) search.ends += s
+                if (ht.last) search.end(s)
                 continue
             }
             // The last half-turn's snapshot was taken when the game ended, possibly mid-turn.
             if (ht.last && node.plan.done && s.pendingDecision == null) {
                 val diff = snapshotter.diff(snapshotter.take(s, seats), ht.eot)
                 if (diff.isEmpty()) {
-                    search.ends += s
+                    search.end(s)
                     continue
                 }
                 search.near(diff)
@@ -219,7 +307,7 @@ class Reconstructor(
                     val diff = snapshotter.diff(snapshotter.take(s, seats), ht.eot)
                     if (diff.isEmpty()) {
                         search.tracer?.line("    end check: matches the snapshot")
-                        search.ends += child.state
+                        search.end(child.state)
                     } else {
                         search.near(diff)
                         search.tracer?.line("      board: ${snapshotter.board(s, seats)}")
@@ -255,11 +343,11 @@ class Reconstructor(
      * plan allowed it and, for each variant tried, whether the engine took it or why it refused.
      */
     /**
-     * Up to [beamWidth] distinct states from [ends], one per [Snapshotter.hidden] group in turn, in
+     * Up to [beamWidth] distinct states from [ends], one per [groupOf] group ([unseen]) in turn, in
      * the order the search found them.
      */
-    private fun pickBeam(ends: List<GameState>, seats: Seats): List<GameState> {
-        val groups = ends.distinctBy { StateProgress.digest(it) }.groupBy { snapshotter.hidden(it, seats) }.values
+    private fun pickBeam(ends: List<GameState>, groupOf: (GameState) -> List<String>): List<GameState> {
+        val groups = ends.distinctBy { StateProgress.digest(it) }.groupBy(groupOf).values
         val out = mutableListOf<GameState>()
         var round = 0
         while (out.size < beamWidth && groups.any { round < it.size }) {
@@ -268,6 +356,18 @@ class Reconstructor(
         }
         return out
     }
+
+    /**
+     * [Snapshotter.hidden], plus which lands [keepMana]'s side left untapped: hidden leaves tapped
+     * lands out because they untap next turn, but that side's stay tapped through the next half-turn.
+     */
+    private fun unseen(s: GameState, seats: Seats): List<String> =
+        snapshotter.hidden(s, seats) + keepMana?.let { untappedLands(s, seats.of(it)) }.orEmpty()
+
+    private fun untappedLands(s: GameState, player: EntityId): List<String> =
+        s.controlledBattlefield(player)
+            .filter { s.projectedState.hasType(it, "LAND") && s.getEntity(it)?.has<TappedComponent>() != true }
+            .mapNotNull { snapshotter.name(s, it) }.sorted().map { "untapped $it" }
 
     private fun expand(node: Node, ht: HalfTurnSpec, seats: Seats, notes: MutableList<String>? = null): List<Node> {
         val s = node.state
@@ -313,8 +413,11 @@ class Reconstructor(
                         !la.affordable -> skip(la, "in the plan, NOT AFFORDABLE")
                         else -> {
                             val after = plan.cast(side, name)
-                            // which lands pay only matters if this side casts again this half-turn
-                            val more = after.spells[side].orEmpty().isNotEmpty()
+                            // which lands pay only matters if this side casts again this half-turn,
+                            // or in the next one while these lands are still tapped, or if the spell
+                            // asks what was spent (Wistfulness: "if {G}{G} was spent to cast it")
+                            val more = after.spells[side].orEmpty().isNotEmpty() || side == keepMana ||
+                                def(name)?.oracleText?.contains("was spent to cast") == true
                             val variants = withTargets(s, la, player)
                                 .flatMap { withX(la, it) }
                                 .flatMap { withCostPayments(s, plan, la, it) }
@@ -695,15 +798,21 @@ class Reconstructor(
             is ChooseOptionDecision -> optionOrder(s, d, node.plan).map { OptionChosenResponse(d.id, it) }
             is ChooseTargetsDecision -> targetResponses(d)
             is SelectCardsDecision ->
-                if (!d.ordered && d.options.size <= MAX_SELECT_OPTIONS && d.maxSelections <= 2) {
+                if (!d.ordered && d.maxSelections <= 2) {
                     // Small picks (including "you may": min 0) are enumerated, the recorded tutored
-                    // card first — Eclipsed Kithkin's "reveal a Kithkin, Forest, or Plains".
-                    val wanted = ht.tutored.toSet()
-                    subsets(d.options, d.minSelections, d.maxSelections)
-                        .sortedByDescending { pick -> pick.count { snapshotter.name(s, it) in wanted } }
-                        .map { CardsSelectedResponse(d.id, it) }
+                    // card first — Eclipsed Kithkin's "reveal a Kithkin, Forest, or Plains" — then
+                    // what the snapshot shows the chooser gaining (Midnight Tilling's returned card,
+                    // Evolving Wilds' basic), unless the picks are binned (a surveil).
+                    val where = (d.selectedLabel ?: d.prompt).lowercase()
+                    val binned = BINNED.any { it in where }
+                    val wanted = ht.tutored.toSet() + if (binned) emptySet() else gained(s, d.playerId, ht)
+                    cardPicks(s, d.id, d.options, d.minSelections, d.maxSelections, wanted) ?: heuristic(s, d)
                 } else heuristic(s, d)
-            is SearchLibraryDecision -> tutor(s, d, ht) ?: heuristic(s, d)
+            is SearchLibraryDecision -> tutor(s, d, ht)
+                ?: d.takeIf { it.maxSelections <= 2 }
+                    ?.let { cardPicks(s, d.id, d.options, d.minSelections, d.maxSelections, gained(s, d.playerId, ht)) }
+                ?: heuristic(s, d)
+            is CombatResolutionDecision -> combatSplits(d) ?: heuristic(s, d)
             else -> heuristic(s, d)
         }
         val out = mutableListOf<Node>()
@@ -735,6 +844,70 @@ class Reconstructor(
         return listOf(CardsSelectedResponse(d.id, picks.take(d.maxSelections)))
     }
 
+    /**
+     * Every pick of [min]..[max] of [options], those with the most [wanted] names first. A short list
+     * is enumerated as it is; a long one (a library searched for a basic land: 17Lands names no card
+     * for an Evolving Wilds) one pick per distinct set of names, up to [MAX_SELECT_OPTIONS] picks.
+     */
+    private fun cardPicks(
+        s: GameState, id: String, options: List<EntityId>, min: Int, max: Int, wanted: Set<String>,
+    ): List<DecisionResponse>? {
+        val picks = if (options.size <= MAX_SELECT_OPTIONS) subsets(options, min, max) else {
+            val reduced = options.groupBy { snapshotter.name(s, it) }.values.flatMap { it.take(max) }
+            distinctByName(s, subsets(reduced, min, max, cap = MAX_TAP_SETS))
+        }
+        return picks.sortedByDescending { pick -> pick.count { snapshotter.name(s, it) in wanted } }
+            .take(maxOf(MAX_SELECT_OPTIONS, if (options.size <= MAX_SELECT_OPTIONS) picks.size else 0))
+            .map { CardsSelectedResponse(id, it) }
+            .ifEmpty { null }
+    }
+
+    /**
+     * Combat damage: the engine's default split first, then for each creature blocked by (or
+     * blocking) several others, one split per creature dealt lethal damage first, the rest in turn
+     * (the validator takes any split some damage-assignment order allows). Which blocker of a double
+     * block dies is otherwise the heuristic's call.
+     */
+    private fun combatSplits(d: CombatResolutionDecision): List<DecisionResponse>? {
+        val mine = d.edges.filter { it.editableBy == d.playerId }
+        val default = mine.associate { it.id to it.amount }
+        var options = listOf(default)
+        for (edges in mine.groupBy { it.sourceId }.values) {
+            val blocks = edges.filter {
+                it.direction == DamageEdgeDirection.ATTACKER_TO_BLOCKER || it.direction == DamageEdgeDirection.BLOCKER_TO_ATTACKER
+            }
+            if (blocks.size < 2) continue
+            val drain = edges.firstOrNull { it.isTrampleDrain }
+            val splits = blocks.map { first ->
+                val order = listOf(first) + (blocks - first)
+                var left = first.maximum
+                val split = mutableMapOf<String, Int>()
+                for (e in order) {
+                    val x = minOf(e.lethal, left)
+                    split[e.id] = x
+                    left -= x
+                }
+                if (left > 0) split[drain?.id ?: first.id] = (split[drain?.id ?: first.id] ?: 0) + left
+                split.toMap()
+            }
+            options = options.flatMap { o -> splits.map { o + it } }.distinct().take(MAX_COMBAT_OPTIONS)
+        }
+        val all = (listOf(default) + options).distinct()
+        if (all.size == 1) return null
+        return all.map { a -> CombatResolutionResponse(d.id, mine.map { DamageEdgeAmount(it.id, a[it.id] ?: 0) }) }
+    }
+
+    /** Names [player] has more of at the end of the half-turn than now: non-token permanents, and the user's hand. */
+    private fun gained(s: GameState, player: EntityId, ht: HalfTurnSpec): Set<String> {
+        val side = Seats.of(s).sideOf(player)
+        val user = side == "user"
+        val now = Snapshotter.counts(s.controlledBattlefield(player).filterNot { snapshotter.isToken(s, it) }
+            .mapNotNull { snapshotter.name(s, it) } +
+            if (user) s.getHand(player).mapNotNull { snapshotter.name(s, it) } else emptyList())
+        val eot = Snapshotter.counts(ht.eot.battlefield[side].orEmpty() + if (user) ht.eot.userHand else emptyList())
+        return eot.filter { (name, k) -> k > (now[name] ?: 0) }.keys
+    }
+
     private fun heuristic(s: GameState, d: PendingDecision): List<DecisionResponse> =
         try {
             listOf(responder.respond(s, d, d.playerId))
@@ -758,8 +931,18 @@ class Reconstructor(
     // Setup and hidden cards
     // =========================================================================
 
+    /**
+     * 17Lands does not always list a half-turn's draws in the order they were drawn (Flaring Cinder's
+     * rummage drew the Pummeler after the draw step's Forest, logged the other way round), so a
+     * half-turn with several draws is also tried with each other card as the draw-step draw.
+     */
+    private fun drawOrders(ht: HalfTurnSpec): List<HalfTurnSpec> =
+        ht.drawn.drop(1).distinct().filter { it != ht.drawn.first() }
+            .map { d -> ht.copy(drawn = listOf(d) + (ht.drawn - d)) }
+
+    /** The user's draws after half-turn [i], in order: their own turns' and those off their turn. */
     private fun laterDraws(spec: GameSpec, i: Int): List<String> =
-        spec.halfTurns.drop(i + 1).filter { it.active == "user" }.flatMap { it.drawn }
+        spec.halfTurns.drop(i + 1).flatMap { it.drawn }
 
     private fun missingCard(spec: GameSpec): String? =
         (spec.userDeck + spec.oppoKnown).firstOrNull { def(it) == null }
@@ -774,13 +957,19 @@ class Reconstructor(
         return deck.map(snapshotter::engineName)
     }
 
-    /** Force the user's opening hand and library to the recorded hand and draw order. */
+    /**
+     * Force the user's opening hand and library to the recorded hand and draw order. A draw inferred
+     * off their turn that the deck has no copy left for came from elsewhere (the graveyard) and is
+     * left out.
+     */
     private fun stackUser(state: GameState, seats: Seats, spec: GameSpec): GameState? {
         val hand = state.getHand(seats.user)
         val library = state.getLibrary(seats.user)
-        val draws = spec.halfTurns.filter { it.active == "user" }.flatMap { it.drawn }
         val rest = spec.userDeck.toMutableList()
-        for (name in spec.openingHand + draws) if (!rest.remove(name)) return null
+        // the user's own draws are certain and come out of the deck first; inferred ones take what is left
+        val own = spec.halfTurns.filter { it.active == "user" }.flatMap { it.drawn }
+        for (name in spec.openingHand + own) if (!rest.remove(name)) return null
+        val draws = spec.halfTurns.flatMap { ht -> if (ht.active == "user") ht.drawn else ht.drawn.filter(rest::remove) }
         if (hand.size != spec.openingHand.size || library.size != draws.size + rest.size) return null
         val order = draws + rest.shuffled(Random(seed))   // index 0 is the top of the library
         return materialize(state, hand.zip(spec.openingHand).toMap() + library.zip(order).toMap())
@@ -796,11 +985,13 @@ class Reconstructor(
      * Cards move by reordering the library, which keeps each card's runtime state: a card someone
      * has looked at carries it, and the materializer refuses to rewrite such a card's identity. Only a
      * card of this half-turn that is no longer in the library (surveilled away, say) is written over an
-     * unseen slot near the bottom instead.
+     * unseen slot near the bottom instead — on the user's own half-turns. On the opponent's, the
+     * draws are inferred and may have come from the graveyard, so one not in the library is let be.
      */
     private fun restackUser(state: GameState, seats: Seats, ht: HalfTurnSpec, later: List<String>): GameState? {
+        val own = ht.active == "user"
         // Past the upkeep, this turn's draw-step draw has already happened.
-        val drawn = if (state.step.ordinal > Step.UPKEEP.ordinal) ht.drawn.drop(1) else ht.drawn
+        val drawn = if (own && state.step.ordinal > Step.UPKEEP.ordinal) ht.drawn.drop(1) else ht.drawn
         val now = drawn + ht.tutored
         val library = state.getLibrary(seats.user)
         if (library.size < now.size) return null
@@ -811,7 +1002,8 @@ class Reconstructor(
             val i = rest.indexOfFirst { snapshotter.name(state, it) == name }
             when {
                 i >= 0 -> top += rest.removeAt(i)
-                k < now.size -> { absent[top.size] = name; top += null }
+                k < now.size && own -> { absent[top.size] = name; top += null }
+                k < now.size -> {}
                 else -> break   // a later draw no longer here is its own half-turn's business
             }
         }
@@ -853,11 +1045,23 @@ class Reconstructor(
         val held = free.mapNotNull { snapshotter.name(state, it) }
         for ((i, card) in casts.withIndex()) {
             val type = beholdType(card) ?: continue
-            // the spell cannot behold itself, but another card cast this turn may still be in hand
+            // the spell cannot behold itself, but another card cast this turn may still be in hand;
+            // a behold that exiles the card (Champion of the Path) may have taken one from hand though
+            // one was on the board, and a card cast later cannot have been exiled
             val others = casts.filterIndexed { j, _ -> j != i }
-            if ((board + held + others).none { hasCreatureType(it, type) }) {
+            val exiles = def(card)?.oracleText?.contains("and exile it") == true
+            if ((if (exiles) held else board + held + others).none { hasCreatureType(it, type) }) {
                 beholdFiller(type)?.let { needed[it] = (needed[it] ?: 0) + 1 }
             }
+        }
+        // A spell of the user's that has the opponent reveal their hand and discard a nonland card of
+        // the user's choice (Auntie's Sentence) finds only filler basics there: a vanilla creature
+        // stands in for the card they discarded, which the record never names.
+        val userCasts = ht.instants["user"].orEmpty() + if (ht.active == "user") ht.creatures + ht.noncreatures else emptyList()
+        val filler = nonlandFiller
+        if (filler != null && userCasts.any { name -> def(name)?.oracleText?.let { REVEALS_HAND.containsMatchIn(it) } == true } &&
+            held.none { def(it)?.typeLine?.isLand == false }) {
+            needed[filler] = (needed[filler] ?: 0) + 1
         }
         // A cycled card of theirs is never named ("Islandcycling {2}"): one that cycles the same way
         // stands in, unless a card in their hand already can.
@@ -889,8 +1093,10 @@ class Reconstructor(
     /**
      * An opponent's explore or reveal can put one of the harness's own stand-ins (a filler basic, the
      * vanilla creature) into their hand as a revealed card, which the materializer will not rewrite,
-     * so it would hold the slot a recorded card needs. Such cards not among [keep] trade places with
-     * unseen cards from the bottom of their library: their identity was made up in the first place.
+     * so it would hold the slot a recorded card needs; so can their own surveil or scry, which leaves
+     * a filler they kept on top of their library seen, where the card they draw next must go. Such
+     * cards not among [keep], in hand or in the top [LIBRARY_VARIANT_DEPTH] of the library, trade
+     * places with unseen cards from the bottom of it: their identity was made up in the first place.
      */
     private fun unrevealFillers(state: GameState, player: EntityId, keep: Set<String>): GameState {
         val made = BASICS.values.toSet() + listOfNotNull(nonlandFiller) - keep
@@ -904,6 +1110,14 @@ class Reconstructor(
             while (j >= 0 && revealed(library[j])) j--
             if (j < 0) break
             hand[i] = library[j].also { library[j] = hand[i] }
+            j--
+            swapped = true
+        }
+        for (i in 0 until minOf(LIBRARY_VARIANT_DEPTH, library.size)) {
+            if (!revealed(library[i]) || snapshotter.name(state, library[i]) !in made) continue
+            while (j > i && revealed(library[j])) j--
+            if (j <= i) break
+            library[i] = library[j].also { library[j] = library[i] }
             j--
             swapped = true
         }
@@ -957,6 +1171,82 @@ class Reconstructor(
         val pos = if (state.step.ordinal > Step.UPKEEP.ordinal || ht.drawn.isEmpty()) 0 else 1
         val order = (library - spare).toMutableList().apply { add(minOf(pos, size), spare) }
         return state.copy(zones = state.zones + (ZoneKey(seats.user, Zone.LIBRARY) to order))
+    }
+
+    /**
+     * Impulse draws. A card the user played from outside their hand ([Search.outside]) most often
+     * came off the top of their library through an effect that exiles cards there and lets them be
+     * played until the end of the next turn (Burning Curiosity, Kulrath Zealot, Sizzling Changeling
+     * dying on the opponent's turn), where the harness had stacked later draws. When such an effect
+     * of the user's is on top of the stack, those cards still in the library go on top, then unseen
+     * cards no later draw needs (what it exiled that the user never played), up to the number of
+     * cards the effect names; the recorded draws stay next. A draw-step draw still to come keeps its
+     * place above them. Null when nothing moves.
+     */
+    /** An impulse draw on top of the stack: its controller, source card name and how many cards it exiles. */
+    private data class Impulse(val controller: EntityId, val source: String, val count: Int)
+
+    private fun impulseOnTop(s: GameState): Impulse? {
+        val e = s.stack.lastOrNull()?.let { s.getEntity(it) } ?: return null
+        val (controller, source) = e.get<SpellOnStackComponent>()?.let { it.casterId to e.get<CardComponent>()?.name }
+            ?: e.get<TriggeredAbilityOnStackComponent>()?.let { it.controllerId to it.sourceName }
+            ?: e.get<ActivatedAbilityOnStackComponent>()?.let { it.controllerId to it.sourceName }
+            ?: return null
+        val name = source?.let(snapshotter::canonical) ?: return null
+        val text = def(name)?.oracleText ?: return null
+        if (!IMPULSE_EXILE.containsMatchIn(text) || !IMPULSE_PLAY.containsMatchIn(text)) return null
+        // "the top card" 1, "the top two cards ... three cards instead" 3, "that many cards" unknown
+        val count = TOP_CARDS.findAll(text).map { m -> m.groupValues[1].let { if (it.isEmpty()) 1 else WORD_VALUES[it] } }
+            .filterNotNull().maxOrNull() ?: IMPULSE_DEFAULT_COUNT
+        return Impulse(controller, name, count)
+    }
+
+    /**
+     * The opponent's impulse draw exiles filler from their unseen library, so a card the record has
+     * them play from exile would have to come from their hand, one card too many out of it. The
+     * branch this returns writes the cards they still play this half-turn ([Plan.spells], land
+     * drops) and in the next two ([Search.oppoLater]) over the top unseen cards of their library,
+     * as many as the impulse exiles; the search also keeps the line where it exiled filler.
+     */
+    private fun oppoImpulse(node: Node, ht: HalfTurnSpec, seats: Seats, search: Search): GameState? {
+        val s = node.state
+        val impulse = impulseOnTop(s)?.takeIf { it.controller == seats.oppo } ?: return null
+        val now = node.plan.spells["oppo"].orEmpty().flatMap { (n, k) -> List(k) { n } } +
+            if (ht.active == "oppo") node.plan.lands.flatMap { (n, k) -> List(k) { n } } else emptyList()
+        val soon = (now + search.oppoLater).toMutableList().apply { remove(impulse.source) }.take(impulse.count)
+        if (soon.isEmpty()) return null
+        val slots = s.getLibrary(seats.oppo).filter { s.getEntity(it)?.has<RevealedToComponent>() != true }.take(soon.size)
+        if (slots.size < soon.size) return null
+        return materialize(s, slots.zip(soon).toMap())?.also {
+            search.tracer?.line("  opponent impulse (${impulse.source}): library top written $soon")
+        }
+    }
+
+    private fun impulseTop(s: GameState, seats: Seats, search: Search): GameState? {
+        if (search.outside.isEmpty()) return null
+        val (controller, source, count) = impulseOnTop(s) ?: return null
+        if (controller != seats.user) return null
+        val library = s.getLibrary(seats.user)
+        val keep = if (s.activePlayerId == seats.user && s.step.ordinal < Step.DRAW.ordinal) 1 else 0
+        val rest = library.drop(keep).toMutableList()
+        val first = mutableListOf<EntityId>()
+        for (name in search.outside) {
+            val i = rest.indexOfFirst { snapshotter.name(s, it) == name }
+            if (i >= 0) first += rest.removeAt(i)
+        }
+        if (first.isEmpty()) return null
+        val needed = Snapshotter.counts(search.draws).toMutableMap()
+        val spares = rest.asReversed().filter { id ->
+            val name = snapshotter.name(s, id) ?: return@filter false
+            val left = needed[name] ?: 0
+            if (left > 0) needed[name] = left - 1
+            left == 0 && s.getEntity(id)?.has<RevealedToComponent>() != true
+        }.take(maxOf(0, count - first.size))
+        rest.removeAll(spares.toSet())
+        val order = library.take(keep) + first + spares + rest
+        if (order == library) return null
+        search.tracer?.line("  impulse ($source): library top ${order.take(keep + count).map { snapshotter.name(s, it) }}")
+        return s.copy(zones = s.zones + (ZoneKey(seats.user, Zone.LIBRARY) to order))
     }
 
     /** A vanilla creature card, to stand in for an unseen nonland (and creature) card of the opponent's. */
@@ -1041,6 +1331,8 @@ class Reconstructor(
         const val MAX_NUMBER_OPTIONS = 10
         const val MAX_FALLBACK_ACTIONS = 6
         const val MAX_SELECT_OPTIONS = 8
+        /** Words in a card selection's prompt or label that say the picked cards are lost, not gained. */
+        private val BINNED = listOf("graveyard", "bottom", "discard", "sacrifice", "exile")
         /** Matching end states collected per half-turn before the beam is picked from them. */
         const val MAX_ENDS = 128
         /** Nodes one group of start states' search runs before the next group's turn. */
@@ -1049,6 +1341,16 @@ class Reconstructor(
         private val BEHOLD = Regex("""\bbehold an? ([A-Z][a-z]+)""")
         const val LIBRARY_VARIANT_DEPTH = 4
         private val READS_LIBRARY_TOP = Regex("""\bexplores?\b|\btop card of your library\b""")
+        /** An impulse draw: exiles cards off the top of its controller's library, which may then be played. */
+        private val IMPULSE_EXILE =
+            Regex("""(?i)\bexile (?:the top|(?:cards|a number of cards|that many cards) from the top)[^.]*\byour library""")
+        private val IMPULSE_PLAY = Regex("""(?i)\byou may (?:play|cast)\b""")
+        /** A hand attack that has the opponent reveal their hand and discard a card the caster chooses. */
+        private val REVEALS_HAND = Regex("""(?i)\breveals (?:their|his or her) hand\b[^.]*\. You choose""")
+        private val TOP_CARDS = Regex("""\btop (?:(\w+) cards|card)\b""")
+        private val WORD_VALUES = mapOf("two" to 2, "three" to 3, "four" to 4, "five" to 5)
+        /** Cards an impulse exiles when its text gives no number ("that many"). */
+        const val IMPULSE_DEFAULT_COUNT = 3
         const val MAX_PAYMENT_OPTIONS = 12
         /** Creature sets enumerated for a crew or saddle cost before the minimal ones are kept. */
         const val MAX_TAP_SETS = 512

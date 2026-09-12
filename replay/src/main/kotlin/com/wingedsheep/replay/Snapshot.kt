@@ -38,6 +38,8 @@ data class Snapshot(
     val battlefield: Map<String, Map<String, Int>>,
     val tokens: Map<String, Int>,
     val life: Map<String, Int>,
+    /** The tokens by name, per side ([Snapshotter.diff] matches some against named permanents). */
+    val tokenNames: Map<String, Map<String, Int>> = emptyMap(),
 )
 
 /**
@@ -82,6 +84,9 @@ class Snapshotter(definitions: Iterable<CardDefinition>, private val compareToke
             life = sides.associateWith { side ->
                 state.getEntity(seats.of(side))?.get<LifeTotalComponent>()?.life ?: 0
             },
+            tokenNames = sides.associateWith { side ->
+                counts(permanents(side).filter { isToken(state, it) }.mapNotNull { name(state, it) })
+            },
         )
     }
 
@@ -91,12 +96,23 @@ class Snapshotter(definitions: Iterable<CardDefinition>, private val compareToke
         multisetDiff("user_hand", engine.userHand, counts(record.userHand))?.let(out::add)
         if (engine.oppoHand != record.oppoHand) out += "oppo_hand ${engine.oppoHand} vs ${record.oppoHand}"
         for (side in listOf("user", "oppo")) {
-            multisetDiff("battlefield.$side", engine.battlefield[side].orEmpty(),
-                counts(record.battlefield[side].orEmpty()))?.let(out::add)
+            // A token that is a real card (Mutable Explorer's Mutavault, a token copy of a creature)
+            // has that card's Arena id, so 17Lands lists it by name among the permanents.
+            val recorded = counts(record.battlefield[side].orEmpty())
+            val named = engine.battlefield[side].orEmpty().toMutableMap()
+            var engineTokens = engine.tokens[side] ?: 0
+            for ((name, k) in engine.tokenNames[side].orEmpty()) {
+                val move = minOf(k, maxOf(0, (recorded[name] ?: 0) - (named[name] ?: 0)))
+                if (move > 0) {
+                    named[name] = (named[name] ?: 0) + move
+                    engineTokens -= move
+                }
+            }
+            multisetDiff("battlefield.$side", named, recorded)?.let(out::add)
             val life = record.life[side]?.toInt() ?: 0
             if (engine.life[side] != life) out += "life.$side ${engine.life[side]} vs $life"
             val tokens = record.tokens[side] ?: 0
-            if (compareTokens && engine.tokens[side] != tokens) out += "tokens.$side ${engine.tokens[side]} vs $tokens"
+            if (compareTokens && engineTokens != tokens) out += "tokens.$side $engineTokens vs $tokens"
         }
         return out
     }
@@ -167,7 +183,8 @@ class Snapshotter(definitions: Iterable<CardDefinition>, private val compareToke
             if (isOpponentsFaceDown(state, id)) key.removePrefix(TOKEN_PREFIX) in FACE_DOWN
             else isToken(state, id) && name.removeSuffix(" Token") == key.removePrefix(TOKEN_PREFIX)
         } else {
-            !isToken(state, id) && name == key
+            // a token named like a card (an animated Mutavault) is logged by that name too
+            name == key && !isOpponentsFaceDown(state, id)
         }
     }
 
