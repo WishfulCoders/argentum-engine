@@ -143,6 +143,7 @@ class Reconstructor(
                         "oppo hand ${ready.getHand(seats.oppo).map { snapshotter.name(ready, it) }}, " +
                         "user library top ${ready.getLibrary(seats.user).take(3).map { snapshotter.name(ready, it) }}")
                     search.tracer?.line("       unseen: ${snapshotter.hidden(ready, seats)}")
+                    revealNote?.let { search.tracer?.line("       opponent: $it") }
                     // a library variant is a group of its own: its search must not wait on the other's
                     groups.getOrPut(snapshotter.hidden(ready, seats) + "library variant $v") { mutableListOf() } +=
                         ArrayDeque(listOf(Node(ready, Plan.of(ht))))
@@ -834,10 +835,11 @@ class Reconstructor(
      * that type is written into a free slot too. It stays in their hand, as a revealed card would.
      * A slot the materializer refuses (a card already revealed, say by a tutor) is skipped.
      */
-    private fun revealOppo(state: GameState, seats: Seats, ht: HalfTurnSpec): GameState? {
+    private fun revealOppo(given: GameState, seats: Seats, ht: HalfTurnSpec): GameState? {
         val own = if (ht.active == "oppo") ht.lands + ht.creatures + ht.noncreatures + ht.discarded else emptyList()
         val casts = own + ht.instants["oppo"].orEmpty() + ht.flash["oppo"].orEmpty()
         val needed = Snapshotter.counts(casts).toMutableMap()
+        val state = unrevealFillers(given, seats.oppo, needed.keys)
         val free = mutableListOf<EntityId>()
         for (id in state.getHand(seats.oppo)) {
             val name = snapshotter.name(state, id)
@@ -863,16 +865,51 @@ class Reconstructor(
             }
         }
         val missing = needed.flatMap { (name, k) -> List(k) { name } }
+        revealNote = null
         if (missing.isEmpty()) return state
         val slots = (free + state.getLibrary(seats.oppo)).toMutableList()
+        val refused = mutableListOf<String>()
         repeat(MAX_SLOT_RETRIES) {
             if (slots.size < missing.size) return null
             val pick = slots.take(missing.size)
-            materialize(state, pick.zip(missing).toMap())?.let { return it }
+            materialize(state, pick.zip(missing).toMap())?.let { written ->
+                val zones = pick.map { if (it in free) "hand" else "library ${state.getLibrary(seats.oppo).indexOf(it)}" }
+                revealNote = "wrote $missing into $zones" + if (refused.isEmpty()) "" else "; refused: $refused"
+                return written
+            }
+            refused += lastError ?: "?"
             if (lastRefused == null || !slots.remove(lastRefused)) return null
         }
         return null
     }
+
+    /**
+     * An opponent's explore or reveal can put one of the harness's own stand-ins (a filler basic, the
+     * vanilla creature) into their hand as a revealed card, which the materializer will not rewrite,
+     * so it would hold the slot a recorded card needs. Such cards not among [keep] trade places with
+     * unseen cards from the bottom of their library: their identity was made up in the first place.
+     */
+    private fun unrevealFillers(state: GameState, player: EntityId, keep: Set<String>): GameState {
+        val made = BASICS.values.toSet() + listOfNotNull(nonlandFiller) - keep
+        fun revealed(id: EntityId) = state.getEntity(id)?.has<RevealedToComponent>() == true
+        val hand = state.getHand(player).toMutableList()
+        val library = state.getLibrary(player).toMutableList()
+        var j = library.lastIndex
+        var swapped = false
+        for (i in hand.indices) {
+            if (!revealed(hand[i]) || snapshotter.name(state, hand[i]) !in made) continue
+            while (j >= 0 && revealed(library[j])) j--
+            if (j < 0) break
+            hand[i] = library[j].also { library[j] = hand[i] }
+            j--
+            swapped = true
+        }
+        if (!swapped) return state
+        return state.copy(zones = state.zones + (ZoneKey(player, Zone.HAND) to hand) + (ZoneKey(player, Zone.LIBRARY) to library))
+    }
+
+    /** What [revealOppo] last wrote where, for the trace. */
+    private var revealNote: String? = null
 
     /**
      * The opponent's unseen library is basic lands, so an effect of theirs that reads their top card
