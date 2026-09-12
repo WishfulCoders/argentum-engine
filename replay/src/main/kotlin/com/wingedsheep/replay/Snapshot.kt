@@ -1,7 +1,13 @@
 package com.wingedsheep.replay
 
 import com.wingedsheep.engine.state.GameState
+import com.wingedsheep.engine.state.components.battlefield.AttachedToComponent
+import com.wingedsheep.engine.state.components.battlefield.CastChoicesComponent
+import com.wingedsheep.engine.state.components.battlefield.ChoiceValue
+import com.wingedsheep.engine.state.components.battlefield.CountersComponent
+import com.wingedsheep.engine.state.components.battlefield.TappedComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
+import com.wingedsheep.engine.state.components.identity.ControllerComponent
 import com.wingedsheep.engine.state.components.identity.LifeTotalComponent
 import com.wingedsheep.engine.state.components.identity.PlayerComponent
 import com.wingedsheep.engine.state.components.identity.TokenComponent
@@ -77,6 +83,40 @@ class Snapshotter(definitions: Iterable<CardDefinition>, private val compareToke
         }
         return out
     }
+
+    /**
+     * What the snapshot cannot see about the battlefield: which non-land permanents are tapped,
+     * what each aura or equipment is attached to, counters, and the choices made as a permanent was
+     * cast or entered (a chosen colour decides what mana a land makes). Two lines that both match a
+     * snapshot but differ here (an aura on the wrong creature) diverge only turns later, so the
+     * beam keeps one of each ([Reconstructor]). Tapped lands are left out: they untap next turn and
+     * would otherwise flood the beam with land-order variants.
+     */
+    fun hidden(state: GameState, seats: Seats): List<String> =
+        listOf("user", "oppo").flatMap { side ->
+            state.controlledBattlefield(seats.of(side)).map { id ->
+                val e = state.getEntity(id)
+                val land = state.projectedState.hasType(id, "LAND")
+                buildString {
+                    append(side).append(':').append(name(state, id))
+                    if (!land && e?.has<TappedComponent>() == true) append(" tapped")
+                    e?.get<AttachedToComponent>()?.let { a ->
+                        append(" on ").append(name(state, a.targetId))
+                        state.getEntity(a.targetId)?.get<ControllerComponent>()?.let { append('/').append(seats.sideOf(it.playerId)) }
+                    }
+                    e?.get<CountersComponent>()?.counters?.filterValues { it != 0 }?.takeIf { it.isNotEmpty() }
+                        ?.let { append(' ').append(it.entries.sortedBy { c -> c.key.toString() }) }
+                    e?.get<CastChoicesComponent>()?.let { c ->
+                        c.x?.let { append(" X=").append(it) }
+                        for ((slot, v) in c.chosen.entries.sortedBy { it.key.toString() }) {
+                            append(' ').append(slot).append('=').append(
+                                if (v is ChoiceValue.EntityChoice) name(state, v.entityId) else v.toString()
+                            )
+                        }
+                    }
+                }
+            }
+        }.sorted()
 
     fun isToken(state: GameState, id: EntityId): Boolean =
         state.getEntity(id)?.has<TokenComponent>() == true

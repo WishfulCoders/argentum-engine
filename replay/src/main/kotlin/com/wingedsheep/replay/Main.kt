@@ -82,7 +82,7 @@ private fun engineCards(): Pair<CardRegistry, Snapshotter> {
 
 private fun trace(args: List<String>) {
     require(args.size >= 2) {
-        "usage: replay trace <specs.jsonl> <gameId> [halfTurn] [nodeBudget] [tracedNodes] [beamWidth]"
+        "usage: replay trace <specs.jsonl> <gameId> [halfTurn|auto] [nodeBudget] [tracedNodes] [beamWidth]"
     }
     val line = File(args[0]).useLines { lines -> lines.firstOrNull { "\"${args[1]}\"" in it } }
         ?: error("game ${args[1]} not in ${args[0]}")
@@ -91,7 +91,7 @@ private fun trace(args: List<String>) {
     val tracedNodes = args.getOrNull(4)?.toInt() ?: 300
     val beamWidth = args.getOrNull(5)?.toInt() ?: 8
     val (registry, snapshotter) = engineCards()
-    val halfTurn = args.getOrNull(2)?.toInt()
+    val halfTurn = args.getOrNull(2)?.toIntOrNull()
         ?: Reconstructor(registry, snapshotter, beamWidth, nodeBudget).run(spec).let { r ->
             println("untraced run: ${r.status}, ${r.reproduced}/${r.halfTurns} half-turns; ${r.reason}")
             r.failedAt ?: return

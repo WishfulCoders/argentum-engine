@@ -39,9 +39,12 @@ import kotlin.random.Random
  * allows (its land drops, casts, attackers and blockers) plus passing priority, with pending
  * decisions enumerated where that is cheap and answered by the AI's [DecisionResponder] where it
  * is not. A line succeeds when the turn ends with the plan done and the public state matching the
- * recorded snapshot ([Snapshotter.diff]). Up to [beamWidth] distinct matching states carry on to
- * the next half-turn; the first half-turn with none is where the game fails, and the closest
- * snapshot difference seen is the reason reported.
+ * recorded snapshot ([Snapshotter.diff]). The search runs until the half-turn's tree is exhausted
+ * (or [MAX_ENDS] matching states, or the node budget), and up to [beamWidth] of the matching states
+ * carry on to the next half-turn, picked round-robin across what the snapshot cannot see
+ * ([Snapshotter.hidden]) so that an aura on the wrong creature does not crowd out the right one.
+ * The first half-turn with none is where the game fails, and the closest snapshot difference seen
+ * is the reason reported.
  *
  * The engine is driven one [ActionProcessor.process] at a time rather than through the AI's
  * [GameSimulator], which passes both players' priority until the stack is empty and so would never
@@ -115,7 +118,7 @@ class Reconstructor(
             if (tracing) tracer!!.begin(spec, i, beam.size)
             search.tracer = tracer.takeIf { tracing }
             for (start in beam) {
-                if (search.nodes >= nodeBudget || search.ends.size >= beamWidth) break
+                if (search.nodes >= nodeBudget || search.ends.size >= MAX_ENDS) break
                 val revealed = revealOppo(start, seats, ht)
                 if (revealed == null) {
                     search.near(listOf("could not write the opponent's cards into hidden slots: $lastError"))
@@ -130,7 +133,7 @@ class Reconstructor(
                 val why = search.closest?.joinToString("; ") ?: "no line reached the end of the half-turn"
                 return result("failed", i, i, why)
             }
-            beam = search.ends.distinctBy { StateProgress.digest(it) }.take(beamWidth)
+            beam = pickBeam(search.ends, seats)
             beamSizes += beam.size
         }
         return result("reproduced", spec.halfTurns.size)
@@ -143,7 +146,7 @@ class Reconstructor(
     private fun searchHalfTurn(start: GameState, ht: HalfTurnSpec, turn: Int, seats: Seats, search: Search) {
         val stack = ArrayDeque<Node>()
         stack.addLast(Node(start, Plan.of(ht)))
-        while (stack.isNotEmpty() && search.nodes < nodeBudget && search.ends.size < beamWidth) {
+        while (stack.isNotEmpty() && search.nodes < nodeBudget && search.ends.size < MAX_ENDS) {
             val node = stack.removeLast()
             search.nodes++
             val s = node.state
@@ -191,6 +194,21 @@ class Reconstructor(
      * The children of [node]. With [notes] (tracing), also says for every legal action whether the
      * plan allowed it and, for each variant tried, whether the engine took it or why it refused.
      */
+    /**
+     * Up to [beamWidth] distinct states from [ends], one per [Snapshotter.hidden] group in turn, in
+     * the order the search found them.
+     */
+    private fun pickBeam(ends: List<GameState>, seats: Seats): List<GameState> {
+        val groups = ends.distinctBy { StateProgress.digest(it) }.groupBy { snapshotter.hidden(it, seats) }.values
+        val out = mutableListOf<GameState>()
+        var round = 0
+        while (out.size < beamWidth && groups.any { round < it.size }) {
+            for (g in groups) if (round < g.size && out.size < beamWidth) out += g[round]
+            round++
+        }
+        return out
+    }
+
     private fun expand(node: Node, ht: HalfTurnSpec, seats: Seats, notes: MutableList<String>? = null): List<Node> {
         val s = node.state
         s.pendingDecision?.let { return decide(node, it, ht, notes) }
@@ -601,6 +619,8 @@ class Reconstructor(
         const val MAX_NUMBER_OPTIONS = 10
         const val MAX_FALLBACK_ACTIONS = 6
         const val MAX_SELECT_OPTIONS = 8
+        /** Matching end states collected per half-turn before the beam is picked from them. */
+        const val MAX_ENDS = 128
         const val MAX_PAYMENT_OPTIONS = 12
         val BASICS = mapOf('W' to "Plains", 'U' to "Island", 'B' to "Swamp", 'R' to "Mountain", 'G' to "Forest")
 
