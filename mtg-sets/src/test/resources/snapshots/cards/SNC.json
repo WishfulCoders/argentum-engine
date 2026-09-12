@@ -2990,6 +2990,87 @@
     ]
 }
 
+// Unlicensed Hearse
+{
+    "name": "Unlicensed Hearse",
+    "manaCost": "{2}",
+    "typeLine": "Artifact — Vehicle",
+    "oracleText": "{T}: Exile up to two target cards from a single graveyard.\nUnlicensed Hearse's power and toughness are each equal to the number of cards exiled with it.\nCrew 2",
+    "creatureStats": {
+        "power": {
+            "type": "Dynamic",
+            "source": {
+                "type": "ContextProperty",
+                "key": "LINKED_EXILE_CARD_COUNT"
+            }
+        },
+        "toughness": {
+            "type": "Dynamic",
+            "source": {
+                "type": "ContextProperty",
+                "key": "LINKED_EXILE_CARD_COUNT"
+            }
+        }
+    },
+    "keywords": [
+        "CREW"
+    ],
+    "keywordAbilities": [
+        {
+            "type": "Numeric",
+            "keyword": "CREW",
+            "n": 2
+        }
+    ],
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "ability_1",
+                "cost": "CostTap",
+                "effect": {
+                    "type": "ForEach",
+                    "space": "IterationSpace.Targets",
+                    "body": {
+                        "type": "MoveToZone",
+                        "target": {
+                            "type": "ContextTarget",
+                            "index": 0
+                        },
+                        "destination": "Exile",
+                        "linkToSource": true
+                    }
+                },
+                "targetRequirements": [
+                    {
+                        "type": "TargetObject",
+                        "count": 2,
+                        "optional": true,
+                        "filter": {
+                            "baseFilter": {},
+                            "zone": "Graveyard"
+                        },
+                        "id": "up to two target cards from a single graveyard",
+                        "sameOwner": true
+                    }
+                ]
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "246",
+        "rarity": "RARE",
+        "artist": "Chris Seaman",
+        "imageUri": "https://cards.scryfall.io/normal/front/9/3/93ee60f7-31dd-4bc6-b71f-57a1a0d19d20.jpg?1783923059",
+        "rulings": [
+            {
+                "date": "2022-04-29",
+                "text": "If you activated the crew ability of Unlicensed Hearse before exiling any cards with its first ability, its power and toughness will be 0/0. Unless there is another effect increasing its toughness, it will be put into its owner's graveyard as a state-based action."
+            }
+        ]
+    },
+    "colorIdentityOverride": []
+}
+
 // Venom Connoisseur
 {
     "name": "Venom Connoisseur",
