@@ -8,6 +8,7 @@ import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.state.components.battlefield.TappedComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.identity.ControllerComponent
+import com.wingedsheep.engine.state.components.identity.CopyOfComponent
 import com.wingedsheep.engine.state.components.identity.LifeTotalComponent
 import com.wingedsheep.engine.state.components.identity.PlayerComponent
 import com.wingedsheep.engine.state.components.identity.TokenComponent
@@ -48,8 +49,16 @@ class Snapshotter(definitions: Iterable<CardDefinition>, private val compareToke
 
     fun canonical(name: String): String = frontOf[name] ?: name
 
-    fun name(state: GameState, id: EntityId): String? =
-        state.getEntity(id)?.get<CardComponent>()?.name?.let(::canonical)
+    /**
+     * The card's name as 17Lands logs it: the front face, and for a copy (Omni-Changeling entering
+     * as a copy of another creature) the printed card, not the one it copies.
+     */
+    fun name(state: GameState, id: EntityId): String? {
+        val e = state.getEntity(id) ?: return null
+        val copy = e.get<CopyOfComponent>()
+        val printed = copy?.let { it.originalCardComponent?.name ?: it.originalCardDefinitionId }
+        return (printed ?: e.get<CardComponent>()?.name)?.let(::canonical)
+    }
 
     fun take(state: GameState, seats: Seats): Snapshot {
         val sides = listOf("user", "oppo")
@@ -86,7 +95,7 @@ class Snapshotter(definitions: Iterable<CardDefinition>, private val compareToke
 
     /**
      * What the snapshot cannot see about the battlefield: which non-land permanents are tapped,
-     * what each aura or equipment is attached to, counters, and the choices made as a permanent was
+     * what each aura or equipment is attached to, what a copy copies, counters, and the choices made as a permanent was
      * cast or entered (a chosen colour decides what mana a land makes). Two lines that both match a
      * snapshot but differ here (an aura on the wrong creature) diverge only turns later, so the
      * beam keeps one of each ([Reconstructor]). Tapped lands are left out: they untap next turn and
@@ -100,6 +109,7 @@ class Snapshotter(definitions: Iterable<CardDefinition>, private val compareToke
                 buildString {
                     append(side).append(':').append(name(state, id))
                     if (!land && e?.has<TappedComponent>() == true) append(" tapped")
+                    e?.get<CopyOfComponent>()?.let { append(" copying ").append(e.get<CardComponent>()?.name) }
                     e?.get<AttachedToComponent>()?.let { a ->
                         append(" on ").append(name(state, a.targetId))
                         state.getEntity(a.targetId)?.get<ControllerComponent>()?.let { append('/').append(seats.sideOf(it.playerId)) }
