@@ -253,6 +253,14 @@ class Reconstructor(
         val out = mutableListOf<Node>()
         var pass: PassPriority? = null
         fun skip(la: LegalAction, why: String) = notes?.add("  - ${la.description} [${la.actionType}]: $why")
+        // untapped permanents with a mana ability, lands first
+        val manaSources = legal.filter { it.isManaAbility }.mapNotNull { (it.action as? ActivateAbility)?.sourceId }
+            .distinct().filter { s.getEntity(it)?.has<TappedComponent>() != true }
+            .sortedBy { if (s.projectedState.hasType(it, "LAND")) 0 else 1 }
+        // mana abilities that sacrifice their source (Treasure), which no payment strategy uses
+        val sacrificeMana = legal.filter { it.isManaAbility && it.action is ActivateAbility && "Sacrifice" in it.description }
+            .distinctBy { snapshotter.name(s, (it.action as ActivateAbility).sourceId) + it.description }
+            .flatMap { la -> List(legal.count { it.description == la.description && it.isManaAbility }) { la } }
         // Copies of a card in hand are interchangeable: try one land drop or cast per name and mode.
         val hand = s.getHand(player).toSet()
         val tried = mutableSetOf<String>()
@@ -281,8 +289,10 @@ class Reconstructor(
                             val more = after.spells[side].orEmpty().isNotEmpty()
                             val variants = withTargets(s, la, player)
                                 .flatMap { withCostPayments(la, it) }
-                                .flatMap { withManaChoices(s, player, la, it, more) }
-                            tryAll(s, la, variants, notes).forEach { out += Node(it, after) }
+                                .flatMap { withManaChoices(s, la, it, more, manaSources) }
+                            val taken = tryAll(s, la, variants, notes)
+                            taken.forEach { out += Node(it, after) }
+                            if (taken.isEmpty()) floatThenCast(s, la, variants.first(), sacrificeMana, notes).forEach { out += Node(it, after) }
                         }
                     }
                 }
@@ -333,6 +343,43 @@ class Reconstructor(
                 tryAll(s, la, listOf(la.action), notes).forEach { out += Node(it, plan) }
             }
         }
+        return out
+    }
+
+    /**
+     * Casts [cast] after activating 1..N of the [floats] (Treasures) for mana. The engine's mana
+     * solver never sacrifices a source, so autopay and explicit payments cannot use a Treasure,
+     * while the enumerator counts it towards what is affordable; a player floats the mana first.
+     * Each Treasure makes one of the cost's colours.
+     */
+    private fun floatThenCast(
+        s: GameState, la: LegalAction, cast: GameAction, floats: List<LegalAction>, notes: MutableList<String>?,
+    ): List<GameState> {
+        if (floats.isEmpty()) return emptyList()
+        val cost = la.manaCostString?.let { runCatching { ManaCost.parse(it) }.getOrNull() } ?: return emptyList()
+        val colours = cost.symbols.filterIsInstance<ManaSymbol.Colored>().map { it.color }.distinct()
+            .ifEmpty { listOfNotNull(floats.first().availableManaColors?.firstOrNull()) }
+        val out = mutableListOf<GameState>()
+        val refusals = mutableListOf<String>()
+        for (k in 1..minOf(floats.size, cost.cmc)) {
+            var picks: List<List<com.wingedsheep.sdk.core.Color?>> = listOf(emptyList())
+            repeat(k) { picks = picks.flatMap { p -> colours.ifEmpty { listOf(null) }.map { p + it } }.take(MAX_TARGET_COMBOS) }
+            for (pick in picks) {
+                var st: GameState? = s
+                // the same Treasure's ability re-enumerated each time: it names the next untapped one
+                for (c in pick) {
+                    val cur = st ?: break
+                    val next = enumerator.enumerate(cur, la.action.playerId, EnumerationMode.ACTIONS_ONLY)
+                        .firstOrNull { it.isManaAbility && it.description == floats.first().description }
+                    st = next?.let { apply(cur, (it.action as ActivateAbility).copy(manaColorChoice = c)) }
+                }
+                val done = st?.let { apply(it, cast) }
+                if (done != null) out += done else refusals += lastError ?: "?"
+            }
+            if (out.isNotEmpty()) break
+        }
+        notes?.add("  + (float Treasure mana) ${la.description}: ${out.size} taken" +
+            if (out.isEmpty()) "; refused: ${refusals.distinct().take(3)}" else "")
         return out
     }
 
@@ -422,12 +469,13 @@ class Reconstructor(
 
     /**
      * Ways to pay the mana: autopay first, then convoke with 1..N creatures (which creatures tap
-     * decides who can block next turn), then — when [more] casts follow this half-turn — explicit
-     * sets of lands, because autopay can tap the colour a later spell needed. One option per
-     * distinct set of names.
+     * decides who can block next turn), then explicit sets of [sources] (lands first) — when [more]
+     * casts follow this half-turn, because autopay can tap the colour a later spell needed, and
+     * whenever a non-land source is at hand, because autopay never sacrifices a Treasure (while the
+     * enumerator counts it as affordable). One option per distinct set of names.
      */
     private fun withManaChoices(
-        s: GameState, player: EntityId, la: LegalAction, action: GameAction, more: Boolean,
+        s: GameState, la: LegalAction, action: GameAction, more: Boolean, sources: List<EntityId>,
     ): List<GameAction> {
         val cast = action as? CastSpell ?: return listOf(action)
         val cost = la.manaCostString?.let { runCatching { ManaCost.parse(it) }.getOrNull() }
@@ -456,14 +504,10 @@ class Reconstructor(
                 }
             }
         }
-        if (more && cost != null && cost.cmc > 0) {
-            val lands = s.controlledBattlefield(player).filter {
-                s.projectedState.hasType(it, "LAND") && s.getEntity(it)?.has<TappedComponent>() != true
-            }
-            if (cost.cmc <= lands.size) {
-                for (pick in distinctByName(s, subsets(lands, cost.cmc, cost.cmc, cap = MAX_PAYMENT_OPTIONS * 4))) {
-                    out += cast.copy(paymentStrategy = PaymentStrategy.Explicit(pick))
-                }
+        val nonLand = sources.any { !s.projectedState.hasType(it, "LAND") }
+        if ((more || nonLand) && cost != null && cost.cmc in 1..sources.size) {
+            for (pick in distinctByName(s, subsets(sources, cost.cmc, cost.cmc, cap = MAX_PAYMENT_OPTIONS * 4))) {
+                out += cast.copy(paymentStrategy = PaymentStrategy.Explicit(pick))
             }
         }
         return out.take(MAX_PAYMENT_OPTIONS)
