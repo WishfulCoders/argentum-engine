@@ -144,9 +144,18 @@ class Snapshotter(definitions: Iterable<CardDefinition>, private val compareToke
             }
         }
 
-    /** A token, or a face-down permanent (manifest, cloak, disguise), which 17Lands logs as a token. */
-    fun isToken(state: GameState, id: EntityId): Boolean =
-        state.getEntity(id)?.let { it.has<TokenComponent>() || it.has<FaceDownComponent>() } == true
+    /**
+     * A token, or an opponent's face-down permanent (manifest, cloak, disguise), which 17Lands logs
+     * as a "[Face-Down Card]" token. The user's own face-down cards are logged by name.
+     */
+    fun isToken(state: GameState, id: EntityId): Boolean {
+        val e = state.getEntity(id) ?: return false
+        return e.has<TokenComponent>() || isOpponentsFaceDown(state, id)
+    }
+
+    private fun isOpponentsFaceDown(state: GameState, id: EntityId): Boolean =
+        state.getEntity(id)?.has<FaceDownComponent>() == true &&
+            state.projectedState.getController(id)?.let { state.getEntity(it)?.get<PlayerComponent>()?.name } == "oppo"
 
     /**
      * Whether entity [id] is the card the replay calls [key]. Combat lists name tokens as
@@ -155,7 +164,7 @@ class Snapshotter(definitions: Iterable<CardDefinition>, private val compareToke
     fun matches(state: GameState, id: EntityId, key: String): Boolean {
         val name = name(state, id) ?: return false
         return if (key.startsWith(TOKEN_PREFIX)) {
-            if (state.getEntity(id)?.has<FaceDownComponent>() == true) key.removePrefix(TOKEN_PREFIX) in FACE_DOWN
+            if (isOpponentsFaceDown(state, id)) key.removePrefix(TOKEN_PREFIX) in FACE_DOWN
             else isToken(state, id) && name.removeSuffix(" Token") == key.removePrefix(TOKEN_PREFIX)
         } else {
             !isToken(state, id) && name == key

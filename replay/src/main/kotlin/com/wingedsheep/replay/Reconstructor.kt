@@ -129,21 +129,24 @@ class Reconstructor(
             val groups = linkedMapOf<List<String>, MutableList<ArrayDeque<Node>>>()
             var starts = 0
             for (start in beam) {
-                val revealed = revealOppo(start, seats, ht)
-                if (revealed == null) {
+                val written = revealOppo(start, seats, ht)
+                if (written == null) {
                     search.near(listOf("could not write the opponent's cards into hidden slots: $lastError"))
                     continue
                 }
-                val ready = if (ht.active == "user") {
-                    restackUser(revealed, seats, ht, laterDraws(spec, i))
-                        ?: revealed.also { search.tracer?.line("restack failed: $lastError") }
-                } else revealed
-                search.tracer?.line("start ${starts++}: user hand ${ready.getHand(seats.user).map { snapshotter.name(ready, it) }}, " +
-                    "oppo hand ${ready.getHand(seats.oppo).map { snapshotter.name(ready, it) }}, " +
-                    "user library top ${ready.getLibrary(seats.user).take(3).map { snapshotter.name(ready, it) }}")
-                search.tracer?.line("       unseen: ${snapshotter.hidden(ready, seats)}")
-                groups.getOrPut(snapshotter.hidden(ready, seats)) { mutableListOf() } +=
-                    ArrayDeque(listOf(Node(ready, Plan.of(ht))))
+                for ((v, revealed) in oppoLibraryVariants(written, seats, ht).withIndex()) {
+                    val ready = if (ht.active == "user") {
+                        restackUser(revealed, seats, ht, laterDraws(spec, i))
+                            ?: revealed.also { search.tracer?.line("restack failed: $lastError") }
+                    } else revealed
+                    search.tracer?.line("start ${starts++}: user hand ${ready.getHand(seats.user).map { snapshotter.name(ready, it) }}, " +
+                        "oppo hand ${ready.getHand(seats.oppo).map { snapshotter.name(ready, it) }}, " +
+                        "user library top ${ready.getLibrary(seats.user).take(3).map { snapshotter.name(ready, it) }}")
+                    search.tracer?.line("       unseen: ${snapshotter.hidden(ready, seats)}")
+                    // a library variant is a group of its own: its search must not wait on the other's
+                    groups.getOrPut(snapshotter.hidden(ready, seats) + "library variant $v") { mutableListOf() } +=
+                        ArrayDeque(listOf(Node(ready, Plan.of(ht))))
+                }
             }
             // Groups of start states that differ in what the snapshot cannot see (a land's colour,
             // an aura's host) advance in turn, a slice of nodes each, so that one with many
@@ -654,7 +657,7 @@ class Reconstructor(
             is ChooseNumberDecision ->
                 (d.minValue..minOf(d.maxValue, d.minValue + MAX_NUMBER_OPTIONS)).map { NumberChosenResponse(d.id, it) }
             is ChooseColorDecision -> d.availableColors.map { ColorChosenResponse(d.id, it) }
-            is ChooseOptionDecision -> d.options.indices.map { OptionChosenResponse(d.id, it) }
+            is ChooseOptionDecision -> optionOrder(s, d, node.plan).map { OptionChosenResponse(d.id, it) }
             is ChooseTargetsDecision -> targetResponses(d)
             is SelectCardsDecision ->
                 if (!d.ordered && d.options.size <= MAX_SELECT_OPTIONS && d.maxSelections <= 2) {
@@ -832,6 +835,55 @@ class Reconstructor(
         return null
     }
 
+    /**
+     * The opponent's unseen library is basic lands, so an effect of theirs that reads their top card
+     * always finds a land: an explore hands them the land, Elven Farsight's "if it's a creature
+     * card, draw a card" never draws. When one of their cards this half-turn, or one of their
+     * permanents (a Map token included), explores or reveals the top of their library, the
+     * half-turn is also searched with the top [LIBRARY_VARIANT_DEPTH] unseen cards a vanilla creature
+     * instead (the draw, then a scry's window before Elven Farsight reveals).
+     */
+    private fun oppoLibraryVariants(state: GameState, seats: Seats, ht: HalfTurnSpec): List<GameState> {
+        val filler = nonlandFiller ?: return listOf(state)
+        val oppoCards = ht.instants["oppo"].orEmpty() + ht.flash["oppo"].orEmpty() +
+            (if (ht.active == "oppo") ht.creatures + ht.noncreatures else emptyList()) +
+            state.controlledBattlefield(seats.oppo).mapNotNull { snapshotter.name(state, it) }
+        if (oppoCards.none { name -> def(name)?.oracleText?.let { READS_LIBRARY_TOP.containsMatchIn(it) } == true }) {
+            return listOf(state)
+        }
+        val slots = state.getLibrary(seats.oppo)
+            .filter { state.getEntity(it)?.has<RevealedToComponent>() != true && snapshotter.name(state, it) in BASICS.values }
+            .take(LIBRARY_VARIANT_DEPTH)
+        val variant = materialize(state, slots.associateWith { filler }) ?: return listOf(state)
+        return listOf(state, variant)
+    }
+
+    /** A vanilla creature card, to stand in for an unseen nonland (and creature) card of the opponent's. */
+    private val nonlandFiller: String? by lazy {
+        registry.allCardNames().sorted().firstOrNull { n ->
+            registry.getCard(n)?.let { it.creatureStats != null && it.oracleText.isBlank() && it.backFace == null } == true
+        }
+    }
+
+    /**
+     * The options of [d] to try: all of a short list; of a long one (a creature type to note or
+     * name), those that are a subtype of a card the chooser still casts this half-turn, holds or
+     * controls, most likely first, then the rest up to [MAX_SELECT_OPTIONS].
+     */
+    private fun optionOrder(s: GameState, d: ChooseOptionDecision, plan: Plan): List<Int> {
+        if (d.options.size <= MAX_SELECT_OPTIONS) return d.options.indices.toList()
+        val weight = mutableMapOf<String, Int>()
+        fun count(names: Iterable<String>, w: Int) = names.forEach { n ->
+            def(n)?.typeLine?.subtypes?.forEach { weight.merge(it.value, w, Int::plus) }
+        }
+        count(plan.spells[Seats.of(s).sideOf(d.playerId)].orEmpty().keys, 3)
+        count(s.getHand(d.playerId).mapNotNull { snapshotter.name(s, it) }, 1)
+        count(s.controlledBattlefield(d.playerId).mapNotNull { snapshotter.name(s, it) }, 1)
+        val ranked = d.options.indices.filter { weight.containsKey(d.options[it]) }
+            .sortedByDescending { weight.getValue(d.options[it]) }
+        return (ranked + d.options.indices.filterNot { it in ranked }).take(maxOf(ranked.size, MAX_SELECT_OPTIONS))
+    }
+
     /** The creature type a card's behold cost asks for ("behold a Goblin"), or null. */
     private fun beholdType(name: String): String? {
         val def = def(name) ?: return null
@@ -888,6 +940,8 @@ class Reconstructor(
         const val SLICE_NODES = 256
         const val MAX_SLOT_RETRIES = 8
         private val BEHOLD = Regex("""\bbehold an? ([A-Z][a-z]+)""")
+        const val LIBRARY_VARIANT_DEPTH = 4
+        private val READS_LIBRARY_TOP = Regex("""\bexplores?\b|\btop card of your library\b""")
         const val MAX_PAYMENT_OPTIONS = 12
         /** Creature sets enumerated for a crew or saddle cost before the minimal ones are kept. */
         const val MAX_TAP_SETS = 512
