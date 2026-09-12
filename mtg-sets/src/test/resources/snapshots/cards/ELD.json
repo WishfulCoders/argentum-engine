@@ -867,6 +867,177 @@
     "colorIdentityOverride": []
 }
 
+// Oko, Thief of Crowns
+{
+    "name": "Oko, Thief of Crowns",
+    "manaCost": "{1}{G}{U}",
+    "typeLine": "Legendary Planeswalker — Oko",
+    "oracleText": "+2: Create a Food token. (It's an artifact with \"{2}, {T}, Sacrifice this token: You gain 3 life.\")\n+1: Target artifact or creature loses all abilities and becomes a green Elk creature with base power and toughness 3/3.\n−5: Exchange control of target artifact or creature you control and target creature an opponent controls with power 3 or less.",
+    "script": {
+        "activatedAbilities": [
+            {
+                "id": "ability_1",
+                "cost": {
+                    "type": "CostLoyalty",
+                    "change": 2
+                },
+                "effect": {
+                    "type": "CreatePredefinedToken",
+                    "tokenType": "Food"
+                },
+                "timing": "SorcerySpeed",
+                "isPlaneswalkerAbility": true
+            },
+            {
+                "id": "ability_2",
+                "cost": {
+                    "type": "CostLoyalty",
+                    "change": 1
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "RemoveAllAbilities",
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "target artifact or creature"
+                            },
+                            "duration": "Permanent"
+                        },
+                        {
+                            "type": "BecomeCreature",
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "target artifact or creature"
+                            },
+                            "power": {
+                                "type": "Fixed",
+                                "amount": 3
+                            },
+                            "toughness": {
+                                "type": "Fixed",
+                                "amount": 3
+                            },
+                            "creatureTypes": [
+                                "Elk"
+                            ],
+                            "removeTypes": [
+                                "ARTIFACT",
+                                "ENCHANTMENT",
+                                "LAND",
+                                "PLANESWALKER",
+                                "BATTLE",
+                                "KINDRED"
+                            ],
+                            "colors": [
+                                "GREEN"
+                            ],
+                            "duration": "Permanent"
+                        }
+                    ]
+                },
+                "targetRequirements": [
+                    {
+                        "type": "TargetObject",
+                        "filter": {
+                            "baseFilter": "creature|artifact"
+                        },
+                        "id": "target artifact or creature"
+                    }
+                ],
+                "timing": "SorcerySpeed",
+                "isPlaneswalkerAbility": true
+            },
+            {
+                "id": "ability_3",
+                "cost": {
+                    "type": "CostLoyalty",
+                    "change": -5
+                },
+                "effect": {
+                    "type": "ExchangeControl",
+                    "target1": {
+                        "type": "BoundVariable",
+                        "name": "target artifact or creature you control"
+                    },
+                    "target2": {
+                        "type": "BoundVariable",
+                        "name": "target creature an opponent controls with power 3 or less"
+                    }
+                },
+                "targetRequirements": [
+                    {
+                        "type": "TargetObject",
+                        "filter": {
+                            "baseFilter": "creature|artifact ctrl:you"
+                        },
+                        "id": "target artifact or creature you control"
+                    },
+                    {
+                        "type": "TargetObject",
+                        "filter": {
+                            "baseFilter": "creature pow<=3 ctrl:opponent"
+                        },
+                        "id": "target creature an opponent controls with power 3 or less"
+                    }
+                ],
+                "timing": "SorcerySpeed",
+                "isPlaneswalkerAbility": true
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "197",
+        "rarity": "MYTHIC",
+        "artist": "Yongjae Choi",
+        "imageUri": "https://cards.scryfall.io/normal/front/3/4/3462a3d0-5552-49fa-9eb7-100960c55891.jpg?1783932594",
+        "rulings": [
+            {
+                "date": "2019-10-04",
+                "text": "Oko's second ability overwrites all previous effects that set the creature's base power and toughness to specific values. Any power- or toughness-setting effects that start to apply after Oko's second ability resolves will overwrite this effect."
+            },
+            {
+                "date": "2019-10-04",
+                "text": "Effects that modify a creature's power and/or toughness, such as the effect of Festive Funeral, will apply to the creature no matter when they started to take effect. The same is true for any counters that change its power and/or toughness."
+            },
+            {
+                "date": "2019-10-04",
+                "text": "Oko's second ability overwrites all colors and creature types the affected creature has. It's just a green Elk. The creature keeps any supertypes (such as legendary) it has, but loses any other card types it has (such as artifact)."
+            },
+            {
+                "date": "2019-10-04",
+                "text": "The effects of Oko's second ability lasts indefinitely. It doesn't expire during the cleanup step or if you or Oko leave the game."
+            },
+            {
+                "date": "2019-10-04",
+                "text": "If either of the target permanents is an illegal target when Oko's last ability resolves, the exchange won't happen."
+            },
+            {
+                "date": "2019-10-04",
+                "text": "Gaining control of a permanent doesn't cause you to gain control of any Auras or Equipment attached to it. Gaining control of an Equipment doesn't cause it to become unattached, although its new controller may activate its equip abilities during their main phase."
+            },
+            {
+                "date": "2019-10-04",
+                "text": "Oko's second ability may target a permanent that is only temporarily an artifact or a creature, such as Oko, the Trickster. If this happens, the effect causes that permanent to remain a green Elk creature even after the temporary effect expires."
+            },
+            {
+                "date": "2019-10-04",
+                "text": "The effects of Oko's third ability lasts indefinitely. It doesn't expire during the cleanup step or if the creature you take has its power raised above 3 later."
+            },
+            {
+                "date": "2019-10-04",
+                "text": "If the affected creature gains an ability after Oko's second ability resolves, it will keep that ability."
+            }
+        ]
+    },
+    "startingLoyalty": 4,
+    "colorIdentityOverride": [
+        "GREEN",
+        "BLUE"
+    ]
+}
+
 // Raging Redcap
 {
     "name": "Raging Redcap",
