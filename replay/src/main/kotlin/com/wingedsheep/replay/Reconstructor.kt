@@ -158,13 +158,21 @@ class Reconstructor(
         // the previous half-turn's matching end states left out of the beam
         var spare = emptyList<GameState>()
         for (i in spec.halfTurns.indices) {
-            var search = searchStep(spec, i, beam, seats)
+            var search = searchStep(spec, i, beam, seats, withDrawOrders = false)
             nodeCounts += search.nodes
+            val ht = spec.halfTurns[i]
+            if (search.ends.isEmpty() && ht.active == "user" && ht.drawn.distinct().size > 1) {
+                // the recorded draw order first; the other orders only when it fails
+                tracer?.takeIf { it.halfTurn == i }?.line("### retry with the half-turn's draws in other orders")
+                val retry = searchStep(spec, i, beam, seats, withDrawOrders = true)
+                nodeCounts[nodeCounts.lastIndex] += retry.nodes
+                if (retry.ends.isNotEmpty()) search = retry
+            }
             if (search.ends.isEmpty() && spare.isNotEmpty()) {
                 // Backtrack one half-turn: the beam kept the wrong lines of the previous one (an
                 // unseen choice diverged here), so the half-turn is searched again from the rest.
                 tracer?.takeIf { it.halfTurn == i }?.line("### retry from the previous half-turn's other ${spare.size} matching states")
-                val retry = searchStep(spec, i, spare, seats)
+                val retry = searchStep(spec, i, spare, seats, withDrawOrders = true)
                 nodeCounts[nodeCounts.lastIndex] += retry.nodes
                 if (retry.ends.isNotEmpty()) search = retry
             }
@@ -180,8 +188,11 @@ class Reconstructor(
         return result("reproduced", spec.halfTurns.size)
     }
 
-    /** Searches half-turn [i] from the [beam]'s states; the [Search] holds the matching end states. */
-    private fun searchStep(spec: GameSpec, i: Int, beam: List<GameState>, seats: Seats): Search {
+    /**
+     * Searches half-turn [i] from the [beam]'s states; the [Search] holds the matching end states.
+     * With [withDrawOrders], also from each other order of the half-turn's draws ([drawOrders]).
+     */
+    private fun searchStep(spec: GameSpec, i: Int, beam: List<GameState>, seats: Seats, withDrawOrders: Boolean): Search {
         val ht = spec.halfTurns[i]
         val search = Search()
         search.outside = spec.halfTurns.drop(i).take(3).flatMap { it.outsideHand }
@@ -215,7 +226,8 @@ class Reconstructor(
                         ?: revealed.also { search.tracer?.line("restack failed: $lastError") }
                     listOf(restacked) + if (ht.active == "user") {
                         listOfNotNull(userLibraryVariant(restacked, seats, ht, laterDraws(spec, i))) +
-                            drawOrders(ht).mapNotNull { restackUser(revealed, seats, it, laterDraws(spec, i)) }
+                            (if (withDrawOrders) drawOrders(ht) else emptyList())
+                                .mapNotNull { restackUser(revealed, seats, it, laterDraws(spec, i)) }
                                 .filter { it.getLibrary(seats.user) != restacked.getLibrary(seats.user) }
                     } else emptyList()
                 } else listOf(revealed)
