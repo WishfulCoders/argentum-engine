@@ -23,7 +23,6 @@ import com.wingedsheep.sdk.core.ManaSymbol
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
-import com.wingedsheep.sdk.scripting.AdditionalCost
 import com.wingedsheep.sdk.scripting.AdditionalCostPayment
 import com.wingedsheep.sdk.scripting.AlternativePaymentChoice
 import com.wingedsheep.sdk.scripting.ConvokePayment
@@ -129,6 +128,8 @@ class Reconstructor(
                     continue
                 }
                 val ready = if (ht.active == "user") restackUser(revealed, seats, ht) ?: revealed else revealed
+                search.tracer?.line("start: oppo hand ${ready.getHand(seats.oppo).map { snapshotter.name(ready, it) }}, " +
+                    "user library top ${ready.getLibrary(seats.user).take(3).map { snapshotter.name(ready, it) }}")
                 searchHalfTurn(ready, ht, i + 1, seats, search)
             }
             nodeCounts += search.nodes
@@ -227,8 +228,13 @@ class Reconstructor(
         val out = mutableListOf<Node>()
         var pass: PassPriority? = null
         fun skip(la: LegalAction, why: String) = notes?.add("  - ${la.description} [${la.actionType}]: $why")
+        // Copies of a card in hand are interchangeable: try one land drop or cast per name and mode.
+        val hand = s.getHand(player).toSet()
+        val tried = mutableSetOf<String>()
         for (la in legal) {
             val action = la.action
+            val card = (action as? PlayLand)?.cardId ?: (action as? CastSpell)?.cardId
+            if (card != null && card in hand && !tried.add("${snapshotter.name(s, card)}|${la.description}")) continue
             when {
                 action is PassPriority -> pass = action
                 action is PlayLand -> {
@@ -601,8 +607,11 @@ class Reconstructor(
         }
         val board = state.controlledBattlefield(seats.oppo).mapNotNull { snapshotter.name(state, it) }
         val held = free.mapNotNull { snapshotter.name(state, it) }
-        for (type in casts.mapNotNull(::beholdType).distinct()) {
-            if ((board + held + casts).none { hasCreatureType(it, type) }) {
+        for ((i, card) in casts.withIndex()) {
+            val type = beholdType(card) ?: continue
+            // the spell cannot behold itself, but another card cast this turn may still be in hand
+            val others = casts.filterIndexed { j, _ -> j != i }
+            if ((board + held + others).none { hasCreatureType(it, type) }) {
                 beholdFiller(type)?.let { needed[it] = (needed[it] ?: 0) + 1 }
             }
         }
@@ -620,14 +629,8 @@ class Reconstructor(
 
     /** The creature type a card's behold cost asks for ("behold a Goblin"), or null. */
     private fun beholdType(name: String): String? {
-        fun find(c: AdditionalCost): AdditionalCost.Behold? = when (c) {
-            is AdditionalCost.Behold -> c
-            is AdditionalCost.OrPay -> find(c.cost)
-            is AdditionalCost.Composite -> c.steps.firstNotNullOfOrNull(::find)
-            else -> null
-        }
-        val behold = registry.getCard(name)?.script?.additionalCosts?.firstNotNullOfOrNull(::find) ?: return null
-        return behold.filter.description.split(' ').lastOrNull { it.firstOrNull()?.isUpperCase() == true }
+        val def = registry.getCard(name) ?: return null
+        return BEHOLD.find(def.oracleText)?.groupValues?.get(1)
     }
 
     private fun hasCreatureType(name: String, type: String): Boolean {
@@ -635,12 +638,12 @@ class Reconstructor(
         return def.typeLine.subtypes.any { it.value == type } || Keyword.CHANGELING in def.keywords
     }
 
-    /** An ECL creature of [type] to stand in for the card an opponent beheld from hand. */
+    /** A creature of [type] to stand in for the card an opponent beheld from hand. */
     private val beholdFillers = mutableMapOf<String, String?>()
     private fun beholdFiller(type: String): String? = beholdFillers.getOrPut(type) {
         registry.allCardNames().sorted().firstOrNull { n ->
             val def = registry.getCard(n)
-            def != null && def.setCode == "ECL" && def.typeLine.subtypes.any { it.value == type } &&
+            def != null && def.typeLine.subtypes.any { it.value == type } &&
                 def.creatureStats != null && def.backFace == null
         }
     }
@@ -676,6 +679,7 @@ class Reconstructor(
         /** Matching end states collected per half-turn before the beam is picked from them. */
         const val MAX_ENDS = 128
         const val MAX_SLOT_RETRIES = 8
+        private val BEHOLD = Regex("""\bbehold an? ([A-Z][a-z]+)""")
         const val MAX_PAYMENT_OPTIONS = 12
         val BASICS = mapOf('W' to "Plains", 'U' to "Island", 'B' to "Swamp", 'R' to "Mountain", 'G' to "Forest")
 
