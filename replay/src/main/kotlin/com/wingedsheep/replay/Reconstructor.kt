@@ -521,7 +521,7 @@ class Reconstructor(
         val pool = la.tapForPowerCreatures.orEmpty().filter { it.power > 0 }
         return subsets(pool, 1, minOf(need, pool.size), cap = MAX_TAP_SETS)
             .filter { p -> p.sumOf { it.power }.let { sum -> sum >= need && p.none { sum - it.power >= need } } }
-            .distinctBy { p -> p.map { snapshotter.name(s, it.entityId) }.sorted() }
+            .distinctBy { p -> p.map { snapshotter.name(s, it.entityId) ?: "" }.sorted() }
             .take(MAX_TARGET_COMBOS)
             .map { p ->
                 val ids = p.map { it.entityId }
