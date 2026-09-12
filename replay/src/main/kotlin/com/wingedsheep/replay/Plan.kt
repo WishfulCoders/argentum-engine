@@ -68,9 +68,13 @@ private fun Map<String, Int>.dec(name: String): Map<String, Int> {
 /**
  * A recorded activation the half-turn must use. One logged without a cost may be a loyalty ability
  * but also a saga chapter or a spell's mode, which the search does not activate, so it is allowed
- * rather than required.
+ * rather than required. Activated keywords (Equip {1}, Crew 2, Station, cycling) are required.
  */
-private fun required(recorded: String): Boolean = ": " in recorded || "cycling" in recorded.lowercase()
+private fun required(recorded: String): Boolean =
+    ": " in recorded || "cycling" in recorded.lowercase() || KEYWORD.containsMatchIn(recorded)
+
+/** Activated abilities 17Lands logs by keyword alone; the export keeps them ("Crew 2", "Station"). */
+private val KEYWORD = Regex("""^(?:[^—]+ — )?(?:Equip|Crew|Saddle|Station)\b""")
 
 /**
  * Whether the engine's description of an activated ability, [engine] ("{1}{W}, Blight 1, Sacrifice
@@ -85,6 +89,8 @@ fun matchesActivation(engine: String, recorded: String): Boolean {
     val e = norm(engine)
     val r = norm(recorded)
     fun words(t: String, n: Int) = t.split(' ').take(n)
+    // the engine spells Station out: "Tap another untapped creature you control: Put charge counters ..."
+    if (r == "station") return "charge counters" in e
     if ("cycling" in words(e, 2).joinToString(" ") || "cycling" in words(r, 2).joinToString(" ")) {
         return words(e, 2) == words(r, 2)
     }

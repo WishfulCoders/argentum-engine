@@ -104,7 +104,7 @@ class Reconstructor(
             GameInitializer(registry).initializeGame(
                 GameConfig(
                     players = listOf(
-                        PlayerConfig("user", Deck(spec.userDeck)),
+                        PlayerConfig("user", Deck(spec.userDeck.map(snapshotter::engineName))),
                         PlayerConfig("oppo", Deck(oppoDeck(spec))),
                     ),
                     skipMulligans = true,
@@ -309,6 +309,13 @@ class Reconstructor(
                         }
                     }
                 }
+                action is CrewVehicle || action is SaddleMount -> {
+                    // 17Lands logs the keyword with its number ("Crew 2"), not the Vehicle
+                    val keyword = if (action is CrewVehicle) "Crew" else "Saddle"
+                    val i = plan.activation(side, "$keyword ${la.tapForPowerRequired}")
+                    if (i < 0) skip(la, "not in the plan")
+                    else tryAll(s, la, tapForPower(s, la), notes).forEach { out += Node(it, plan.activate(side, i)) }
+                }
                 la.actionType == "DeclareAttackers" -> when {
                     !active || plan.attacksDone -> skip(la, "attacks already declared or not the active player")
                     else -> {
@@ -432,7 +439,7 @@ class Reconstructor(
 
     /** The colours in [name]'s mana cost, hybrid halves included. */
     private fun spellColours(name: String): List<com.wingedsheep.sdk.core.Color> =
-        registry.getCard(name)?.manaCost?.symbols.orEmpty().flatMap {
+        def(name)?.manaCost?.symbols.orEmpty().flatMap {
             when (it) {
                 is ManaSymbol.Colored -> listOf(it.color)
                 is ManaSymbol.Hybrid -> listOf(it.color1, it.color2)
@@ -502,6 +509,28 @@ class Reconstructor(
         return payments.take(MAX_TARGET_COMBOS).map {
             if (action is CastSpell) action.copy(additionalCostPayment = it) else (action as ActivateAbility).copy(costPayment = it)
         }
+    }
+
+    /**
+     * Crew or saddle payments: the minimal sets of creatures that reach the required power (tapping
+     * more never matches a record better), one per distinct set of names. Which creatures tap
+     * decides who can still attack or block, so each is a separate line.
+     */
+    private fun tapForPower(s: GameState, la: LegalAction): List<GameAction> {
+        val need = la.tapForPowerRequired ?: return emptyList()
+        val pool = la.tapForPowerCreatures.orEmpty().filter { it.power > 0 }
+        return subsets(pool, 1, minOf(need, pool.size), cap = MAX_TAP_SETS)
+            .filter { p -> p.sumOf { it.power }.let { sum -> sum >= need && p.none { sum - it.power >= need } } }
+            .distinctBy { p -> p.map { snapshotter.name(s, it.entityId) }.sorted() }
+            .take(MAX_TARGET_COMBOS)
+            .map { p ->
+                val ids = p.map { it.entityId }
+                when (val a = la.action) {
+                    is CrewVehicle -> a.copy(crewCreatures = ids)
+                    is SaddleMount -> a.copy(saddleCreatures = ids)
+                    else -> a
+                }
+            }
     }
 
     /**
@@ -663,14 +692,16 @@ class Reconstructor(
         spec.halfTurns.drop(i + 1).filter { it.active == "user" }.flatMap { it.drawn }
 
     private fun missingCard(spec: GameSpec): String? =
-        (spec.userDeck + spec.oppoKnown).firstOrNull { !registry.hasCard(it) }
+        (spec.userDeck + spec.oppoKnown).firstOrNull { def(it) == null }
+
+    private fun def(name: String) = registry.getCard(snapshotter.engineName(name))
 
     private fun oppoDeck(spec: GameSpec): List<String> {
         val basics = spec.oppColors.mapNotNull { BASICS[it] }.ifEmpty { listOf("Plains") }
         val deck = spec.oppoKnown.toMutableList()
         var i = 0
         while (deck.size < DECK_SIZE) deck += basics[i++ % basics.size]
-        return deck
+        return deck.map(snapshotter::engineName)
     }
 
     /** Force the user's opening hand and library to the recorded hand and draw order. */
@@ -771,12 +802,12 @@ class Reconstructor(
 
     /** The creature type a card's behold cost asks for ("behold a Goblin"), or null. */
     private fun beholdType(name: String): String? {
-        val def = registry.getCard(name) ?: return null
+        val def = def(name) ?: return null
         return BEHOLD.find(def.oracleText)?.groupValues?.get(1)
     }
 
     private fun hasCreatureType(name: String, type: String): Boolean {
-        val def = registry.getCard(name) ?: return false
+        val def = def(name) ?: return false
         return def.typeLine.subtypes.any { it.value == type } || Keyword.CHANGELING in def.keywords
     }
 
@@ -792,7 +823,7 @@ class Reconstructor(
 
     private fun materialize(state: GameState, names: Map<EntityId, String>): GameState? {
         lastRefused = null
-        val request = HiddenWorldMaterializationRequest(names.mapValues { registry.requireCard(it.value) }, state.rng)
+        val request = HiddenWorldMaterializationRequest(names.mapValues { registry.requireCard(snapshotter.engineName(it.value)) }, state.rng)
         return when (val r = materializer.materialize(state, request)) {
             is HiddenWorldMaterializationResult.Materialized -> r.state
             is HiddenWorldMaterializationResult.Unsupported -> {
@@ -826,6 +857,8 @@ class Reconstructor(
         const val MAX_SLOT_RETRIES = 8
         private val BEHOLD = Regex("""\bbehold an? ([A-Z][a-z]+)""")
         const val MAX_PAYMENT_OPTIONS = 12
+        /** Creature sets enumerated for a crew or saddle cost before the minimal ones are kept. */
+        const val MAX_TAP_SETS = 512
         val BASICS = mapOf('W' to "Plains", 'U' to "Island", 'B' to "Swamp", 'R' to "Mountain", 'G' to "Forest")
 
         /** Subsets of [items] with size in [min, max], smallest first; capped. */

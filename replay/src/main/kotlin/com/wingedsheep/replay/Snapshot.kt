@@ -47,7 +47,14 @@ class Snapshotter(definitions: Iterable<CardDefinition>, private val compareToke
     private val frontOf: Map<String, String> =
         definitions.mapNotNull { d -> d.backFace?.let { it.name to d.name } }.toMap()
 
-    fun canonical(name: String): String = frontOf[name] ?: name
+    /** Split cards and Rooms are registered as "Fuss // Bother"; 17Lands names the left half. */
+    private val splitOf: Map<String, String> =
+        definitions.filter { SPLIT in it.name }.associate { it.name.substringBefore(SPLIT) to it.name }
+
+    fun canonical(name: String): String = frontOf[name] ?: name.substringBefore(SPLIT)
+
+    /** The registry's name for the card the replay calls [name]. */
+    fun engineName(name: String): String = splitOf[name] ?: name
 
     /**
      * The card's name as 17Lands logs it: the front face, and for a copy (Omni-Changeling entering
@@ -154,6 +161,7 @@ class Snapshotter(definitions: Iterable<CardDefinition>, private val compareToke
 
     companion object {
         const val TOKEN_PREFIX = "token:"
+        private const val SPLIT = " // "
 
         fun counts(names: List<String>): Map<String, Int> = names.groupingBy { it }.eachCount()
 
