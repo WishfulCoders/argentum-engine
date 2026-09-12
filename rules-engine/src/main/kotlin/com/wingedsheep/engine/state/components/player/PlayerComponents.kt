@@ -184,10 +184,15 @@ data class ManaPoolComponent(
      * emptying within combat and are handled instead by `CombatManager.endCombat`. Only ordinary
      * ([ManaExpiry.END_OF_TURN]) mana is subject to this action. (At end of turn no combat-duration
      * mana remains, so preservation is a no-op there.)
+     *
+     * **Turn-duration mana** ([ManaExpiry.UNTIL_END_OF_TURN], Brazen Collector) is preserved the same
+     * way at every boundary except the one that ends the turn ([endOfTurn]: the cleanup step ending).
      */
-    fun emptyAtBoundary(convertToRed: Boolean, retain: Set<Color>): ManaPoolComponent {
-        val preserved = restrictedMana.filter { it.expiry == ManaExpiry.END_OF_COMBAT }
-        val lostRestricted = restrictedMana.filter { it.expiry != ManaExpiry.END_OF_COMBAT }
+    fun emptyAtBoundary(convertToRed: Boolean, retain: Set<Color>, endOfTurn: Boolean = false): ManaPoolComponent {
+        fun kept(e: RestrictedManaEntry) = e.expiry == ManaExpiry.END_OF_COMBAT ||
+            (e.expiry == ManaExpiry.UNTIL_END_OF_TURN && !endOfTurn)
+        val preserved = restrictedMana.filter(::kept)
+        val lostRestricted = restrictedMana.filterNot(::kept)
         return when {
             convertToRed -> {
                 // Count the would-be-lost mana the way `total` does (provenance tags are markers on

@@ -92,6 +92,7 @@ import com.wingedsheep.engine.state.components.player.SkippedTurnPartsComponent
 import com.wingedsheep.engine.handlers.ConditionEvaluator
 import com.wingedsheep.engine.handlers.DynamicAmountEvaluator
 import com.wingedsheep.engine.handlers.EffectContext
+import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.DamagePersistsThroughCleanup
@@ -488,7 +489,9 @@ class CleanupPhaseManager(
                     container.with(
                         manaPool.emptyAtBoundary(
                             convertToRed = playerId in convertToRedPlayers,
-                            retain = retained
+                            retain = retained,
+                            // the cleanup step ending ends the turn: turn-duration mana goes too
+                            endOfTurn = state.step == Step.CLEANUP
                         )
                     )
                 } else {

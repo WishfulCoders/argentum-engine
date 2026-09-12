@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.effects.ManaExpiry
 
 /**
  * Brazen Collector
@@ -32,7 +33,7 @@ val BrazenCollector = card("Brazen Collector") {
 
     triggeredAbility {
         trigger = Triggers.Attacks
-        effect = Effects.AddMana(Color.RED, 1)
+        effect = Effects.AddMana(Color.RED, 1, expiry = ManaExpiry.UNTIL_END_OF_TURN)
     }
 
     metadata {

@@ -20,8 +20,9 @@ import com.wingedsheep.sdk.scripting.references.Player
  * combination of {R} and/or {G}. Until end of turn, you don't lose this mana as
  * steps and phases end.
  *
- * Note: The "don't lose this mana" clause is effectively a no-op in this engine
- * since mana pools are only emptied at end of turn, not between steps/phases.
+ * Not modelled: the "don't lose this mana" clause. Pools empty as each step and phase ends, and
+ * `AddDynamicMana` has no `ManaExpiry` yet (`AddMana` takes `UNTIL_END_OF_TURN`), so mana left
+ * over after the attack trigger is lost when the declare-attackers step ends.
  * The mana amount equals the number of attacking creatures you control at the time
  * the triggered ability resolves.
  */
