@@ -660,6 +660,83 @@
     ]
 }
 
+// Dark Tutelage
+{
+    "name": "Dark Tutelage",
+    "manaCost": "{2}{B}",
+    "typeLine": "Enchantment",
+    "oracleText": "At the beginning of your upkeep, reveal the top card of your library and put that card into your hand. You lose life equal to its mana value.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "ability_1",
+                "trigger": {
+                    "type": "StepEvent",
+                    "step": "UPKEEP"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": {
+                                "type": "TopOfLibrary",
+                                "count": {
+                                    "type": "Fixed",
+                                    "amount": 1
+                                }
+                            },
+                            "storeAs": "revealed"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "revealed",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Hand"
+                            },
+                            "revealed": true
+                        },
+                        {
+                            "type": "LoseLife",
+                            "amount": {
+                                "type": "StoredCardManaValue",
+                                "collectionName": "revealed"
+                            },
+                            "target": "Controller"
+                        }
+                    ]
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "90",
+        "rarity": "RARE",
+        "artist": "James Ryman",
+        "flavorText": "\"It is a rough road that leads to the heights of greatness.\"\n—Seneca, *Epistles*, trans. Gummere",
+        "imageUri": "https://cards.scryfall.io/normal/front/9/e/9ec3dd9f-3969-4fd7-97f7-e9868eb19a64.jpg?1783941817",
+        "rulings": [
+            {
+                "date": "2010-08-15",
+                "text": "The mana value of the revealed card is determined solely by the mana symbols printed in its upper right corner. The mana value is the total amount of mana in that cost, regardless of color. For example, a card with mana cost {3}{U}{U} has mana value 5."
+            },
+            {
+                "date": "2010-08-15",
+                "text": "If the mana cost of the revealed card includes {X}, X is considered to be 0."
+            },
+            {
+                "date": "2010-08-15",
+                "text": "If the revealed card has no mana symbols in its upper right corner (because it's a land card, for example), its mana value is 0."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK"
+    ]
+}
+
 // Dryad's Favor
 {
     "name": "Dryad's Favor",
