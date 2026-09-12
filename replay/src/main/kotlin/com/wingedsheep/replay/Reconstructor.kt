@@ -13,6 +13,8 @@ import com.wingedsheep.engine.legalactions.LegalAction
 import com.wingedsheep.engine.legalactions.LegalActionEnumerator
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
+import com.wingedsheep.engine.state.ZoneKey
+import com.wingedsheep.engine.state.components.identity.RevealedToComponent
 import com.wingedsheep.engine.state.components.combat.AttackingComponent
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
 import com.wingedsheep.gym.GameEnvironment
@@ -21,6 +23,7 @@ import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.ManaSymbol
 import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.AdditionalCostPayment
@@ -40,8 +43,9 @@ import kotlin.random.Random
  * allows (its land drops, casts, attackers and blockers) plus passing priority, with pending
  * decisions enumerated where that is cheap and answered by the AI's [DecisionResponder] where it
  * is not. A line succeeds when the turn ends with the plan done and the public state matching the
- * recorded snapshot ([Snapshotter.diff]). The search runs until the half-turn's tree is exhausted
- * (or [MAX_ENDS] matching states, or the node budget), and up to [beamWidth] of the matching states
+ * recorded snapshot ([Snapshotter.diff]). The kept states' searches advance in turn, grouped by
+ * [Snapshotter.hidden], until every tree is exhausted (or [MAX_ENDS] matching states, or the node budget), and up to [beamWidth] of
+ * the matching states
  * carry on to the next half-turn, picked round-robin across what the snapshot cannot see
  * ([Snapshotter.hidden]) so that an aura on the wrong creature does not crowd out the right one.
  * The first half-turn with none is where the game fails, and the closest snapshot difference seen
@@ -78,6 +82,7 @@ class Reconstructor(
         var nodes = 0
         var closest: List<String>? = null
         var tracer: Tracer? = null
+        var nodeCap = Int.MAX_VALUE
 
         fun near(diff: List<String>) {
             tracer?.line("    end check: ${diff.joinToString("; ")}")
@@ -120,17 +125,38 @@ class Reconstructor(
             val tracing = tracer?.halfTurn == i
             if (tracing) tracer!!.begin(spec, i, beam.size)
             search.tracer = tracer.takeIf { tracing }
+            // start states grouped by what the snapshot cannot see, in beam order
+            val groups = linkedMapOf<List<String>, MutableList<ArrayDeque<Node>>>()
+            var starts = 0
             for (start in beam) {
-                if (search.nodes >= nodeBudget || search.ends.size >= MAX_ENDS) break
                 val revealed = revealOppo(start, seats, ht)
                 if (revealed == null) {
                     search.near(listOf("could not write the opponent's cards into hidden slots: $lastError"))
                     continue
                 }
-                val ready = if (ht.active == "user") restackUser(revealed, seats, ht) ?: revealed else revealed
-                search.tracer?.line("start: oppo hand ${ready.getHand(seats.oppo).map { snapshotter.name(ready, it) }}, " +
+                val ready = if (ht.active == "user") {
+                    restackUser(revealed, seats, ht, laterDraws(spec, i))
+                        ?: revealed.also { search.tracer?.line("restack failed: $lastError") }
+                } else revealed
+                search.tracer?.line("start ${starts++}: user hand ${ready.getHand(seats.user).map { snapshotter.name(ready, it) }}, " +
+                    "oppo hand ${ready.getHand(seats.oppo).map { snapshotter.name(ready, it) }}, " +
                     "user library top ${ready.getLibrary(seats.user).take(3).map { snapshotter.name(ready, it) }}")
-                searchHalfTurn(ready, ht, i + 1, seats, search)
+                search.tracer?.line("       unseen: ${snapshotter.hidden(ready, seats)}")
+                groups.getOrPut(snapshotter.hidden(ready, seats)) { mutableListOf() } +=
+                    ArrayDeque(listOf(Node(ready, Plan.of(ht))))
+            }
+            // Groups of start states that differ in what the snapshot cannot see (a land's colour,
+            // an aura's host) advance in turn, a slice of nodes each, so that one with many
+            // equivalent lines cannot use up the budget or the end states before the others are
+            // looked at. Within a group the starts are near-duplicates and are searched one by one.
+            while (search.nodes < nodeBudget && search.ends.size < MAX_ENDS &&
+                groups.values.any { g -> g.any { it.isNotEmpty() } }) {
+                for ((k, group) in groups.values.withIndex()) {
+                    val stack = group.firstOrNull { it.isNotEmpty() } ?: continue
+                    search.tracer?.line("-- group $k")
+                    search.nodeCap = minOf(nodeBudget, search.nodes + SLICE_NODES)
+                    searchHalfTurn(stack, ht, i + 1, seats, search)
+                }
             }
             nodeCounts += search.nodes
             if (tracing) tracer!!.end(search.nodes, search.ends.size, search.closest)
@@ -148,10 +174,9 @@ class Reconstructor(
     // Search
     // =========================================================================
 
-    private fun searchHalfTurn(start: GameState, ht: HalfTurnSpec, turn: Int, seats: Seats, search: Search) {
-        val stack = ArrayDeque<Node>()
-        stack.addLast(Node(start, Plan.of(ht)))
-        while (stack.isNotEmpty() && search.nodes < nodeBudget && search.ends.size < MAX_ENDS) {
+    /** Advances one start state's depth-first search until its [stack] empties or [Search.nodeCap]. */
+    private fun searchHalfTurn(stack: ArrayDeque<Node>, ht: HalfTurnSpec, turn: Int, seats: Seats, search: Search) {
+        while (stack.isNotEmpty() && search.nodes < search.nodeCap && search.ends.size < MAX_ENDS) {
             val node = stack.removeLast()
             search.nodes++
             val s = node.state
@@ -261,6 +286,17 @@ class Reconstructor(
                         }
                     }
                 }
+                action is ActivateAbility || action is TypecycleCard || action is CycleCard -> when {
+                    la.isManaAbility -> {}
+                    else -> {
+                        val i = plan.activation(side, la.description)
+                        if (i < 0) skip(la, "not in the plan")
+                        else {
+                            val variants = withTargets(s, la, player).flatMap { withCostPayments(la, it) }
+                            tryAll(s, la, variants, notes).forEach { out += Node(it, plan.activate(side, i)) }
+                        }
+                    }
+                }
                 la.actionType == "DeclareAttackers" -> when {
                     !active || plan.attacksDone -> skip(la, "attacks already declared or not the active player")
                     else -> {
@@ -352,15 +388,18 @@ class Reconstructor(
     }
 
     /**
-     * One action per way to pay the cast's additional cost ([LegalAction.additionalCostInfo]):
+     * One action per way to pay a cast's additional cost, or an ability's ([LegalAction.additionalCostInfo]):
      * behold a Kithkin, blight a creature, sacrifice, discard. Unlike the AI, which takes the first
      * candidate, the search branches, because which creature gets the -1/-1 counter changes the
      * game. The "or pay {2}" alternative arrives as its own legal action.
      */
     private fun withCostPayments(la: LegalAction, action: GameAction): List<GameAction> {
         val info = la.additionalCostInfo ?: return listOf(action)
-        val cast = action as? CastSpell ?: return listOf(action)
-        val base = cast.additionalCostPayment ?: AdditionalCostPayment()
+        val base = when (action) {
+            is CastSpell -> action.additionalCostPayment
+            is ActivateAbility -> action.costPayment
+            else -> return listOf(action)
+        } ?: AdditionalCostPayment()
         val payments = when (info.costType) {
             "Blight" -> info.validBlightTargets.map { base.copy(blightTargets = listOf(it)) }
             "Behold" -> subsets(info.validBeholdTargets, info.beholdCount, info.beholdCount)
@@ -376,7 +415,9 @@ class Reconstructor(
             "ExileFromGraveyard" -> listOf(base.copy(exiledCards = info.validExileTargets.take(info.exileMinCount)))
             else -> return listOf(action)
         }
-        return payments.take(MAX_TARGET_COMBOS).map { cast.copy(additionalCostPayment = it) }
+        return payments.take(MAX_TARGET_COMBOS).map {
+            if (action is CastSpell) action.copy(additionalCostPayment = it) else (action as ActivateAbility).copy(costPayment = it)
+        }
     }
 
     /**
@@ -531,6 +572,9 @@ class Reconstructor(
     // Setup and hidden cards
     // =========================================================================
 
+    private fun laterDraws(spec: GameSpec, i: Int): List<String> =
+        spec.halfTurns.drop(i + 1).filter { it.active == "user" }.flatMap { it.drawn }
+
     private fun missingCard(spec: GameSpec): String? =
         (spec.userDeck + spec.oppoKnown).firstOrNull { !registry.hasCard(it) }
 
@@ -556,33 +600,44 @@ class Reconstructor(
 
     /**
      * Put this half-turn's recorded draws on top of the user's library, then its tutored cards (so a
-     * "look at the top N" effect finds the card the record says it took). Library effects — Eclipsed
-     * Kithkin sending cards to the bottom, surveil, a shuffle — move cards after [stackUser] ran, so
-     * the order is re-forced every half-turn. Cards change places by swapping identities, which keeps
-     * the library's contents; a card no longer in the library overwrites the slot instead.
+     * "look at the top N" effect finds the card the record says it took), then the draws of the
+     * user's [later] half-turns (so such an effect sees what the user really saw). Library effects —
+     * Eclipsed Kithkin sending cards to the bottom, surveil, a shuffle — move cards after [stackUser]
+     * ran, so the order is re-forced every half-turn.
+     *
+     * Cards move by reordering the library, which keeps each card's runtime state: a card someone
+     * has looked at carries it, and the materializer refuses to rewrite such a card's identity. Only a
+     * card of this half-turn that is no longer in the library (surveilled away, say) is written over an
+     * unseen slot near the bottom instead.
      */
-    private fun restackUser(state: GameState, seats: Seats, ht: HalfTurnSpec): GameState? {
+    private fun restackUser(state: GameState, seats: Seats, ht: HalfTurnSpec, later: List<String>): GameState? {
         // Past the upkeep, this turn's draw-step draw has already happened.
         val drawn = if (state.step.ordinal > Step.UPKEEP.ordinal) ht.drawn.drop(1) else ht.drawn
-        val want = drawn + ht.tutored
-        if (want.isEmpty()) return state
+        val now = drawn + ht.tutored
         val library = state.getLibrary(seats.user)
-        if (library.size < want.size) return null
-        val current = library.map { snapshotter.name(state, it) }.toMutableList()
-        val assignment = mutableMapOf<EntityId, String>()
-        for ((k, name) in want.withIndex()) {
-            if (current[k] == name) continue
-            val j = (k + 1 until library.size).firstOrNull { current[it] == name }
-            if (j != null) {
-                val displaced = current[k] ?: continue
-                assignment[library[j]] = displaced
-                current[j] = displaced
+        if (library.size < now.size) return null
+        val rest = library.toMutableList()
+        val top = mutableListOf<EntityId?>()
+        val absent = mutableMapOf<Int, String>()
+        for ((k, name) in (now + later).withIndex()) {
+            val i = rest.indexOfFirst { snapshotter.name(state, it) == name }
+            when {
+                i >= 0 -> top += rest.removeAt(i)
+                k < now.size -> { absent[top.size] = name; top += null }
+                else -> break   // a later draw no longer here is its own half-turn's business
             }
-            assignment[library[k]] = name
-            current[k] = name
         }
-        if (assignment.isEmpty()) return state
-        return materialize(state, assignment)
+        if (absent.size > rest.size) return null
+        // unseen slots, bottom first, stand in for the cards that left the library
+        val spare = rest.asReversed().filter { state.getEntity(it)?.has<RevealedToComponent>() != true }
+        if (spare.size < absent.size) return null
+        val fill = absent.keys.zip(spare).toMap()
+        rest.removeAll(fill.values.toSet())
+        val order = top.mapIndexed { k, id -> id ?: fill.getValue(k) } + rest
+        val key = ZoneKey(seats.user, Zone.LIBRARY)
+        val reordered = if (order == library) state else state.copy(zones = state.zones + (key to order))
+        if (absent.isEmpty()) return reordered
+        return materialize(reordered, absent.mapKeys { (k, _) -> fill.getValue(k) })
     }
 
     /**
@@ -665,6 +720,7 @@ class Reconstructor(
     private fun describe(plan: Plan): String = buildList {
         if (plan.lands.isNotEmpty()) add("lands ${plan.lands}")
         plan.spells.forEach { (side, left) -> if (left.isNotEmpty()) add("$side spells $left") }
+        plan.activations.forEach { (side, left) -> if (left.isNotEmpty()) add("$side abilities $left") }
         if (plan.attacked.isNotEmpty() && !plan.attacksDone) add("attack ${plan.attacked}")
         if (plan.blocking.isNotEmpty() && !plan.blocksDone) add("block ${plan.blocking}")
     }.joinToString(", ")
@@ -678,6 +734,8 @@ class Reconstructor(
         const val MAX_SELECT_OPTIONS = 8
         /** Matching end states collected per half-turn before the beam is picked from them. */
         const val MAX_ENDS = 128
+        /** Nodes one group of start states' search runs before the next group's turn. */
+        const val SLICE_NODES = 256
         const val MAX_SLOT_RETRIES = 8
         private val BEHOLD = Regex("""\bbehold an? ([A-Z][a-z]+)""")
         const val MAX_PAYMENT_OPTIONS = 12

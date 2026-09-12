@@ -41,6 +41,8 @@ data class HalfTurnSpec(
     val instants: Map<String, List<String>> = emptyMap(),
     /** Permanents the non-active player added: flash casts, which the file never records. */
     val flash: Map<String, List<String>> = emptyMap(),
+    /** Activated abilities per side, in the engine's notation (`{T}, Blight 1: Surveil 1.`). */
+    val activated: Map<String, List<String>> = emptyMap(),
     val attacked: List<String> = emptyList(),
     val blocked: List<String> = emptyList(),
     val blocking: List<String> = emptyList(),
