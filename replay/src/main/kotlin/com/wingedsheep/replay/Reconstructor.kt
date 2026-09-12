@@ -264,6 +264,7 @@ class Reconstructor(
         // Copies of a card in hand are interchangeable: try one land drop or cast per name and mode.
         val hand = s.getHand(player).toSet()
         val tried = mutableSetOf<String>()
+        var cast = false   // whether a planned spell was cast from this node
         for (la in legal) {
             val action = la.action
             val card = (action as? PlayLand)?.cardId ?: (action as? CastSpell)?.cardId
@@ -293,6 +294,7 @@ class Reconstructor(
                             val taken = tryAll(s, la, variants, notes)
                             taken.forEach { out += Node(it, after) }
                             if (taken.isEmpty()) floatThenCast(s, la, variants.first(), sacrificeMana, notes).forEach { out += Node(it, after) }
+                            if (out.any { it.plan === after }) cast = true
                         }
                     }
                 }
@@ -329,6 +331,31 @@ class Reconstructor(
                     }
                 }
                 else -> skip(la, "not modelled")
+            }
+        }
+        // A planned spell nobody could cast here may need mana the engine's solver does not use —
+        // a creature's "add one mana for each colour", Springleaf Drum's "tap a creature" — so the
+        // search may activate such a source first and cast from the pool at the next node (in its
+        // own main phase: mana floated elsewhere empties before a sorcery-speed spell can use it).
+        val mainPhase = s.step == Step.PRECOMBAT_MAIN || s.step == Step.POSTCOMBAT_MAIN
+        // (not while a recorded land drop is available: playing the land first never costs a line)
+        val landFirst = legal.any { la ->
+            (la.action as? PlayLand)?.let { snapshotter.name(s, it.cardId) }?.let(plan::canPlayLand) == true
+        }
+        // A Treasure is floated even when a cast went through: a modal spell picks its modes before
+        // paying, and only then finds that autopay will not sacrifice.
+        if (active && mainPhase && s.stack.isEmpty() && !landFirst && plan.spells[side].orEmpty().isNotEmpty()) {
+            val colours = plan.spells[side].orEmpty().keys.flatMap { spellColours(it) }.distinct()
+            for (la in legal.filter { it.isManaAbility && it.action is ActivateAbility }
+                .filterNot { s.projectedState.hasType((it.action as ActivateAbility).sourceId, "LAND") }
+                .filter { !cast || "Sacrifice" in it.description }
+                .distinctBy { snapshotter.name(s, (it.action as ActivateAbility).sourceId) + it.description }) {
+                val base = la.action as ActivateAbility
+                val choices = if (la.requiresManaColorChoice) {
+                    colours.filter { la.availableManaColors?.contains(it) != false }.map { base.copy(manaColorChoice = it) }
+                } else listOf(base)
+                val variants = choices.flatMap { withCostPayments(la, it) }.take(MAX_PAYMENT_OPTIONS)
+                tryAll(s, la, variants, notes).forEach { out += Node(it, plan) }
             }
         }
         pass?.let { p ->
@@ -402,6 +429,16 @@ class Reconstructor(
         })
         return taken
     }
+
+    /** The colours in [name]'s mana cost, hybrid halves included. */
+    private fun spellColours(name: String): List<com.wingedsheep.sdk.core.Color> =
+        registry.getCard(name)?.manaCost?.symbols.orEmpty().flatMap {
+            when (it) {
+                is ManaSymbol.Colored -> listOf(it.color)
+                is ManaSymbol.Hybrid -> listOf(it.color1, it.color2)
+                else -> emptyList()
+            }
+        }
 
     private fun names(s: GameState, ids: List<EntityId>?): List<String> =
         ids.orEmpty().map { id -> snapshotter.name(s, id)?.let { if (snapshotter.isToken(s, id)) "token:$it" else it } ?: "?" }
