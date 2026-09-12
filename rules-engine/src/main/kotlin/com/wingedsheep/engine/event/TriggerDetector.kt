@@ -1094,6 +1094,7 @@ class TriggerDetector(
                     if (specEvent.from != null && event.fromZone != specEvent.from) return false
                     if (specEvent.to != null && event.toZone != specEvent.to) return false
                     if (specEvent.excludeTo != null && event.toZone == specEvent.excludeTo) return false
+                    if (specEvent.excludeFrom != null && event.fromZone == specEvent.excludeFrom) return false
                     true
                 } else {
                     // Filter-scoped: "whenever a creature you control enters this turn". There is no

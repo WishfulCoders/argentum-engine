@@ -5383,6 +5383,13 @@ for any other (filter, binding, to/excludeTo) combination.
   (`ZoneTransitionService.trackPermanentSacrifice` → `pendingSacrificeIds`) stamps on every
   sacrifice — cost payment and the sacrifice effect executors alike — so ordinary destruction /
   lethal-damage / SBA deaths leave it `false`.
+- `EventPattern.ZoneChangeEvent(..., excludeFrom = zone)` — the origin that does **not** match, the
+  mirror of `excludeTo`. "A creature card is put into a graveyard from anywhere other than the
+  battlefield" is `ZoneChangeEvent(filter = Creature, to = GRAVEYARD, excludeFrom = BATTLEFIELD)` with
+  ANY binding — a discard, a mill, a countered creature spell, never a death (**Syr Konrad, the
+  Grim**, whose "another creature dies" clause is a separate OTHER-bound `leavesBattlefield` trigger
+  so it keeps the leaves-the-battlefield look-back). Honored by the trigger matcher, delayed
+  zone-change triggers and the attachment detectors.
 
 **Token creation**
 
