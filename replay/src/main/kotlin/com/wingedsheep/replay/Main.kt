@@ -33,9 +33,9 @@ fun main(args: Array<String>) {
     val nodeBudget = args.getOrNull(4)?.toInt() ?: 20_000
     val threads = args.getOrNull(5)?.toInt() ?: Runtime.getRuntime().availableProcessors()
 
-    val (registry, snapshotter) = engineCards()
     val specs = input.readLines().filter { it.isNotBlank() }.take(maxGames)
         .map { specJson.decodeFromString<GameSpec>(it) }
+    val (registry, snapshotter) = engineCards(specs.map { it.set }.distinct().single())
     println("replay: ${specs.size} games, beam $beamWidth, budget $nodeBudget nodes/half-turn, $threads threads")
 
     val local = ThreadLocal.withInitial { Reconstructor(registry, snapshotter, beamWidth, nodeBudget) }
@@ -67,19 +67,20 @@ fun main(args: Array<String>) {
 }
 
 /**
- * Every set, so Special Guests printed elsewhere resolve; ECL last so its printings win. Plus the
- * predefined tokens (Treasure, Food, Clue, ...): without them `CreateTreasure` resolves to nothing.
+ * Every set, so Special Guests and bonus sheets printed elsewhere resolve; [setCode] last so its
+ * printings win. Plus the predefined tokens (Treasure, Food, Clue, ...): without them
+ * `CreateTreasure` resolves to nothing.
  */
-private fun engineCards(): Pair<CardRegistry, Snapshotter> {
+private fun engineCards(setCode: String): Pair<CardRegistry, Snapshotter> {
     val sets = MtgSetCatalog.all
-    val ecl = MtgSetCatalog.requireByCode("ECL")
+    val main = MtgSetCatalog.requireByCode(setCode)
     val registry = CardRegistry().apply {
-        for (set in sets) if (set.code != ecl.code) {
+        for (set in sets) if (set.code != main.code) {
             register(set.cards)
             register(set.basicLands)
         }
-        register(ecl.cards)
-        register(ecl.basicLands)
+        register(main.cards)
+        register(main.basicLands)
         register(PredefinedTokens.allTokens)
     }
     return registry to Snapshotter(sets.flatMap { it.cards })
@@ -95,7 +96,7 @@ private fun trace(args: List<String>) {
     val nodeBudget = args.getOrNull(3)?.toInt() ?: 40_000
     val tracedNodes = args.getOrNull(4)?.toInt() ?: 300
     val beamWidth = args.getOrNull(5)?.toInt() ?: 8
-    val (registry, snapshotter) = engineCards()
+    val (registry, snapshotter) = engineCards(spec.set)
     val halfTurn = args.getOrNull(2)?.toIntOrNull()
         ?: Reconstructor(registry, snapshotter, beamWidth, nodeBudget).run(spec).let { r ->
             println("untraced run: ${r.status}, ${r.reproduced}/${r.halfTurns} half-turns; ${r.reason}")

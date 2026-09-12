@@ -15,6 +15,8 @@ import kotlinx.serialization.json.JsonNamingStrategy
 @Serializable
 data class GameSpec(
     val gameId: String,
+    /** The 17Lands set code; its printings win where a name is printed in several sets. */
+    val set: String = "ECL",
     val onPlay: Boolean,
     val won: Boolean,
     val oppColors: String = "",
