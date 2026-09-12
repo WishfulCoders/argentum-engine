@@ -854,6 +854,14 @@ class Reconstructor(
                 beholdFiller(type)?.let { needed[it] = (needed[it] ?: 0) + 1 }
             }
         }
+        // A cycled card of theirs is never named ("Islandcycling {2}"): one that cycles the same way
+        // stands in, unless a card in their hand already can.
+        for (text in ht.activated["oppo"].orEmpty().filter { "cycling" in it.lowercase() }) {
+            val keyword = text.substringAfter(" — ").trim()
+            if ((held + needed.keys).none { def(it)?.oracleText?.contains(keyword) == true }) {
+                cyclingFiller(keyword)?.let { needed[it] = (needed[it] ?: 0) + 1 }
+            }
+        }
         val missing = needed.flatMap { (name, k) -> List(k) { name } }
         if (missing.isEmpty()) return state
         val slots = (free + state.getLibrary(seats.oppo)).toMutableList()
@@ -913,6 +921,12 @@ class Reconstructor(
         val ranked = d.options.indices.filter { weight.containsKey(d.options[it]) }
             .sortedByDescending { weight.getValue(d.options[it]) }
         return (ranked + d.options.indices.filterNot { it in ranked }).take(maxOf(ranked.size, MAX_SELECT_OPTIONS))
+    }
+
+    /** A card with [keyword] ("Islandcycling {2}") to stand in for a card an opponent cycled. */
+    private val cyclingFillers = mutableMapOf<String, String?>()
+    private fun cyclingFiller(keyword: String): String? = cyclingFillers.getOrPut(keyword) {
+        registry.allCardNames().sorted().firstOrNull { registry.getCard(it)?.oracleText?.contains(keyword) == true }
     }
 
     /** The creature type a card's behold cost asks for ("behold a Goblin"), or null. */

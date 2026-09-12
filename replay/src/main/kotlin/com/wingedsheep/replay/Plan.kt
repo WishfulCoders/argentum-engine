@@ -82,7 +82,7 @@ private val KEYWORD = Regex("""^(?:[^—]+ — )?(?:Equip|Crew|Saddle|Station)\b
  * 1, Sacrifice CARDNAME: Exile enchanted creature."). The two word their costs differently ("this
  * Aura", CARDNAME), so costs are compared part by part on their first word; a recorded text with no
  * cost (a loyalty ability, logged without its "+1") is compared on its first words, and cycling on
- * the keyword.
+ * the keyword alone.
  */
 fun matchesActivation(engine: String, recorded: String): Boolean {
     fun norm(t: String) = t.substringAfter(" — ").lowercase().replace(Regex("\\s+"), " ").trim()
@@ -91,8 +91,11 @@ fun matchesActivation(engine: String, recorded: String): Boolean {
     fun words(t: String, n: Int) = t.split(' ').take(n)
     // the engine spells Station out: "Tap another untapped creature you control: Put charge counters ..."
     if (r == "station") return "charge counters" in e
+    // cycling on the keyword ("basic landcycling"): the engine follows it with the card's name
+    // ("Islandcycling Giant Koi"), 17Lands with the cost
+    fun keyword(t: String) = t.split(' ').let { w -> w.take(w.indexOfFirst { "cycling" in it } + 1) }
     if ("cycling" in words(e, 2).joinToString(" ") || "cycling" in words(r, 2).joinToString(" ")) {
-        return words(e, 2) == words(r, 2)
+        return keyword(e) == keyword(r)
     }
     fun cost(t: String) = if (": " in t) t.substringBefore(": ").split(", ").map { it.substringBefore(' ') } else null
     val ec = cost(e)
