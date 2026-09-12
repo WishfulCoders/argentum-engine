@@ -135,18 +135,21 @@ class Reconstructor(
                     continue
                 }
                 for ((v, revealed) in oppoLibraryVariants(written, seats, ht).withIndex()) {
-                    val ready = if (ht.active == "user") {
-                        restackUser(revealed, seats, ht, laterDraws(spec, i))
+                    val readies = if (ht.active == "user") {
+                        val restacked = restackUser(revealed, seats, ht, laterDraws(spec, i))
                             ?: revealed.also { search.tracer?.line("restack failed: $lastError") }
-                    } else revealed
-                    search.tracer?.line("start ${starts++}: user hand ${ready.getHand(seats.user).map { snapshotter.name(ready, it) }}, " +
-                        "oppo hand ${ready.getHand(seats.oppo).map { snapshotter.name(ready, it) }}, " +
-                        "user library top ${ready.getLibrary(seats.user).take(3).map { snapshotter.name(ready, it) }}")
-                    search.tracer?.line("       unseen: ${snapshotter.hidden(ready, seats)}")
-                    revealNote?.let { search.tracer?.line("       opponent: $it") }
-                    // a library variant is a group of its own: its search must not wait on the other's
-                    groups.getOrPut(snapshotter.hidden(ready, seats) + "library variant $v") { mutableListOf() } +=
-                        ArrayDeque(listOf(Node(ready, Plan.of(ht))))
+                        listOf(restacked) + listOfNotNull(userLibraryVariant(restacked, seats, ht, laterDraws(spec, i)))
+                    } else listOf(revealed)
+                    for ((u, ready) in readies.withIndex()) {
+                        search.tracer?.line("start ${starts++}: user hand ${ready.getHand(seats.user).map { snapshotter.name(ready, it) }}, " +
+                            "oppo hand ${ready.getHand(seats.oppo).map { snapshotter.name(ready, it) }}, " +
+                            "user library top ${ready.getLibrary(seats.user).take(3).map { snapshotter.name(ready, it) }}")
+                        search.tracer?.line("       unseen: ${snapshotter.hidden(ready, seats)}")
+                        revealNote?.let { search.tracer?.line("       opponent: $it") }
+                        // a library variant is a group of its own: its search must not wait on the other's
+                        groups.getOrPut(snapshotter.hidden(ready, seats) + "library variant $v/$u") { mutableListOf() } +=
+                            ArrayDeque(listOf(Node(ready, Plan.of(ht))))
+                    }
                 }
             }
             // Groups of start states that differ in what the snapshot cannot see (a land's colour,
@@ -932,6 +935,28 @@ class Reconstructor(
             .take(LIBRARY_VARIANT_DEPTH)
         val variant = materialize(state, slots.associateWith { filler }) ?: return listOf(state)
         return listOf(state, variant)
+    }
+
+    /**
+     * The user's library is stacked with their recorded draws, so their own explore or top-card
+     * reveal finds the next recorded draw; when the card it found was a nonland they binned, the
+     * record shows no trace of it. On a half-turn where one of the user's cards can do that, it is
+     * also searched with an unseen nonland from the rest of their deck under this turn's draw.
+     */
+    private fun userLibraryVariant(state: GameState, seats: Seats, ht: HalfTurnSpec, later: List<String>): GameState? {
+        val userCards = ht.creatures + ht.noncreatures + ht.instants["user"].orEmpty() +
+            state.controlledBattlefield(seats.user).mapNotNull { snapshotter.name(state, it) }
+        if (userCards.none { name -> def(name)?.oracleText?.let { READS_LIBRARY_TOP.containsMatchIn(it) } == true }) return null
+        val library = state.getLibrary(seats.user)
+        val recorded = Snapshotter.counts(ht.drawn + ht.tutored + later)
+        val spare = library.lastOrNull { id ->
+            val name = snapshotter.name(state, id)
+            name != null && name !in recorded && state.getEntity(id)?.has<RevealedToComponent>() != true &&
+                def(name)?.typeLine?.isLand == false
+        } ?: return null
+        val pos = if (state.step.ordinal > Step.UPKEEP.ordinal || ht.drawn.isEmpty()) 0 else 1
+        val order = (library - spare).toMutableList().apply { add(minOf(pos, size), spare) }
+        return state.copy(zones = state.zones + (ZoneKey(seats.user, Zone.LIBRARY) to order))
     }
 
     /** A vanilla creature card, to stand in for an unseen nonland (and creature) card of the opponent's. */
