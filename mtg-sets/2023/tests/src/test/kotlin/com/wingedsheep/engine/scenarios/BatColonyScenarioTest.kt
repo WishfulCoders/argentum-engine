@@ -83,6 +83,26 @@ class BatColonyScenarioTest : ScenarioTestBase() {
 
                 game.findPermanents("Bat Token").size shouldBe 2
             }
+
+            test("paid by tapping lands, a colorless Cave counts its one mana once") {
+                // Plains, Hidden Courtyard ({T}: Add {W}) and Cavernous Maw ({T}: Add {C}) pay {2}{W}:
+                // two of the three mana came from Caves. The colorless production used to be counted
+                // twice (once as its default coloured amount), making three Bats.
+                val game = scenario()
+                    .withPlayers("Player", "Opponent")
+                    .withCardInHand(1, "Bat Colony")
+                    .withLandsOnBattlefield(1, "Plains", 1)
+                    .withCardOnBattlefield(1, "Hidden Courtyard")
+                    .withCardOnBattlefield(1, "Cavernous Maw")
+                    .withActivePlayer(1)
+                    .inPhase(Phase.PRECOMBAT_MAIN, Step.PRECOMBAT_MAIN)
+                    .build()
+
+                game.castSpell(1, "Bat Colony").error shouldBe null
+                game.resolveStack()
+
+                game.findPermanents("Bat Token").size shouldBe 2
+            }
         }
     }
 }
