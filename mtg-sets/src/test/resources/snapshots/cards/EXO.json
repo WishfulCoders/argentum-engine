@@ -103,6 +103,75 @@
     ]
 }
 
+// Curiosity
+{
+    "name": "Curiosity",
+    "manaCost": "{U}",
+    "typeLine": "Enchantment — Aura",
+    "oracleText": "Enchant creature\nWhenever enchanted creature deals damage to an opponent, you may draw a card.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "ability_1",
+                "trigger": {
+                    "type": "DealsDamageEvent",
+                    "recipient": "RecipientOpponent"
+                },
+                "binding": "ATTACHED",
+                "effect": {
+                    "type": "Gated",
+                    "gate": "Gate.MayDecide",
+                    "then": {
+                        "type": "DrawCards",
+                        "count": {
+                            "type": "Fixed",
+                            "amount": 1
+                        }
+                    }
+                }
+            }
+        ],
+        "auraTarget": {
+            "type": "TargetObject",
+            "filter": {
+                "baseFilter": "creature"
+            }
+        }
+    },
+    "metadata": {
+        "collectorNumber": "29",
+        "rarity": "UNCOMMON",
+        "artist": "Val Mayerik",
+        "flavorText": "All Mirri wanted to do was rest, but she couldn't ignore a nagging suspicion as she followed Crovax's skulking form.",
+        "imageUri": "https://cards.scryfall.io/normal/front/f/e/fee17ef5-7e1a-42ae-b680-df81204df7dd.jpg?1783946527",
+        "rulings": [
+            {
+                "date": "2023-09-01",
+                "text": "Curiosity doesn't trigger if the enchanted creature deals damage to a planeswalker or to a battle."
+            },
+            {
+                "date": "2023-09-01",
+                "text": "You draw one card each time the enchanted creature deals damage to an opponent, no matter how much damage it deals."
+            },
+            {
+                "date": "2023-09-01",
+                "text": "If you control Curiosity and it's enchanting an opponent's creature, you won't draw a card when that creature deals damage to you. The creature has to deal damage to one of your opponents for the ability to trigger."
+            },
+            {
+                "date": "2011-09-22",
+                "text": "\"You\" refers to the controller of Curiosity, which may be different from the controller of the enchanted creature. \"An opponent\" refers to an opponent of Curiosity's controller."
+            },
+            {
+                "date": "2011-09-22",
+                "text": "Any damage dealt by the enchanted creature to an opponent will cause Curiosity to trigger, not just combat damage."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
 // Cursed Flesh
 {
     "name": "Cursed Flesh",
