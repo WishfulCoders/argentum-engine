@@ -3863,6 +3863,59 @@
     ]
 }
 
+// Spreading Seas
+{
+    "name": "Spreading Seas",
+    "manaCost": "{1}{U}",
+    "typeLine": "Enchantment — Aura",
+    "oracleText": "Enchant land\nWhen this Aura enters, draw a card.\nEnchanted land is an Island.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "ability_1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "DrawCards",
+                    "count": {
+                        "type": "Fixed",
+                        "amount": 1
+                    }
+                }
+            }
+        ],
+        "staticAbilities": [
+            {
+                "type": "SetEnchantedLandType",
+                "landType": "Island"
+            }
+        ],
+        "auraTarget": {
+            "type": "TargetObject",
+            "filter": {
+                "baseFilter": "land"
+            }
+        }
+    },
+    "metadata": {
+        "collectorNumber": "70",
+        "artist": "Jung Park",
+        "flavorText": "Most inhabitants of Zendikar have given up on the idea of an accurate map.",
+        "imageUri": "https://cards.scryfall.io/normal/front/3/7/37454c1c-4098-4ac2-884e-3f65f1384bdb.jpg?1783942160",
+        "rulings": [
+            {
+                "date": "2009-10-01",
+                "text": "The enchanted land loses its existing land types and any abilities printed on it. It now has the land type Island and has the ability to tap to produce {U}. Spreading Seas doesn't change the enchanted land's name or whether it's legendary, basic, or snow."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
 // Steppe Lynx
 {
     "name": "Steppe Lynx",
