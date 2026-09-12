@@ -1035,6 +1035,141 @@
     ]
 }
 
+// Detention Sphere
+{
+    "name": "Detention Sphere",
+    "manaCost": "{1}{W}{U}",
+    "typeLine": "Enchantment",
+    "oracleText": "When this enchantment enters, you may exile target nonland permanent not named Detention Sphere and all other permanents with the same name as that permanent.\nWhen this enchantment leaves the battlefield, return the exiled cards to the battlefield under their owner's control.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "ability_1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Gated",
+                    "gate": "Gate.MayDecide",
+                    "then": {
+                        "type": "Composite",
+                        "effects": [
+                            {
+                                "type": "GatherCards",
+                                "source": "ChosenTargets",
+                                "storeAs": "target"
+                            },
+                            {
+                                "type": "StoreCardName",
+                                "from": "target",
+                                "storeAs": "name"
+                            },
+                            {
+                                "type": "GatherCards",
+                                "source": {
+                                    "type": "BattlefieldMatching",
+                                    "filter": {
+                                        "cardPredicates": [
+                                            {
+                                                "type": "NameEqualsChosen",
+                                                "variableName": "name"
+                                            }
+                                        ]
+                                    }
+                                },
+                                "storeAs": "sameNamed"
+                            },
+                            {
+                                "type": "MoveCollection",
+                                "from": "sameNamed",
+                                "destination": {
+                                    "type": "ToZone",
+                                    "zone": "Exile"
+                                },
+                                "linkToSource": true
+                            }
+                        ]
+                    }
+                },
+                "targetRequirement": {
+                    "type": "TargetObject",
+                    "filter": {
+                        "baseFilter": {
+                            "cardPredicates": [
+                                "IsNonland",
+                                "IsPermanent",
+                                {
+                                    "type": "Not",
+                                    "predicate": {
+                                        "type": "NameEquals",
+                                        "name": "Detention Sphere"
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "id": "target nonland permanent not named Detention Sphere"
+                }
+            },
+            {
+                "id": "ability_2",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "from": "Battlefield"
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GatherCards",
+                            "source": "FromLinkedExile",
+                            "storeAs": "linked_return"
+                        },
+                        {
+                            "type": "MoveCollection",
+                            "from": "linked_return",
+                            "destination": {
+                                "type": "ToZone",
+                                "zone": "Battlefield"
+                            },
+                            "underOwnersControl": true
+                        }
+                    ]
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "155",
+        "rarity": "RARE",
+        "artist": "Kev Walker",
+        "imageUri": "https://cards.scryfall.io/normal/front/a/f/afee5464-83b7-4d7a-b407-9ee7de21535b.jpg?1783940341",
+        "rulings": [
+            {
+                "date": "2012-10-01",
+                "text": "Although the target of the \"enters\" ability must not be a land, lands with the same name as that permanent will be exiled."
+            },
+            {
+                "date": "2012-10-01",
+                "text": "The \"enters\" ability has only one target. The other permanents with that name aren't targeted. For example, a permanent with protection from white will be exiled if it has the same name as the target nonland permanent."
+            },
+            {
+                "date": "2012-10-01",
+                "text": "If the target nonland permanent is an illegal target when the \"enters\" ability tries to resolve, it won't resolve and none of its effects will happen. No permanents will be exiled, including those with the same name as the target."
+            },
+            {
+                "date": "2012-10-01",
+                "text": "If Detention Sphere leaves the battlefield before its \"enters\" ability has resolved, its leaves-the-battlefield ability will trigger and do nothing. Then the \"enters\" ability will resolve and exile the targeted nonland permanent and other permanents with that name indefinitely."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE",
+        "BLUE"
+    ]
+}
+
 // Deviant Glee
 {
     "name": "Deviant Glee",

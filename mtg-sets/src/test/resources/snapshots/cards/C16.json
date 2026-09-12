@@ -40,3 +40,104 @@
     },
     "colorIdentityOverride": []
 }
+
+// Bruse Tarl, Boorish Herder
+{
+    "name": "Bruse Tarl, Boorish Herder",
+    "manaCost": "{2}{R}{W}",
+    "typeLine": "Legendary Creature — Human Ally",
+    "oracleText": "Whenever Bruse Tarl enters or attacks, target creature you control gains double strike and lifelink until end of turn.\nPartner (You can have two commanders if both have partner.)",
+    "creatureStats": {
+        "power": 3,
+        "toughness": 3
+    },
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "ability_1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GrantKeyword",
+                            "keyword": "DOUBLE_STRIKE",
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "target creature you control"
+                            }
+                        },
+                        {
+                            "type": "GrantKeyword",
+                            "keyword": "LIFELINK",
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "target creature you control"
+                            }
+                        }
+                    ]
+                },
+                "targetRequirement": {
+                    "type": "TargetObject",
+                    "filter": {
+                        "baseFilter": "creature ctrl:you"
+                    },
+                    "id": "target creature you control"
+                },
+                "descriptionOverride": "Whenever Bruse Tarl enters or attacks, target creature you control gains double strike and lifelink until end of turn."
+            },
+            {
+                "id": "ability_2",
+                "trigger": "AttackEvent",
+                "effect": {
+                    "type": "Composite",
+                    "effects": [
+                        {
+                            "type": "GrantKeyword",
+                            "keyword": "DOUBLE_STRIKE",
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "target creature you control"
+                            }
+                        },
+                        {
+                            "type": "GrantKeyword",
+                            "keyword": "LIFELINK",
+                            "target": {
+                                "type": "BoundVariable",
+                                "name": "target creature you control"
+                            }
+                        }
+                    ]
+                },
+                "targetRequirement": {
+                    "type": "TargetObject",
+                    "filter": {
+                        "baseFilter": "creature ctrl:you"
+                    },
+                    "id": "target creature you control"
+                },
+                "descriptionOverride": "Whenever Bruse Tarl enters or attacks, target creature you control gains double strike and lifelink until end of turn."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "30",
+        "rarity": "MYTHIC",
+        "artist": "Anthony Palumbo",
+        "imageUri": "https://cards.scryfall.io/normal/front/1/2/125b552b-45ea-4e0b-94a9-8131c97a04c0.jpg?1783937085",
+        "rulings": [
+            {
+                "date": "2020-11-10",
+                "text": "The triggered ability triggers both when Bruse Tarl enters the battlefield and whenever it attacks. You don't have to choose only one."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED",
+        "WHITE"
+    ]
+}
