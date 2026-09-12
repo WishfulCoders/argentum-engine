@@ -312,6 +312,7 @@ class Reconstructor(
                             // which lands pay only matters if this side casts again this half-turn
                             val more = after.spells[side].orEmpty().isNotEmpty()
                             val variants = withTargets(s, la, player)
+                                .flatMap { withX(la, it) }
                                 .flatMap { withCostPayments(s, plan, la, it) }
                                 .flatMap { withManaChoices(s, la, it, more, manaSources) }
                             val taken = tryAll(s, la, variants, notes)
@@ -327,7 +328,8 @@ class Reconstructor(
                         val i = plan.activation(side, la.description)
                         if (i < 0) skip(la, "not in the plan")
                         else {
-                            val variants = withTargets(s, la, player).flatMap { withCostPayments(s, plan, la, it) }
+                            val variants = withTargets(s, la, player).flatMap { withX(la, it) }
+                                .flatMap { withCostPayments(s, plan, la, it) }
                             tryAll(s, la, variants, notes).forEach { out += Node(it, plan.activate(side, i)) }
                         }
                     }
@@ -374,8 +376,19 @@ class Reconstructor(
         }
         // A Treasure is floated even when a cast went through: a modal spell picks its modes before
         // paying, and only then finds that autopay will not sacrifice.
-        if (active && mainPhase && s.stack.isEmpty() && !landFirst && plan.spells[side].orEmpty().isNotEmpty()) {
-            val colours = plan.spells[side].orEmpty().keys.flatMap { spellColours(it) }.distinct()
+        // Planned spells in hand the enumerator left out: no payment path it knows affords them.
+        val offered = legal.mapNotNull { (it.action as? CastSpell)?.cardId?.let { id -> snapshotter.name(s, id) } }.toSet()
+        val held = s.getHand(player).mapNotNull { snapshotter.name(s, it) }.toSet()
+        val unoffered = plan.spells[side].orEmpty().keys.filter { it in held && it !in offered }
+        // The non-active player's planned spells are instants and flash: they float only when
+        // one of them is unaffordable to the engine (a filter is their only source of a colour).
+        val floatFor = when {
+            active && mainPhase && s.stack.isEmpty() && !landFirst -> plan.spells[side].orEmpty().keys
+            !active -> unoffered
+            else -> emptyList()
+        }
+        if (floatFor.isNotEmpty()) {
+            val colours = floatFor.flatMap { spellColours(it) }.distinct()
             for (la in legal.filter { it.isManaAbility && it.action is ActivateAbility }
                 .filterNot { s.projectedState.hasType((it.action as ActivateAbility).sourceId, "LAND") }
                 .filter { !cast || "Sacrifice" in it.description }
@@ -384,9 +397,22 @@ class Reconstructor(
                 val choices = if (la.requiresManaColorChoice) {
                     colours.filter { la.availableManaColors?.contains(it) != false }.map { base.copy(manaColorChoice = it) }
                 } else listOf(base)
-                val variants = choices.flatMap { withCostPayments(s, plan, la, it) }.take(MAX_PAYMENT_OPTIONS)
+                // a filter ("{1}: Add {B}, {G}, or {U}") pays with a land the spell may need: try each
+                val cost = la.manaCostString?.let { runCatching { ManaCost.parse(it) }.getOrNull() }
+                val lands = manaSources.filter { s.projectedState.hasType(it, "LAND") }
+                val payments = listOf<PaymentStrategy>(PaymentStrategy.AutoPay) +
+                    if (cost != null && cost.cmc in 1..lands.size) {
+                        distinctByName(s, subsets(lands, cost.cmc, cost.cmc)).map { PaymentStrategy.Explicit(it) }
+                    } else emptyList()
+                val variants = choices.flatMap { c -> payments.map { c.copy(paymentStrategy = it) } }
+                    .flatMap { withCostPayments(s, plan, la, it) }.take(MAX_PAYMENT_OPTIONS)
                 tryAll(s, la, variants, notes).forEach { out += Node(it, plan) }
             }
+        }
+        if (notes != null && unoffered.isNotEmpty()) {
+            val sources = legal.filter { it.isManaAbility }.mapNotNull { (it.action as? ActivateAbility)?.sourceId }
+                .distinct().filter { s.getEntity(it)?.has<TappedComponent>() != true }.map { snapshotter.name(s, it) }
+            notes.add("  ! planned $unoffered in hand but not offered (unaffordable to the engine); untapped mana sources $sources")
         }
         pass?.let { p ->
             val passed = apply(s, p)
@@ -414,7 +440,7 @@ class Reconstructor(
     ): List<GameState> {
         if (floats.isEmpty()) return emptyList()
         val cost = la.manaCostString?.let { runCatching { ManaCost.parse(it) }.getOrNull() } ?: return emptyList()
-        val colours = cost.symbols.filterIsInstance<ManaSymbol.Colored>().map { it.color }.distinct()
+        val colours = cost.symbols.flatMap { it.colors }.distinct()
             .ifEmpty { listOfNotNull(floats.first().availableManaColors?.firstOrNull()) }
         val out = mutableListOf<GameState>()
         val refusals = mutableListOf<String>()
@@ -460,15 +486,9 @@ class Reconstructor(
         return taken
     }
 
-    /** The colours in [name]'s mana cost, hybrid halves included. */
+    /** The colours in [name]'s mana cost: hybrid halves, twobrid and Phyrexian symbols included. */
     private fun spellColours(name: String): List<com.wingedsheep.sdk.core.Color> =
-        def(name)?.manaCost?.symbols.orEmpty().flatMap {
-            when (it) {
-                is ManaSymbol.Colored -> listOf(it.color)
-                is ManaSymbol.Hybrid -> listOf(it.color1, it.color2)
-                else -> emptyList()
-            }
-        }
+        def(name)?.manaCost?.symbols.orEmpty().flatMap { it.colors }
 
     private fun names(s: GameState, ids: List<EntityId>?): List<String> =
         ids.orEmpty().map { id -> snapshotter.name(s, id)?.let { if (snapshotter.isToken(s, id)) "token:$it" else it } ?: "?" }
@@ -487,6 +507,17 @@ class Reconstructor(
     // =========================================================================
     // Choices: targets, combat, decisions
     // =========================================================================
+
+    /** An {X} cost's values, largest affordable first (an activation left at no X cannot pay). */
+    private fun withX(la: LegalAction, action: GameAction): List<GameAction> {
+        if (!la.hasXCost) return listOf(action)
+        val xs = (la.maxAffordableX ?: la.minX).downTo(la.minX).take(MAX_NUMBER_OPTIONS)
+        return when (action) {
+            is CastSpell -> if (action.xValue != null) listOf(action) else xs.map { action.copy(xValue = it) }
+            is ActivateAbility -> if (action.xValue != null) listOf(action) else xs.map { action.copy(xValue = it) }
+            else -> listOf(action)
+        }
+    }
 
     private fun withTargets(s: GameState, la: LegalAction, player: EntityId): List<GameAction> {
         if (!la.requiresTargets) return listOf(la.action)
