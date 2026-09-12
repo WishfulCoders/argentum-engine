@@ -532,6 +532,8 @@ internal class AffectsFilterResolver {
         StatePredicate.IsSource -> false
         // No granter context during projection — granter-relative exclusion is resolution-time only.
         StatePredicate.IsGrantingPermanent -> false
+        // Nor a trigger context — trigger-relative exclusion is resolution-time only.
+        StatePredicate.IsTriggeringEntity -> false
         // Source-relative exile linkage (LinkedExileComponent on the effect source). Only
         // meaningful in target/gather-filter contexts via PredicateEvaluator; never match in
         // group-static projection.

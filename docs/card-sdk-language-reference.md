@@ -4959,6 +4959,13 @@ work for abilities-on-stack (which carry no `CardComponent`).
   (Ronin, Shadow Stalker), "{1}, Sacrifice an Aura attached to this creature" (Faunsbane Troll) — because
   the sacrifice enumeration (`CostEnumerationUtils.findAbilitySacrificeTargets`) and payment
   (`CostHandler.paySacrificeList`) both put the ability's source into the `PredicateContext`.
+- `IsTriggeringEntity` (negated builder `notTriggeringEntity()`) — matches the entity that fired the resolving
+  triggered ability (`PredicateContext.triggeringEntityId`); false with no trigger context, and false in untap,
+  trigger-gating and projection filters. The trigger-relative sibling of `IsSource`, for "each **other** …"
+  counts around a triggering creature that is not the ability's source: **Shared Animosity**'s "it gets +1/+0
+  for each other attacking creature that shares a creature type with it" counts
+  `Creature.attacking().sharingCreatureTypeWith(EntityReference.Triggering).notTriggeringEntity()` —
+  `excludeSelf` there would exclude the enchantment, not the attacker.
 - `IsGrantingPermanent` (negated builder `notGrantingPermanent()`) — matches the *granting permanent* of the
   resolving ability: the Equipment/Aura/permanent whose `GrantActivatedAbility`/`GrantTriggeredAbility` static
   granted the ability, read from the evaluation context's `granterId`. For a granted triggered ability the
