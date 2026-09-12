@@ -201,7 +201,8 @@ class Reconstructor(
             notes?.forEach { search.tracer!!.line(it) }
             // Push in reverse so the first child — a recorded action, passes come last — is
             // explored first.
-            for (child in children.asReversed()) {
+            val active = seats.of(ht.active)
+            for (child in children.asReversed().map { effectLands(node, it, active) }) {
                 if (child.state.turnNumber > turn && !child.state.gameOver) {
                     // This action ended the turn, so the parent is the end-of-turn position.
                     if (!child.plan.done) {
@@ -221,6 +222,25 @@ class Reconstructor(
                 }
             }
         }
+    }
+
+    /**
+     * 17Lands counts a land an effect put onto the battlefield (Spelunking's "put a land card from
+     * your hand onto the battlefield") among the lands played, so such a land uses up a planned land
+     * drop of its name, as a [PlayLand] does.
+     */
+    private fun effectLands(parent: Node, child: Node, player: EntityId): Node {
+        val before = parent.state.controlledBattlefield(player).toSet()
+        val entered = child.state.controlledBattlefield(player).filter {
+            it !in before && !snapshotter.isToken(child.state, it) && child.state.projectedState.hasType(it, "LAND")
+        }
+        val played = parent.plan.lands.values.sum() - child.plan.lands.values.sum()
+        var plan = child.plan
+        for (id in entered.drop(played)) {
+            val name = snapshotter.name(child.state, id) ?: continue
+            if (plan.canPlayLand(name)) plan = plan.playLand(name)
+        }
+        return if (plan === child.plan) child else child.copy(plan = plan)
     }
 
     /**
@@ -289,7 +309,7 @@ class Reconstructor(
                             // which lands pay only matters if this side casts again this half-turn
                             val more = after.spells[side].orEmpty().isNotEmpty()
                             val variants = withTargets(s, la, player)
-                                .flatMap { withCostPayments(la, it) }
+                                .flatMap { withCostPayments(s, plan, la, it) }
                                 .flatMap { withManaChoices(s, la, it, more, manaSources) }
                             val taken = tryAll(s, la, variants, notes)
                             taken.forEach { out += Node(it, after) }
@@ -304,7 +324,7 @@ class Reconstructor(
                         val i = plan.activation(side, la.description)
                         if (i < 0) skip(la, "not in the plan")
                         else {
-                            val variants = withTargets(s, la, player).flatMap { withCostPayments(la, it) }
+                            val variants = withTargets(s, la, player).flatMap { withCostPayments(s, plan, la, it) }
                             tryAll(s, la, variants, notes).forEach { out += Node(it, plan.activate(side, i)) }
                         }
                     }
@@ -361,7 +381,7 @@ class Reconstructor(
                 val choices = if (la.requiresManaColorChoice) {
                     colours.filter { la.availableManaColors?.contains(it) != false }.map { base.copy(manaColorChoice = it) }
                 } else listOf(base)
-                val variants = choices.flatMap { withCostPayments(la, it) }.take(MAX_PAYMENT_OPTIONS)
+                val variants = choices.flatMap { withCostPayments(s, plan, la, it) }.take(MAX_PAYMENT_OPTIONS)
                 tryAll(s, la, variants, notes).forEach { out += Node(it, plan) }
             }
         }
@@ -484,25 +504,37 @@ class Reconstructor(
      * candidate, the search branches, because which creature gets the -1/-1 counter changes the
      * game. The "or pay {2}" alternative arrives as its own legal action.
      */
-    private fun withCostPayments(la: LegalAction, action: GameAction): List<GameAction> {
+    private fun withCostPayments(s: GameState, plan: Plan, la: LegalAction, action: GameAction): List<GameAction> {
         val info = la.additionalCostInfo ?: return listOf(action)
         val base = when (action) {
             is CastSpell -> action.additionalCostPayment
             is ActivateAbility -> action.costPayment
             else -> return listOf(action)
         } ?: AdditionalCostPayment()
+        // One choice per distinct set of names (copies are interchangeable), cheapest [rank] first.
+        fun choose(ids: List<EntityId>, n: Int, rank: (EntityId) -> Int = { 0 }): List<List<EntityId>> =
+            subsets(ids.sortedBy(rank), n, n, cap = MAX_TAP_SETS)
+                .distinctBy { p -> p.map { "${snapshotter.name(s, it)}@${s.getBattlefield().contains(it)}" }.sorted() }
+                .sortedBy { p -> p.sumOf(rank) }
+        // Tap what nothing else needs first: lands still pay for spells, planned attackers attack.
+        val attackers = plan.attacked.toSet()
+        fun tapRank(id: EntityId) = when {
+            !plan.attacksDone && snapshotter.name(s, id) in attackers -> 4
+            s.projectedState.hasType(id, "LAND") -> 2
+            else -> 1
+        }
         val payments = when (info.costType) {
             "Blight" -> info.validBlightTargets.map { base.copy(blightTargets = listOf(it)) }
-            "Behold" -> subsets(info.validBeholdTargets, info.beholdCount, info.beholdCount)
-                .map { base.copy(beheldCards = it) }
-            "TapPermanents" -> subsets(info.validTapTargets, info.tapCount, info.tapCount)
-                .map { base.copy(tappedPermanents = it) }
-            "DiscardCard" -> subsets(info.validDiscardTargets, info.discardCount, info.discardCount)
-                .map { base.copy(discardedCards = it) }
-            "SacrificePermanent" -> subsets(info.validSacrificeTargets, info.sacrificeCount, info.sacrificeCount)
+            // "choose a creature you control or reveal a creature card" (Monstrous Emergence) pays like behold
+            "Behold", "ChooseEntity" -> choose(info.validBeholdTargets, info.beholdCount).map { base.copy(beheldCards = it) }
+            "RevealCard" -> choose(info.validRevealTargets, info.revealCount).map { base.copy(revealedCards = it) }
+            "Casualty" -> listOf(base) + choose(info.validSacrificeTargets, 1).map { base.copy(sacrificedPermanents = it) }
+            "Craft" -> choose(info.validCraftMaterials, info.craftMinCount).map { base.copy(exiledCards = it) }
+            "TapPermanents" -> choose(info.validTapTargets, info.tapCount, ::tapRank).map { base.copy(tappedPermanents = it) }
+            "DiscardCard" -> choose(info.validDiscardTargets, info.discardCount).map { base.copy(discardedCards = it) }
+            "SacrificePermanent" -> choose(info.validSacrificeTargets, info.sacrificeCount)
                 .map { base.copy(sacrificedPermanents = it) }
-            "BouncePermanent" -> subsets(info.validBounceTargets, info.bounceCount, info.bounceCount)
-                .map { base.copy(bouncedPermanents = it) }
+            "BouncePermanent" -> choose(info.validBounceTargets, info.bounceCount).map { base.copy(bouncedPermanents = it) }
             "ExileFromGraveyard" -> listOf(base.copy(exiledCards = info.validExileTargets.take(info.exileMinCount)))
             else -> return listOf(action)
         }

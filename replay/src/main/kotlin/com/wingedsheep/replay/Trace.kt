@@ -1,6 +1,7 @@
 package com.wingedsheep.replay
 
 import com.wingedsheep.engine.state.GameState
+import com.wingedsheep.engine.state.components.player.ManaPoolComponent
 import java.io.PrintStream
 
 /**
@@ -38,7 +39,16 @@ class Tracer(
         val prio = s.priorityPlayerId?.let(seats::sideOf) ?: "-"
         val stack = s.stack.map { snapshotter.name(s, it) ?: "?" }
         val pending = s.pendingDecision?.let { " pending ${it::class.simpleName} for ${seats.sideOf(it.playerId)}" } ?: ""
-        return "#$n turn ${s.turnNumber} ${s.step} prio $prio stack $stack plan [$plan]$pending"
+        // the priority player's hand and floating mana: why a planned spell is or is not offered
+        val holder = s.priorityPlayerId
+        val hand = holder?.let { p -> s.getHand(p).map { snapshotter.name(s, it) ?: "?" } }.orEmpty()
+        val pool = holder?.let { s.getEntity(it)?.get<ManaPoolComponent>() }?.let { m ->
+            "WUBRGC".toList().zip(listOf(m.white, m.blue, m.black, m.red, m.green, m.colorless))
+                .filter { it.second > 0 }.joinToString("") { (c, k) -> "$c".repeat(k) } +
+                if (m.restrictedMana.isNotEmpty()) "+${m.restrictedMana.size}r" else ""
+        }.orEmpty()
+        return "#$n turn ${s.turnNumber} ${s.step} prio $prio stack $stack plan [$plan]$pending" +
+            " | hand $hand${if (pool.isNotEmpty()) " pool $pool" else ""}"
     }
 
     fun end(nodes: Int, ends: Int, closest: List<String>?) {

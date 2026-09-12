@@ -9,6 +9,7 @@ import com.wingedsheep.engine.state.components.battlefield.TappedComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.identity.ControllerComponent
 import com.wingedsheep.engine.state.components.identity.CopyOfComponent
+import com.wingedsheep.engine.state.components.identity.FaceDownComponent
 import com.wingedsheep.engine.state.components.identity.LifeTotalComponent
 import com.wingedsheep.engine.state.components.identity.PlayerComponent
 import com.wingedsheep.engine.state.components.identity.TokenComponent
@@ -143,8 +144,9 @@ class Snapshotter(definitions: Iterable<CardDefinition>, private val compareToke
             }
         }
 
+    /** A token, or a face-down permanent (manifest, cloak, disguise), which 17Lands logs as a token. */
     fun isToken(state: GameState, id: EntityId): Boolean =
-        state.getEntity(id)?.has<TokenComponent>() == true
+        state.getEntity(id)?.let { it.has<TokenComponent>() || it.has<FaceDownComponent>() } == true
 
     /**
      * Whether entity [id] is the card the replay calls [key]. Combat lists name tokens as
@@ -153,7 +155,8 @@ class Snapshotter(definitions: Iterable<CardDefinition>, private val compareToke
     fun matches(state: GameState, id: EntityId, key: String): Boolean {
         val name = name(state, id) ?: return false
         return if (key.startsWith(TOKEN_PREFIX)) {
-            isToken(state, id) && name.removeSuffix(" Token") == key.removePrefix(TOKEN_PREFIX)
+            if (state.getEntity(id)?.has<FaceDownComponent>() == true) key.removePrefix(TOKEN_PREFIX) in FACE_DOWN
+            else isToken(state, id) && name.removeSuffix(" Token") == key.removePrefix(TOKEN_PREFIX)
         } else {
             !isToken(state, id) && name == key
         }
@@ -161,6 +164,8 @@ class Snapshotter(definitions: Iterable<CardDefinition>, private val compareToke
 
     companion object {
         const val TOKEN_PREFIX = "token:"
+        /** 17Lands' token names for a face-down permanent. */
+        private val FACE_DOWN = setOf("Manifest", "Face-Down Creature", "[Face-Down Card]")
         private const val SPLIT = " // "
 
         fun counts(names: List<String>): Map<String, Int> = names.groupingBy { it }.eachCount()
