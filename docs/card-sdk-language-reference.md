@@ -3648,6 +3648,16 @@ A resolving nonpermanent spell retains its stack instance through serialized eff
   ability whose source already *is* the granter (Territory Forge / Sharkey-style gains), it resolves
   to the same entity as `Self`.
 - `EffectTarget.TriggeringEntity` — the entity that caused the trigger to fire.
+- `EffectTarget.AttackedBy(attacker = TriggeringEntity)` — the **player or planeswalker** `attacker`
+  is attacking: "deals 1 damage to the player or planeswalker that creature is attacking" (**Raid
+  Bombardment**, Hellrider — `AttackedBy(TriggeringEntity)` inside an ANY-bound `Triggers.attacks`),
+  "… it's attacking" (`AttackedBy(Self)`), Mage Slayer (`AttackedBy(EquippedCreature)`). Names the
+  planeswalker itself, unlike `Player.DefendingPlayer`, which maps it to its controller. Read at
+  resolution (CR 608.2h): the attacker's current attack while it is on the battlefield, else the
+  defender it had when it left — so the damage still lands after the attacker has died. An attacker
+  removed from combat but still on the battlefield is attacking nothing, and a battle or a
+  planeswalker that has left is neither, so those resolve to nothing and the effect does nothing. A
+  token attacker that has ceased to exist has no last-known defender to read.
 - `EffectTarget.TargetController` — the controller of the spell/ability's first chosen target
   ("its controller creates two Map tokens", "its controller gains 4 life"). Control-change effects
   are honored (projected controller first), and a target that has already left the battlefield —

@@ -336,13 +336,16 @@ object CardIntentAnalyzer {
      * Whether an effect aimed at [target] lands on a permanent that is not the card itself — the
      * precondition for calling anything "removal".
      *
-     * Two exclusions. A **player** target is a clock, not an answer. And **[EffectTarget.Self]** is
-     * the card sacrificing or exiling itself, unless [insideIteration], where it names whichever
-     * permanent the surrounding `ForEach` is currently visiting.
+     * Two exclusions. A **player** target is a clock, not an answer — which is also what
+     * [EffectTarget.AttackedBy] mostly names (Raid Bombardment pings whoever is being attacked).
+     * And **[EffectTarget.Self]** is the card sacrificing or exiling itself, unless
+     * [insideIteration], where it names whichever permanent the surrounding `ForEach` is currently
+     * visiting.
      */
     private fun hitsAnotherPermanent(target: EffectTarget, insideIteration: Boolean): Boolean = when (target) {
         is EffectTarget.PlayerRef, EffectTarget.Controller, EffectTarget.TargetController,
-        EffectTarget.ControllerOfTriggeringEntity, EffectTarget.ControllerOfDamageSource -> false
+        EffectTarget.ControllerOfTriggeringEntity, EffectTarget.ControllerOfDamageSource,
+        is EffectTarget.AttackedBy -> false
 
         EffectTarget.Self -> insideIteration
         else -> true

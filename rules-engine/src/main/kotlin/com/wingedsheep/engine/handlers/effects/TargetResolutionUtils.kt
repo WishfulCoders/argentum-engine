@@ -122,6 +122,9 @@ object TargetResolutionUtils {
             val attachmentId = context.triggeringEntityId ?: return null
             return state.getEntity(attachmentId)?.get<AttachedToComponent>()?.targetId
         }
+        if (effectTarget is EffectTarget.AttackedBy) {
+            return attackedBy(effectTarget.attacker, context, state)
+        }
         if (effectTarget is EffectTarget.ControllerOfPipelineTarget) {
             val targetEntityId = context.pipeline.storedCollections[effectTarget.collectionName]?.getOrNull(effectTarget.index) ?: return null
             return controllerOf(state, targetEntityId)
@@ -176,6 +179,36 @@ object TargetResolutionUtils {
             ?: return null
         return if (defenderId in state.turnOrder) defenderId
         else state.getEntity(defenderId)?.get<ControllerComponent>()?.playerId
+    }
+
+    /**
+     * The player or planeswalker [attacker] is attacking ([EffectTarget.AttackedBy]), per CR 608.2h:
+     * the attacker's current `AttackingComponent` while it is still that object on the battlefield,
+     * else the defender frozen into its battlefield-exit snapshot. A creature removed from combat
+     * but still on the battlefield is attacking nothing — no fallback to an older snapshot — and a
+     * defender that is no longer a player or a planeswalker on the battlefield (a battle, a
+     * planeswalker that has left) resolves to nothing.
+     *
+     * The live resolution refuses a `Self` or triggering creature that has left the battlefield,
+     * which is exactly when last-known information applies, so those two fall back to the raw id.
+     * A token attacker that has ceased to exist (CR 704.5d) has no snapshot left to read, so it
+     * resolves to nothing — the same gap [defendingPlayerOfAttacker] has.
+     */
+    private fun attackedBy(attacker: EffectTarget, context: EffectContext, state: GameState): EntityId? {
+        val liveId = resolveTarget(attacker, context, state)
+        val attackerId = liveId ?: when (attacker) {
+            EffectTarget.Self -> context.sourceId
+            EffectTarget.TriggeringEntity -> context.triggeringEntityId
+            else -> null
+        } ?: return null
+        val container = state.getEntity(attackerId) ?: return null
+        val defenderId = if (liveId != null && attackerId in state.getBattlefield()) {
+            container.get<AttackingComponent>()?.defenderId
+        } else {
+            container.get<LastKnownPermanentComponent>()?.snapshot?.attackedDefenderId
+        } ?: return null
+        if (defenderId in state.turnOrder) return defenderId
+        return defenderId.takeIf { it in state.getBattlefield() && state.projectedState.isPlaneswalker(it) }
     }
 
     /**
