@@ -305,7 +305,9 @@ object TargetSelection {
             //    engine rejects it — e.g. Sandman's graveyard land — and the AI re-picks the
             //    same failing activation forever).
             // Mirrors the web client's target-payload builder (pipelinePhases.ts).
-            val isSpell = state.isSpellOnStack(entityId)
+            // any stack object: a triggered or activated ability is addressed as a `Spell` too
+            // (Kirol's "copy target triggered ability"), and has no SpellOnStackComponent
+            val isSpell = state.isSpellOnStack(entityId) || entityId in state.stack
             val isPlayer = state.getEntity(entityId)?.get<PlayerComponent>() != null
             val cardZone = zoneOfCardTarget(state, entityId)
             when {
