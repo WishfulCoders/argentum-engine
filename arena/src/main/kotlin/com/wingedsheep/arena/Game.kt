@@ -36,6 +36,8 @@ class GameRunner(
     private val profile: AiProfile,
     private val maxTurnsPerSeat: Int = 50,
     private val maxActions: Int = 20_000,
+    /** Print the stack trace of an exception that ends a game (the `one` mode). */
+    private val printTraces: Boolean = false,
 ) {
     private val processor = ActionProcessor(registry)
     private val enumerator = LegalActionEnumerator.create(registry)
@@ -123,6 +125,7 @@ class GameRunner(
                 reason = if (actionCount >= maxActions) "maxActions($maxActions)" else "maxTurns($maxTurnsPerSeat)"
             }
         } catch (e: Throwable) {
+            if (printTraces) e.printStackTrace()
             reason = "exception(${e::class.simpleName}: ${e.message?.take(200)})"
         }
         val winnerSeat = if (state.gameOver) state.winnerId?.let { bySeat[it] } else null

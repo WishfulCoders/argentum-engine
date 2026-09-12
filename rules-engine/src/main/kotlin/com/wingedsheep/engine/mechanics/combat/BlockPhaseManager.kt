@@ -305,7 +305,60 @@ internal class BlockPhaseManager(
             }
         }
 
+        // 3. MustBeBlockedIfAble (Gaea's Protector, Vinebred Brawler): one satisfying assignment
+        // from the same maximum matching [validateMustBeBlockedRequirements] enforces, so a
+        // declaration built from this map is never rejected for leaving such an attacker
+        // unblocked. Only blockers not already claimed above are offered.
+        for ((blockerId, attackerId) in mustBeBlockedIfAbleMatching(state, blockingPlayer, potentialBlockers)) {
+            if (blockerId in result) continue
+            result.getOrPut(blockerId) { mutableListOf() }.add(attackerId)
+        }
+
         return result.filterValues { it.isNotEmpty() }
+    }
+
+    /**
+     * Maximum bipartite matching between the "must be blocked if able" attackers and the blockers
+     * hypothetically free to cover them (CR 509.1c): a provoke-pinned blocker is only free for its
+     * pinned attacker, and a blocker that can block a Lure-style attacker is claimed by that
+     * requirement. Returns blocker → attacker. Per-pair blocking restrictions go through
+     * [canCreatureBlockAttacker]; declaration-wide restrictions (e.g. can't-block-alone) are not
+     * modelled, so the matching can only over-count in those corners.
+     */
+    private fun mustBeBlockedIfAbleMatching(
+        state: GameState,
+        blockingPlayer: EntityId,
+        potentialBlockers: List<EntityId>
+    ): Map<EntityId, EntityId> {
+        val mustBeBlockedIfAbleAttackers = findMustBeBlockedIfAbleAttackers(state)
+        if (mustBeBlockedIfAbleAttackers.isEmpty()) return emptyMap()
+        val projected = state.projectedState
+        val mustBeBlockedByAllAttackers = findMustBeBlockedAttackers(state)
+        val provokePinnedAttackers = state.floatingEffects
+            .filter { it.effect.modification is SerializableModification.MustBlockSpecificAttacker }
+            .flatMap { floatingEffect ->
+                val modification =
+                    floatingEffect.effect.modification as SerializableModification.MustBlockSpecificAttacker
+                floatingEffect.effect.affectedEntities.map { it to modification.attackerId }
+            }
+            .groupBy({ it.first }, { it.second })
+            .mapValues { it.value.toSet() }
+        val lureClaimedBlockers = potentialBlockers.filter { blockerId ->
+            mustBeBlockedByAllAttackers.any { attackerId ->
+                canCreatureBlockAttacker(state, blockerId, attackerId, blockingPlayer, projected)
+            }
+        }.toSet()
+
+        fun canHypotheticallyBlock(blockerId: EntityId, attackerId: EntityId): Boolean {
+            if (blockerId in lureClaimedBlockers) return false
+            provokePinnedAttackers[blockerId]?.let { pins -> if (attackerId !in pins) return false }
+            return canCreatureBlockAttacker(state, blockerId, attackerId, blockingPlayer, projected)
+        }
+
+        return com.wingedsheep.engine.mechanics.BipartiteMatching
+            .maximumMatching(mustBeBlockedIfAbleAttackers, potentialBlockers) { attackerId, blockerId ->
+                canHypotheticallyBlock(blockerId, attackerId)
+            }
     }
 
     // =========================================================================
@@ -766,42 +819,12 @@ internal class BlockPhaseManager(
 
         // 2. "Must be blocked if able" (Gaea's Protector): at least one creature must block it.
         // Rule 509.1c: the declaration is illegal if the number of requirements being obeyed is
-        // fewer than the maximum number that could be obeyed. That maximum is a maximum bipartite
-        // matching between the must-be-blocked attackers and the blockers hypothetically free to
-        // cover them: a provoke-pinned blocker is only free for its pinned attacker, and a blocker
-        // that can block a Lure-style attacker is claimed by that requirement (section 1 forces it
-        // there). Per-pair blocking restrictions go through canCreatureBlockAttacker; declaration-
-        // wide restrictions (e.g. can't-block-alone) are not modelled, so the computed maximum can
-        // only over-count in those corners — never rejecting more than 509.1c would.
+        // fewer than the maximum number that could be obeyed, i.e. the size of the maximum
+        // matching in [mustBeBlockedIfAbleMatching] (which [getMandatoryBlockerAssignments] also
+        // offers, so a declaration built from it satisfies this check).
         val mustBeBlockedIfAbleAttackers = findMustBeBlockedIfAbleAttackers(state)
         if (mustBeBlockedIfAbleAttackers.isNotEmpty()) {
-            val provokePinnedAttackers = state.floatingEffects
-                .filter { it.effect.modification is SerializableModification.MustBlockSpecificAttacker }
-                .flatMap { floatingEffect ->
-                    val modification =
-                        floatingEffect.effect.modification as SerializableModification.MustBlockSpecificAttacker
-                    floatingEffect.effect.affectedEntities.map { it to modification.attackerId }
-                }
-                .groupBy({ it.first }, { it.second })
-                .mapValues { it.value.toSet() }
-            val lureClaimedBlockers = potentialBlockers.filter { blockerId ->
-                mustBeBlockedByAllAttackers.any { attackerId ->
-                    canCreatureBlockAttacker(state, blockerId, attackerId, blockingPlayer, projected)
-                }
-            }.toSet()
-
-            fun canHypotheticallyBlock(blockerId: EntityId, attackerId: EntityId): Boolean {
-                if (blockerId in lureClaimedBlockers) return false
-                provokePinnedAttackers[blockerId]?.let { pins -> if (attackerId !in pins) return false }
-                return canCreatureBlockAttacker(state, blockerId, attackerId, blockingPlayer, projected)
-            }
-
-            // Maximum bipartite matching (attackers ↔ hypothetically-free blockers): its size is
-            // the most requirements that could be simultaneously obeyed. Shared Kuhn's routine.
-            val matchedAttackerOfBlocker = com.wingedsheep.engine.mechanics.BipartiteMatching
-                .maximumMatching(mustBeBlockedIfAbleAttackers, potentialBlockers) { attackerId, blockerId ->
-                    canHypotheticallyBlock(blockerId, attackerId)
-                }
+            val matchedAttackerOfBlocker = mustBeBlockedIfAbleMatching(state, blockingPlayer, potentialBlockers)
             val maxSatisfiable = matchedAttackerOfBlocker.size
             val satisfied = mustBeBlockedIfAbleAttackers.count { !attackerToBlockers[it].isNullOrEmpty() }
 

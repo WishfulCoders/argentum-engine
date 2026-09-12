@@ -14,6 +14,9 @@ import java.util.concurrent.atomic.AtomicInteger
 /**
  * `arena <decks.jsonl> <results.jsonl> [gamesPerPair] [threads] [maxOpponents] [maxTargets] [seed]`
  *
+ * `arena one <decks.jsonl> <targetId> <opponentId> <game> <seed>` replays one game from a results
+ * line with stack traces printed, for debugging an `exception(...)` reason.
+ *
  * Every target deck plays every opponent deck [gamesPerPair] times (alternating who is on the
  * play), scheduled opponent by opponent so a partial results file already has every target at
  * the same game count. Results are appended in completion order and flushed regularly; rerunning
@@ -21,6 +24,7 @@ import java.util.concurrent.atomic.AtomicInteger
  * does not know are reported and skipped.
  */
 fun main(args: Array<String>) {
+    if (args.firstOrNull() == "one") return playOne(args.drop(1))
     require(args.size >= 2) {
         "usage: arena <decks.jsonl> <results.jsonl> [gamesPerPair] [threads] [maxOpponents] [maxTargets] [seed]"
     }
@@ -32,16 +36,7 @@ fun main(args: Array<String>) {
     val maxTargets = args.getOrNull(5)?.toInt() ?: Int.MAX_VALUE
     val runSeed = args.getOrNull(6)?.toLong() ?: 0L
 
-    // Every set, so Special Guests printed elsewhere resolve; ECL last so its printings win.
-    val ecl = MtgSetCatalog.requireByCode("ECL")
-    val registry = CardRegistry().apply {
-        for (set in MtgSetCatalog.all) if (set.code != ecl.code) {
-            register(set.cards)
-            register(set.basicLands)
-        }
-        register(ecl.cards)
-        register(ecl.basicLands)
-    }
+    val registry = eclRegistry()
     val profile = AiProfile.CURRENT
 
     val decks = input.readLines().filter { it.isNotBlank() }.map { arenaJson.decodeFromString<DeckSpec>(it) }
@@ -130,6 +125,34 @@ fun main(args: Array<String>) {
         }
     }
     pool.shutdown()
+}
+
+/** Every set, so Special Guests printed elsewhere resolve; ECL last so its printings win. */
+private fun eclRegistry(): CardRegistry {
+    val ecl = MtgSetCatalog.requireByCode("ECL")
+    return CardRegistry().apply {
+        for (set in MtgSetCatalog.all) if (set.code != ecl.code) {
+            register(set.cards)
+            register(set.basicLands)
+        }
+        register(ecl.cards)
+        register(ecl.basicLands)
+    }
+}
+
+private fun playOne(args: List<String>) {
+    require(args.size == 5) { "usage: arena one <decks.jsonl> <targetId> <opponentId> <game> <seed>" }
+    val decks = File(args[0]).readLines().filter { it.isNotBlank() }
+        .map { arenaJson.decodeFromString<DeckSpec>(it) }.associateBy { it.id }
+    val target = decks.getValue(args[1])
+    val opponent = decks.getValue(args[2])
+    val game = args[3].toInt()
+    val seed = args[4].toLong()
+    val targetSeat = game % 2
+    val seats = if (targetSeat == 0) listOf(target.cards, opponent.cards) else listOf(opponent.cards, target.cards)
+    val o = GameRunner(eclRegistry(), AiProfile.CURRENT, printTraces = true).play(seats, seed)
+    println("winner seat ${o.winnerSeat} (target seat $targetSeat), turns ${o.turns}, actions ${o.actions}, " +
+        "illegal ${o.illegal}, life ${o.life}, reason '${o.reason}'")
 }
 
 /** SplitMix64 over the run seed and the schedule coordinates, so a run is reproducible. */
