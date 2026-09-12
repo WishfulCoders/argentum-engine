@@ -1108,7 +1108,8 @@
                     "type": "Exists",
                     "player": "You",
                     "zone": "Battlefield",
-                    "filter": "creature Elf"
+                    "filter": "creature Elf",
+                    "excludeSelf": true
                 }
             }
         ]

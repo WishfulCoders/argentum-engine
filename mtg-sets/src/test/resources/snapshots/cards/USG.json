@@ -3653,7 +3653,8 @@
                     "type": "Exists",
                     "player": "You",
                     "zone": "Battlefield",
-                    "filter": "land"
+                    "filter": "nonland permanent",
+                    "excludeSelf": true
                 }
             }
         ]

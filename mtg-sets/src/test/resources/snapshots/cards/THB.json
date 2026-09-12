@@ -1578,7 +1578,8 @@
                     "type": "Exists",
                     "player": "You",
                     "zone": "Battlefield",
-                    "filter": "creature pow>=4"
+                    "filter": "creature pow>=4",
+                    "excludeSelf": true
                 }
             }
         ]

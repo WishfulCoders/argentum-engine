@@ -77,6 +77,94 @@
     ]
 }
 
+// Fatal Push
+{
+    "name": "Fatal Push",
+    "manaCost": "{B}",
+    "typeLine": "Instant",
+    "oracleText": "Destroy target creature if it has mana value 2 or less.\nRevolt — Destroy that creature if it has mana value 4 or less instead if a permanent left the battlefield under your control this turn.",
+    "script": {
+        "spellEffect": {
+            "type": "Gated",
+            "gate": {
+                "type": "Gate.WhenCondition",
+                "condition": {
+                    "type": "Any",
+                    "conditions": [
+                        {
+                            "type": "EntityMatches",
+                            "entity": {
+                                "type": "ContextTarget",
+                                "index": 0
+                            },
+                            "filter": "creature mv<=2"
+                        },
+                        {
+                            "type": "All",
+                            "conditions": [
+                                "PermanentLeftBattlefieldThisTurn",
+                                {
+                                    "type": "EntityMatches",
+                                    "entity": {
+                                        "type": "ContextTarget",
+                                        "index": 0
+                                    },
+                                    "filter": "creature mv<=4"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },
+            "then": {
+                "type": "MoveToZone",
+                "target": {
+                    "type": "BoundVariable",
+                    "name": "target creature"
+                },
+                "destination": "Graveyard",
+                "byDestruction": true
+            }
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": "creature"
+                },
+                "id": "target creature"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "57",
+        "rarity": "UNCOMMON",
+        "artist": "Eric Deschamps",
+        "imageUri": "https://cards.scryfall.io/normal/front/b/5/b5e81649-9954-424c-89d1-f87d73b66047.jpg?1783936764",
+        "rulings": [
+            {
+                "date": "2020-08-07",
+                "text": "Fatal Push can target any creature, even one with mana value 5 or greater. The creature's mana value is checked only as Fatal Push resolves."
+            },
+            {
+                "date": "2020-08-07",
+                "text": "If a creature on the battlefield has {X} in its mana cost, X is considered to be 0."
+            },
+            {
+                "date": "2020-08-07",
+                "text": "Revolt abilities don't care why the permanent left the battlefield, who caused it to move, or where it moved to."
+            },
+            {
+                "date": "2020-08-07",
+                "text": "Tokens that leave the battlefield will satisfy a revolt ability."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK"
+    ]
+}
+
 // Gifted Aetherborn
 {
     "name": "Gifted Aetherborn",

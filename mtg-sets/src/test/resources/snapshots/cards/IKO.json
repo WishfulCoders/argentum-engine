@@ -153,6 +153,96 @@
     ]
 }
 
+// Back for More
+{
+    "name": "Back for More",
+    "manaCost": "{4}{B}{G}",
+    "typeLine": "Instant",
+    "oracleText": "Return target creature card from your graveyard to the battlefield. When you do, it fights up to one target creature you don't control. (Each deals damage equal to its power to the other.)",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "GatherCards",
+                    "source": "ChosenTargets",
+                    "storeAs": "returned"
+                },
+                {
+                    "type": "ReflexiveTrigger",
+                    "action": {
+                        "type": "MoveToZone",
+                        "target": {
+                            "type": "BoundVariable",
+                            "name": "target creature card from your graveyard"
+                        },
+                        "destination": "Battlefield",
+                        "fromZone": "Graveyard"
+                    },
+                    "optional": false,
+                    "reflexiveEffect": {
+                        "type": "Fight",
+                        "target1": {
+                            "type": "PipelineTarget",
+                            "collectionName": "returned"
+                        },
+                        "target2": {
+                            "type": "ContextTarget",
+                            "index": 0
+                        }
+                    },
+                    "reflexiveTargetRequirements": [
+                        {
+                            "type": "TargetObject",
+                            "optional": true,
+                            "filter": {
+                                "baseFilter": "creature ctrl:opponent"
+                            }
+                        }
+                    ],
+                    "descriptionOverride": "When you do, it fights up to one target creature you don't control."
+                }
+            ],
+            "descriptionOverride": "Return target creature card from your graveyard to the battlefield. When you do, it fights up to one target creature you don't control."
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": "creature own:you",
+                    "zone": "Graveyard"
+                },
+                "id": "target creature card from your graveyard"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "177",
+        "rarity": "UNCOMMON",
+        "artist": "Daarken",
+        "flavorText": "\"How can you be sure you pierced its heart? Do you even know where its heart is?\"\n—Trundan, Indatha poacher",
+        "imageUri": "https://cards.scryfall.io/normal/front/3/f/3fc7210c-da23-4cec-9195-4de75587f40f.jpg?1783931029",
+        "rulings": [
+            {
+                "date": "2024-04-12",
+                "text": "You don't choose a target creature you don't control at the time you cast Back for More. Rather, a \"reflexive\" ability triggers when you return the target creature card from your graveyard to the battlefield. You choose a target for that ability as it goes on the stack. Each player may respond to this triggered ability as normal. Notably, Back for More isn't a crime, but the reflexive triggered ability potentially is."
+            },
+            {
+                "date": "2020-04-17",
+                "text": "The reflexive triggered ability from Back for More is put onto the stack at the same time as any other triggered abilities caused by the creature entering the battlefield."
+            },
+            {
+                "date": "2020-04-17",
+                "text": "If the target creature is an illegal target when the reflexive triggered ability tries to resolve, the ability doesn't resolve. If the creature you put onto the battlefield is no longer on the battlefield or no longer a creature, the target creature won't deal or be dealt damage."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "BLACK",
+        "GREEN"
+    ]
+}
+
 // Barrier Breach
 {
     "name": "Barrier Breach",

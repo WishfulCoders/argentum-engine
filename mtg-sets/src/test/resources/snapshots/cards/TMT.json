@@ -9144,7 +9144,8 @@
                     "amount": {
                         "type": "ContextProperty",
                         "key": "TRIGGER_DAMAGE_AMOUNT"
-                    }
+                    },
+                    "expiry": "UNTIL_END_OF_TURN"
                 },
                 "descriptionOverride": "Enrage — Whenever Raphael is dealt damage, add that much {R}. Until end of turn, you don't lose this mana as steps and phases end."
             }

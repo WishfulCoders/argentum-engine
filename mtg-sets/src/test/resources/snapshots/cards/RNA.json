@@ -357,6 +357,45 @@
     ]
 }
 
+// Bedevil
+{
+    "name": "Bedevil",
+    "manaCost": "{B}{B}{R}",
+    "typeLine": "Instant",
+    "oracleText": "Destroy target artifact, creature, or planeswalker.",
+    "script": {
+        "spellEffect": {
+            "type": "MoveToZone",
+            "target": {
+                "type": "BoundVariable",
+                "name": "target artifact, creature, or planeswalker"
+            },
+            "destination": "Graveyard",
+            "byDestruction": true
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": "artifact|creature|planeswalker"
+                },
+                "id": "target artifact, creature, or planeswalker"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "157",
+        "rarity": "RARE",
+        "artist": "Seb McKinnon",
+        "flavorText": "\"It's easy to get taken in by the spectacle, to enjoy a bit of naughty amusement. But make no mistake: the Cult of Rakdos is a danger.\"\n—Tajic",
+        "imageUri": "https://cards.scryfall.io/normal/front/8/1/81e2b96b-ecf2-4dd9-bc9d-3c46ee8c59e6.jpg?1783933657"
+    },
+    "colorIdentityOverride": [
+        "BLACK",
+        "RED"
+    ]
+}
+
 // Biogenic Upgrade
 {
     "name": "Biogenic Upgrade",
@@ -3029,6 +3068,87 @@
         "imageUri": "https://cards.scryfall.io/normal/front/e/f/ef3358cb-714c-49bf-b7e9-a69d02d7799e.jpg"
     },
     "colorIdentityOverride": [
+        "GREEN"
+    ]
+}
+
+// Savage Smash
+{
+    "name": "Savage Smash",
+    "manaCost": "{1}{R}{G}",
+    "typeLine": "Sorcery",
+    "oracleText": "Target creature you control gets +2/+2 until end of turn. It fights target creature you don't control. (Each deals damage equal to its power to the other.)",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "ModifyStats",
+                    "powerModifier": {
+                        "type": "Fixed",
+                        "amount": 2
+                    },
+                    "toughnessModifier": {
+                        "type": "Fixed",
+                        "amount": 2
+                    },
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "target creature you control"
+                    }
+                },
+                {
+                    "type": "Fight",
+                    "target1": {
+                        "type": "BoundVariable",
+                        "name": "target creature you control"
+                    },
+                    "target2": {
+                        "type": "BoundVariable",
+                        "name": "target creature you don't control"
+                    }
+                }
+            ]
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": "creature ctrl:you"
+                },
+                "id": "target creature you control"
+            },
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": "creature ctrl:opponent"
+                },
+                "id": "target creature you don't control"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "203",
+        "artist": "Zoltan Boros",
+        "flavorText": "A Gruul berserker is never unarmed.",
+        "imageUri": "https://cards.scryfall.io/normal/front/4/c/4ca942d7-a3a3-429f-a159-fc2363d9bca6.jpg?1783933639",
+        "rulings": [
+            {
+                "date": "2019-01-25",
+                "text": "You can't cast Savage Smash unless you choose both a creature you control and a creature you don't control as targets."
+            },
+            {
+                "date": "2019-01-25",
+                "text": "If either target is an illegal target as Savage Smash resolves, neither creature will deal or be dealt damage."
+            },
+            {
+                "date": "2019-01-25",
+                "text": "If the creature you control is an illegal target as Savage Smash tries to resolve, it won't get +2/+2. If that creature is a legal target but the other creature isn't, the creature you control still gets +2/+2."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED",
         "GREEN"
     ]
 }
