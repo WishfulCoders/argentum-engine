@@ -2,6 +2,7 @@ package com.wingedsheep.replay
 
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.mtg.sets.MtgSetCatalog
+import com.wingedsheep.mtg.sets.tokens.PredefinedTokens
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.jsonArray
@@ -65,7 +66,10 @@ fun main(args: Array<String>) {
     summarize(results)
 }
 
-/** Every set, so Special Guests printed elsewhere resolve; ECL last so its printings win. */
+/**
+ * Every set, so Special Guests printed elsewhere resolve; ECL last so its printings win. Plus the
+ * predefined tokens (Treasure, Food, Clue, ...): without them `CreateTreasure` resolves to nothing.
+ */
 private fun engineCards(): Pair<CardRegistry, Snapshotter> {
     val sets = MtgSetCatalog.all
     val ecl = MtgSetCatalog.requireByCode("ECL")
@@ -76,6 +80,7 @@ private fun engineCards(): Pair<CardRegistry, Snapshotter> {
         }
         register(ecl.cards)
         register(ecl.basicLands)
+        register(PredefinedTokens.allTokens)
     }
     return registry to Snapshotter(sets.flatMap { it.cards })
 }

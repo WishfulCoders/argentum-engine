@@ -17,11 +17,13 @@ import com.wingedsheep.engine.state.components.combat.AttackingComponent
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
 import com.wingedsheep.gym.GameEnvironment
 import com.wingedsheep.engine.state.components.battlefield.TappedComponent
+import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.ManaSymbol
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
+import com.wingedsheep.sdk.scripting.AdditionalCost
 import com.wingedsheep.sdk.scripting.AdditionalCostPayment
 import com.wingedsheep.sdk.scripting.AlternativePaymentChoice
 import com.wingedsheep.sdk.scripting.ConvokePayment
@@ -67,6 +69,8 @@ class Reconstructor(
 
     /** Why the last [apply] or [materialize] was refused, for the trace and the failure reason. */
     private var lastError: String? = null
+    /** The hidden slot the materializer last refused, if it named one. */
+    private var lastRefused: EntityId? = null
 
     private data class Node(val state: GameState, val plan: Plan)
 
@@ -182,7 +186,10 @@ class Reconstructor(
                     if (diff.isEmpty()) {
                         search.tracer?.line("    end check: matches the snapshot")
                         search.ends += child.state
-                    } else search.near(diff)
+                    } else {
+                        search.near(diff)
+                        search.tracer?.line("      board: ${snapshotter.board(s, seats)}")
+                    }
                 } else {
                     stack.addLast(child)
                 }
@@ -576,28 +583,75 @@ class Reconstructor(
      * Make sure the opponent holds the cards the record has them play this half-turn: needed cards
      * already in hand stay, the rest are written over filler hand slots, then over the top of the
      * library (a card drawn this turn can be the one played).
+     *
+     * A spell with a behold cost ("behold a Goblin or pay {2}") cast without the {2} needs a Goblin
+     * in hand when the opponent controls none, and the filler hand holds basics; so one creature of
+     * that type is written into a free slot too. It stays in their hand, as a revealed card would.
+     * A slot the materializer refuses (a card already revealed, say by a tutor) is skipped.
      */
     private fun revealOppo(state: GameState, seats: Seats, ht: HalfTurnSpec): GameState? {
         val own = if (ht.active == "oppo") ht.lands + ht.creatures + ht.noncreatures + ht.discarded else emptyList()
-        val needed = Snapshotter.counts(own + ht.instants["oppo"].orEmpty() + ht.flash["oppo"].orEmpty()).toMutableMap()
+        val casts = own + ht.instants["oppo"].orEmpty() + ht.flash["oppo"].orEmpty()
+        val needed = Snapshotter.counts(casts).toMutableMap()
         val free = mutableListOf<EntityId>()
         for (id in state.getHand(seats.oppo)) {
             val name = snapshotter.name(state, id)
             val left = name?.let { needed[it] } ?: 0
             if (name != null && left > 0) needed[name] = left - 1 else free += id
         }
+        val board = state.controlledBattlefield(seats.oppo).mapNotNull { snapshotter.name(state, it) }
+        val held = free.mapNotNull { snapshotter.name(state, it) }
+        for (type in casts.mapNotNull(::beholdType).distinct()) {
+            if ((board + held + casts).none { hasCreatureType(it, type) }) {
+                beholdFiller(type)?.let { needed[it] = (needed[it] ?: 0) + 1 }
+            }
+        }
         val missing = needed.flatMap { (name, k) -> List(k) { name } }
         if (missing.isEmpty()) return state
-        val slots = free + state.getLibrary(seats.oppo).take(missing.size)
-        if (slots.size < missing.size) return null
-        return materialize(state, slots.zip(missing).toMap())
+        val slots = (free + state.getLibrary(seats.oppo)).toMutableList()
+        repeat(MAX_SLOT_RETRIES) {
+            if (slots.size < missing.size) return null
+            val pick = slots.take(missing.size)
+            materialize(state, pick.zip(missing).toMap())?.let { return it }
+            if (lastRefused == null || !slots.remove(lastRefused)) return null
+        }
+        return null
+    }
+
+    /** The creature type a card's behold cost asks for ("behold a Goblin"), or null. */
+    private fun beholdType(name: String): String? {
+        fun find(c: AdditionalCost): AdditionalCost.Behold? = when (c) {
+            is AdditionalCost.Behold -> c
+            is AdditionalCost.OrPay -> find(c.cost)
+            is AdditionalCost.Composite -> c.steps.firstNotNullOfOrNull(::find)
+            else -> null
+        }
+        val behold = registry.getCard(name)?.script?.additionalCosts?.firstNotNullOfOrNull(::find) ?: return null
+        return behold.filter.description.split(' ').lastOrNull { it.firstOrNull()?.isUpperCase() == true }
+    }
+
+    private fun hasCreatureType(name: String, type: String): Boolean {
+        val def = registry.getCard(name) ?: return false
+        return def.typeLine.subtypes.any { it.value == type } || Keyword.CHANGELING in def.keywords
+    }
+
+    /** An ECL creature of [type] to stand in for the card an opponent beheld from hand. */
+    private val beholdFillers = mutableMapOf<String, String?>()
+    private fun beholdFiller(type: String): String? = beholdFillers.getOrPut(type) {
+        registry.allCardNames().sorted().firstOrNull { n ->
+            val def = registry.getCard(n)
+            def != null && def.setCode == "ECL" && def.typeLine.subtypes.any { it.value == type } &&
+                def.creatureStats != null && def.backFace == null
+        }
     }
 
     private fun materialize(state: GameState, names: Map<EntityId, String>): GameState? {
+        lastRefused = null
         val request = HiddenWorldMaterializationRequest(names.mapValues { registry.requireCard(it.value) }, state.rng)
         return when (val r = materializer.materialize(state, request)) {
             is HiddenWorldMaterializationResult.Materialized -> r.state
             is HiddenWorldMaterializationResult.Unsupported -> {
+                lastRefused = r.reason.entityId
                 val slot = r.reason.entityId?.let { id -> "${snapshotter.name(state, id)} (${id.value})" }
                 lastError = "${r.reason.kind} $slot ${r.reason.details.joinToString()}"
                 null
@@ -621,6 +675,7 @@ class Reconstructor(
         const val MAX_SELECT_OPTIONS = 8
         /** Matching end states collected per half-turn before the beam is picked from them. */
         const val MAX_ENDS = 128
+        const val MAX_SLOT_RETRIES = 8
         const val MAX_PAYMENT_OPTIONS = 12
         val BASICS = mapOf('W' to "Plains", 'U' to "Island", 'B' to "Swamp", 'R' to "Mountain", 'G' to "Forest")
 

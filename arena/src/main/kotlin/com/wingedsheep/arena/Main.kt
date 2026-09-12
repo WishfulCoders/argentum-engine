@@ -3,6 +3,7 @@ package com.wingedsheep.arena
 import com.wingedsheep.ai.engine.AiProfile
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.mtg.sets.MtgSetCatalog
+import com.wingedsheep.mtg.sets.tokens.PredefinedTokens
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import java.io.File
@@ -127,7 +128,10 @@ fun main(args: Array<String>) {
     pool.shutdown()
 }
 
-/** Every set, so Special Guests printed elsewhere resolve; ECL last so its printings win. */
+/**
+ * Every set, so Special Guests printed elsewhere resolve; ECL last so its printings win. Plus the
+ * predefined tokens (Treasure, Food, Clue, ...): without them `CreateTreasure` resolves to nothing.
+ */
 private fun eclRegistry(): CardRegistry {
     val ecl = MtgSetCatalog.requireByCode("ECL")
     return CardRegistry().apply {
@@ -137,6 +141,7 @@ private fun eclRegistry(): CardRegistry {
         }
         register(ecl.cards)
         register(ecl.basicLands)
+        register(PredefinedTokens.allTokens)
     }
 }
 

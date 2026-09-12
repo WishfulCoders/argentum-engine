@@ -118,6 +118,14 @@ class Snapshotter(definitions: Iterable<CardDefinition>, private val compareToke
             }
         }.sorted()
 
+    /** Every battlefield object by side, tokens marked, for the trace. */
+    fun board(state: GameState, seats: Seats): String =
+        listOf("user", "oppo").joinToString(" | ") { side ->
+            "$side: " + state.controlledBattlefield(seats.of(side)).joinToString(", ") { id ->
+                (name(state, id) ?: "<no card ${id.value}>") + if (isToken(state, id)) " (token)" else ""
+            }
+        }
+
     fun isToken(state: GameState, id: EntityId): Boolean =
         state.getEntity(id)?.has<TokenComponent>() == true
 
