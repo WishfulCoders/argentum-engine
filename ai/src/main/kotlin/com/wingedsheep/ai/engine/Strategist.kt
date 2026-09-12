@@ -927,8 +927,8 @@ class Strategist(
 
     /**
      * Turn the Convoke candidates advertised by the legal-action enumerator into the payment the
-     * cast handler consumes. Colored pips are satisfied first; remaining creatures pay only the
-     * generic part of the cost, so the AI never submits an invalid overpayment.
+     * cast handler consumes. Colored pips are satisfied first, then hybrid ones; remaining creatures
+     * pay only the generic part of the cost, so the AI never submits an invalid overpayment.
      */
     private fun withAutomaticConvoke(action: LegalAction): GameAction {
         val cast = action.action as? CastSpell ?: return action.action
@@ -953,6 +953,16 @@ class Strategist(
                     val creature = unused.removeAt(index)
                     payments[creature.entityId] = ConvokePayment(color)
                 }
+            }
+        }
+        // Hybrid pips next, by a creature of either colour: Merrow Skyswimmer's {3}{W/U}{W/U} with
+        // two white creatures and one Plains is castable only if the creatures take the hybrids.
+        for (hybrid in cost.symbols.filterIsInstance<ManaSymbol.Hybrid>()) {
+            val index = unused.indexOfFirst { hybrid.color1 in it.colors || hybrid.color2 in it.colors }
+            if (index >= 0) {
+                val creature = unused.removeAt(index)
+                val color = if (hybrid.color1 in creature.colors) hybrid.color1 else hybrid.color2
+                payments[creature.entityId] = ConvokePayment(color)
             }
         }
         while (genericNeeded > 0 && unused.isNotEmpty()) {

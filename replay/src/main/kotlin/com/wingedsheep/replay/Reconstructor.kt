@@ -482,13 +482,19 @@ class Reconstructor(
         val out = mutableListOf<GameAction>(cast)
         val convoke = la.convokeCreatures.orEmpty()
         if (la.hasConvoke && convoke.isNotEmpty() && cost != null) {
-            // The AI's policy — each coloured symbol by a creature of that colour, then generic —
-            // is the only option here that pays coloured mana with creatures ({4}{W}{W}).
+            // Coloured-first — each coloured symbol by a creature of that colour, then hybrid ones
+            // by a creature of either colour, then generic — is the only option here that pays
+            // coloured mana with creatures ({4}{W}{W}, Merrow Skyswimmer's {3}{W/U}{W/U}).
             val coloured = mutableMapOf<EntityId, ConvokePayment>()
             val unused = convoke.toMutableList()
-            for (symbol in cost.symbols.filterIsInstance<ManaSymbol.Colored>()) {
-                val i = unused.indexOfFirst { symbol.color in it.colors }
-                if (i >= 0) coloured[unused.removeAt(i).entityId] = ConvokePayment(symbol.color)
+            val pips = cost.symbols.filterIsInstance<ManaSymbol.Colored>().map { listOf(it.color) } +
+                cost.symbols.filterIsInstance<ManaSymbol.Hybrid>().map { listOf(it.color1, it.color2) }
+            for (colours in pips) {
+                val i = unused.indexOfFirst { c -> colours.any { it in c.colors } }
+                if (i >= 0) {
+                    val creature = unused.removeAt(i)
+                    coloured[creature.entityId] = ConvokePayment(colours.first { it in creature.colors })
+                }
             }
             repeat(minOf(cost.genericAmount, unused.size)) { coloured[unused.removeAt(0).entityId] = ConvokePayment() }
             if (coloured.isNotEmpty()) {
