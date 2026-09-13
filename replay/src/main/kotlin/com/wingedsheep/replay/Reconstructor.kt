@@ -461,7 +461,8 @@ class Reconstructor(
                                 .flatMap { withManaChoices(s, la, it, more, manaSources) }
                             val taken = tryAll(s, la, variants, notes)
                             taken.forEach { (st, a) -> out += Node(st, after, node.line.then(s, a, PLAN)) }
-                            if (taken.isEmpty()) floatThenCast(s, la, variants.first(), sacrificeMana, notes).forEach { (st, steps) ->
+                            // (no variants at all: no target or cost payment the engine accepts)
+                            if (taken.isEmpty() && variants.isNotEmpty()) floatThenCast(s, la, variants.first(), sacrificeMana, notes).forEach { (st, steps) ->
                                 out += Node(st, after, node.line.then(steps, PLAN))
                             }
                             if (out.any { it.plan === after }) cast = true
