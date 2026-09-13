@@ -267,6 +267,9 @@ class AIPlayer(
                 creatureValuation = profile.creatureValuation,
                 priceLandsInHandAsMana = profile.priceLandsInHandAsMana,
             )
+            val priorityEvaluator = profile.priorityEvalWeightsId
+                ?.let { EvalWeights.resolveEvaluator(it, IntentCatalog.of(cardRegistry)) }
+                ?: evaluator
             val combatAdvisor = CombatAdvisor(
                 simulator, evaluator, cardRegistry, advisorRegistry,
                 priceCrackBackAsLife = profile.priceCrackBackAsLife,
@@ -291,7 +294,7 @@ class AIPlayer(
                 simulator = simulator,
                 evaluator = evaluator,
                 strategist = Strategist(
-                    simulator, evaluator,
+                    simulator, priorityEvaluator,
                     combatAdvisor = combatAdvisor,
                     advisorRegistry = advisorRegistry,
                     useMeaningfulFilter = profile.useMeaningfulFilter,
@@ -308,7 +311,7 @@ class AIPlayer(
                     // only needs to know what a point of board value trades against.
                     boardPresenceWeight = EvalWeights.resolve(profile.evalWeightsId).boardPresence,
                     candidateEvaluator = candidateEvaluatorFor(
-                        cardRegistry, profile, evaluator, advisorRegistry, intents,
+                        cardRegistry, profile, priorityEvaluator, advisorRegistry, intents,
                         EvalWeights.winProbabilityScale(profile.evalWeightsId),
                     ),
                     stateSampler = if (profile.determinizeHiddenInformation) {

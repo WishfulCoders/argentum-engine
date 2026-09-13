@@ -132,8 +132,9 @@ fun main(args: Array<String>) {
 
 /**
  * `-Darena.profile` (both seats) and `-Darena.targetProfile` (the target's seat only): `current`, the
- * default AI, or `apprentice`, the same AI with its evaluator replaced by the linear model in
- * `shared-apprentice.json` under `-Dargentum.ai.apprentice.dir` (the gameplay pilot, `docs/26`).
+ * default AI, or `apprentice`, the same AI whose priority choices (not combat or decisions) are scored
+ * by the linear model in `shared-apprentice.json` under `-Dargentum.ai.apprentice.dir` (the
+ * gameplay pilot, mtg-draft-ai `docs/26`).
  * An apprentice that did not load is an error, not a silent fallback to the default evaluator.
  */
 private fun arenaProfile(name: String): AiProfile = when (name) {
@@ -142,7 +143,7 @@ private fun arenaProfile(name: String): AiProfile = when (name) {
         require(EvalWeights.isRawProfile("shared-apprentice")) {
             "no valid shared-apprentice.json under -Dargentum.ai.apprentice.dir"
         }
-        AiProfile.CURRENT.copy(id = "current-apprentice", evalWeightsId = "shared-apprentice")
+        AiProfile.CURRENT.copy(id = "current-apprentice", priorityEvalWeightsId = "shared-apprentice")
     }
     else -> error("unknown profile $name")
 }

@@ -377,6 +377,12 @@ data class AiProfile(
     val priceLandsInHandAsMana: Boolean = false,
     /** Non-null profiles may only be selected automatically for this set. Arena selection stays explicit. */
     val restrictedToSet: String? = null,
+    /**
+     * An evaluator for the Strategist's priority choices only (which land, spell or ability, or to
+     * pass); combat and decision responses keep [evalWeightsId]. For an evaluator fit to priority
+     * choices alone (mtg-draft-ai `docs/26`), which says nothing about combat. Null: [evalWeightsId].
+     */
+    val priorityEvalWeightsId: String? = null,
 ) {
     companion object {
         /**
