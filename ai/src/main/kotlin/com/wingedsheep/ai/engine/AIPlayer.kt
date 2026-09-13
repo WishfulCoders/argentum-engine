@@ -62,12 +62,30 @@ class AIPlayer(
      * ~20-30 windows it crosses.
      */
     fun chooseAction(state: GameState): GameAction {
+        pendingAfterFloat?.let { (activations, action) ->
+            pendingAfterFloat = null
+            val next = activations.firstOrNull() ?: action
+            // Still the plan only if the state is the one the last activation left us in.
+            if (state.priorityPlayerId == playerId && state.pendingDecision == null &&
+                simulator.accepts(state, next)
+            ) {
+                if (activations.isNotEmpty()) pendingAfterFloat = activations.drop(1) to action
+                return next
+            }
+        }
         if (useMeaningfulFilter && MeaningfulActionFilter.canAutoPassWithoutEnumerating(state, playerId)) {
             return PassPriority(playerId)
         }
         val legalActions = simulator.getLegalActions(state, playerId)
-        return chooseFrom(state, legalActions).action
+        val chosen = chooseFrom(state, legalActions).action
+        // A cast only a Treasure pays for: activate the Treasures first, then cast from the pool.
+        val float = simulator.floatSacrificeMana(state, chosen) ?: return chosen
+        pendingAfterFloat = float.activations.drop(1) to chosen
+        return float.activations.first()
     }
+
+    /** Mana abilities still to activate, then the action they pay for (see [GameSimulator.floatSacrificeMana]). */
+    private var pendingAfterFloat: Pair<List<GameAction>, GameAction>? = null
 
     /**
      * Choose the best [LegalAction] from the given list.
