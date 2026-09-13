@@ -22,6 +22,10 @@ data class Plan(
     val plots: Map<String, Map<String, Int>> = emptyMap(),
     /** Room doors still to unlock, by side and door name. */
     val unlocks: Map<String, Map<String, Int>> = emptyMap(),
+    /** Cards still to cast face down, by side: the card each turned out to be, or "" for any. */
+    val faceDown: Map<String, List<String>> = emptyMap(),
+    /** Face-down cards still to turn face up, by side and name. */
+    val turnUps: Map<String, Map<String, Int>> = emptyMap(),
 ) {
     fun canPlayLand(name: String): Boolean = (lands[name] ?: 0) > 0
     fun playLand(name: String): Plan = copy(lands = lands.dec(name))
@@ -31,6 +35,16 @@ data class Plan(
 
     fun canUnlock(side: String, door: String): Boolean = (unlocks[side]?.get(door) ?: 0) > 0
     fun unlock(side: String, door: String): Plan = copy(unlocks = unlocks + (side to unlocks[side].orEmpty().dec(door)))
+
+    fun canCastFaceDown(side: String, name: String): Boolean = faceDown[side].orEmpty().let { name in it || "" in it }
+    fun castFaceDown(side: String, name: String): Plan {
+        val left = faceDown.getValue(side).toMutableList()
+        left.removeAt(left.indexOf(name).takeIf { it >= 0 } ?: left.indexOf(""))
+        return copy(faceDown = faceDown + (side to left))
+    }
+
+    fun canTurnUp(side: String, name: String): Boolean = (turnUps[side]?.get(name) ?: 0) > 0
+    fun turnUp(side: String, name: String): Plan = copy(turnUps = turnUps + (side to turnUps[side].orEmpty().dec(name)))
 
     fun canCast(side: String, name: String): Boolean = (spells[side]?.get(name) ?: 0) > 0
     fun cast(side: String, name: String): Plan =
@@ -49,7 +63,7 @@ data class Plan(
 
     val done: Boolean
         get() = lands.isEmpty() && spells.values.all { it.isEmpty() } && activations.values.all { it.none(::required) } &&
-            plots.values.all { it.isEmpty() } && unlocks.values.all { it.isEmpty() } &&
+            plots.values.all { it.isEmpty() } && unlocks.values.all { it.isEmpty() } && faceDown.values.all { it.isEmpty() } && turnUps.values.all { it.isEmpty() } &&
             (attacked.isEmpty() || attacksDone) && (blocking.isEmpty() || blocksDone)
 
     companion object {
@@ -68,6 +82,10 @@ data class Plan(
                 blocked = ht.blocked,
                 plots = ht.plotted.filterValues { it.isNotEmpty() }.mapValues { Snapshotter.counts(it.value) },
                 unlocks = ht.unlocked.filterValues { it.isNotEmpty() }.mapValues { Snapshotter.counts(it.value) },
+                faceDown = ht.faceDown.filterValues { it > 0 }.mapValues { (side, n) ->
+                    List(n) { ht.faceDownAs[side]?.getOrNull(it).orEmpty() }
+                },
+                turnUps = ht.turnedUp.filterValues { it.isNotEmpty() }.mapValues { Snapshotter.counts(it.value) },
             )
         }
     }

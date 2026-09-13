@@ -53,6 +53,12 @@ data class HalfTurnSpec(
     val instants: Map<String, List<String>> = emptyMap(),
     /** Permanents the non-active player added: flash casts, which the file never records. */
     val flash: Map<String, List<String>> = emptyMap(),
+    /** Cards cast face down (disguise, morph), per side: the opponent's, which 17Lands logs unnamed. */
+    val faceDown: Map<String, Int> = emptyMap(),
+    /** What those face-down cards were, where a later turn-up or death showed it ("" if never). */
+    val faceDownAs: Map<String, List<String>> = emptyMap(),
+    /** Face-down cards turned face up, per side: the opponent's, inferred by the exporter. */
+    val turnedUp: Map<String, List<String>> = emptyMap(),
     /** Activated abilities per side, in the engine's notation (`{T}, Blight 1: Surveil 1.`). */
     val activated: Map<String, List<String>> = emptyMap(),
     val attacked: List<String> = emptyList(),

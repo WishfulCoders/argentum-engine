@@ -34,6 +34,7 @@ import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.AdditionalCostPayment
 import com.wingedsheep.sdk.scripting.AlternativePaymentChoice
 import com.wingedsheep.sdk.scripting.ConvokePayment
+import com.wingedsheep.sdk.scripting.KeywordAbility
 import kotlin.random.Random
 
 /**
@@ -443,6 +444,28 @@ class Reconstructor(
                         else -> tryAll(s, la, listOf(action), notes).forEach { (st, a) -> out += Node(st, plan.playLand(name), node.line.then(s, a, PLAN)) }
                     }
                 }
+                // The opponent's face-down casts are logged unnamed: [revealOppo] gave them the card
+                // a later turn-up or death showed, or one that can be cast so. (The user's are logged
+                // by name and planned as casts.)
+                action is CastSpell && action.castFaceDown && side in plan.faceDown -> {
+                    val name = snapshotter.name(s, action.cardId) ?: continue
+                    when {
+                        !plan.canCastFaceDown(side, name) -> skip(la, "not the planned face-down card")
+                        !la.affordable -> skip(la, "face down, NOT AFFORDABLE")
+                        else -> {
+                            val after = plan.castFaceDown(side, name)
+                            val more = after.spells[side].orEmpty().isNotEmpty() || after.faceDown[side].orEmpty().isNotEmpty() ||
+                                after.turnUps[side].orEmpty().isNotEmpty() || side == keepMana
+                            tryAll(s, la, withManaChoices(s, la, action, more, manaSources), notes)
+                                .forEach { (st, a) -> out += Node(st, after, node.line.then(s, a, PLAN)) }
+                        }
+                    }
+                }
+                action is TurnFaceUp -> {
+                    val name = snapshotter.name(s, action.sourceId) ?: continue
+                    if (!plan.canTurnUp(side, name)) skip(la, "not in the plan")
+                    else tryAll(s, la, withX(la, action), notes).forEach { (st, a) -> out += Node(st, plan.turnUp(side, name), node.line.then(s, a, PLAN)) }
+                }
                 action is CastSpell -> {
                     val name = snapshotter.name(s, action.cardId) ?: continue
                     when {
@@ -676,6 +699,7 @@ class Reconstructor(
         return when (action) {
             is CastSpell -> if (action.xValue != null) listOf(action) else xs.map { action.copy(xValue = it) }
             is ActivateAbility -> if (action.xValue != null) listOf(action) else xs.map { action.copy(xValue = it) }
+            is TurnFaceUp -> if (action.xValue != null) listOf(action) else xs.map { action.copy(xValue = it) }
             else -> listOf(action)
         }
     }
@@ -1135,6 +1159,14 @@ class Reconstructor(
                 cyclingFiller(keyword)?.let { needed[it] = (needed[it] ?: 0) + 1 }
             }
         }
+        // A card they cast face down is never named: one that can be cast so stands in, unless
+        // their hand already holds enough.
+        if (ht.active == "oppo") {
+            val named = ht.faceDownAs["oppo"].orEmpty().filter { it.isNotEmpty() }
+            named.forEach { needed[it] = (needed[it] ?: 0) + 1 }
+            val short = (ht.faceDown["oppo"] ?: 0) - named.size - held.count { castsFaceDown(it) && it !in named }
+            if (short > 0) faceDownFiller?.let { needed[it] = (needed[it] ?: 0) + short }
+        }
         val missing = needed.flatMap { (name, k) -> List(k) { name } }
         revealNote = null
         if (missing.isEmpty()) return state
@@ -1372,6 +1404,18 @@ class Reconstructor(
         registry.allCardNames().sorted().firstOrNull { registry.getCard(it)?.oracleText?.contains(keyword) == true }
     }
 
+    private fun castsFaceDown(name: String, keyword: (KeywordAbility) -> Boolean = { it is KeywordAbility.Morph || it is KeywordAbility.Disguise }) =
+        def(name)?.keywordAbilities?.any(keyword) == true
+
+    /**
+     * A card to stand in for one an opponent cast face down: a disguise card (MKM, where face-down
+     * spells have ward {2}), else a morph card.
+     */
+    private val faceDownFiller: String? by lazy {
+        val names = registry.allCardNames().sorted()
+        names.firstOrNull { castsFaceDown(it) { k -> k is KeywordAbility.Disguise } } ?: names.firstOrNull { castsFaceDown(it) }
+    }
+
     /** The creature type a card's behold cost asks for ("behold a Goblin"), or null. */
     private fun beholdType(name: String): String? {
         val def = def(name) ?: return null
@@ -1413,6 +1457,8 @@ class Reconstructor(
         plan.activations.forEach { (side, left) -> if (left.isNotEmpty()) add("$side abilities $left") }
         plan.plots.forEach { (side, left) -> if (left.isNotEmpty()) add("$side plots $left") }
         plan.unlocks.forEach { (side, left) -> if (left.isNotEmpty()) add("$side unlocks $left") }
+        plan.faceDown.forEach { (side, left) -> if (left.isNotEmpty()) add("$side face-down casts ${left.map { it.ifEmpty { "?" } }}") }
+        plan.turnUps.forEach { (side, left) -> if (left.isNotEmpty()) add("$side turn-ups $left") }
         if (plan.attacked.isNotEmpty() && !plan.attacksDone) add("attack ${plan.attacked}")
         if (plan.blocking.isNotEmpty() && !plan.blocksDone) add("block ${plan.blocking}")
     }.joinToString(", ")
