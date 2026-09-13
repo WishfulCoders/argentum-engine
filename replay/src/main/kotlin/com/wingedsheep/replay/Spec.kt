@@ -46,6 +46,8 @@ data class HalfTurnSpec(
     val creatures: List<String> = emptyList(),
     val noncreatures: List<String> = emptyList(),
     val discarded: List<String> = emptyList(),
+    /** Cards plotted, per side (OTJ; never logged, inferred by the exporter), cast later from exile. */
+    val plotted: Map<String, List<String>> = emptyMap(),
     val instants: Map<String, List<String>> = emptyMap(),
     /** Permanents the non-active player added: flash casts, which the file never records. */
     val flash: Map<String, List<String>> = emptyMap(),

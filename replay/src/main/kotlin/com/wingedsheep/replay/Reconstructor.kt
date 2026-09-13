@@ -14,6 +14,7 @@ import com.wingedsheep.engine.legalactions.LegalActionEnumerator
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.ZoneKey
+import com.wingedsheep.engine.state.components.identity.PlottedComponent
 import com.wingedsheep.engine.state.components.identity.RevealedToComponent
 import com.wingedsheep.engine.state.components.combat.AttackingComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
@@ -478,6 +479,11 @@ class Reconstructor(
                             tryAll(s, la, variants, notes).forEach { (st, a) -> out += Node(st, plan.activate(side, i), node.line.then(s, a, PLAN)) }
                         }
                     }
+                }
+                action is PlotCard -> {
+                    val name = snapshotter.name(s, action.cardId) ?: continue
+                    if (!plan.canPlot(side, name)) skip(la, "not in the plan")
+                    else tryAll(s, la, listOf(action), notes).forEach { (st, a) -> out += Node(st, plan.plot(side, name), node.line.then(s, a, PLAN)) }
                 }
                 action is CrewVehicle || action is SaddleMount -> {
                     // 17Lands logs the keyword with its number ("Crew 2"), not the Vehicle
@@ -1078,7 +1084,13 @@ class Reconstructor(
     private fun revealOppo(given: GameState, seats: Seats, ht: HalfTurnSpec): GameState? {
         val own = if (ht.active == "oppo") ht.lands + ht.creatures + ht.noncreatures + ht.discarded else emptyList()
         val casts = own + ht.instants["oppo"].orEmpty() + ht.flash["oppo"].orEmpty()
-        val needed = Snapshotter.counts(casts).toMutableMap()
+        val needed = Snapshotter.counts(casts + ht.plotted["oppo"].orEmpty()).toMutableMap()
+        // a card they plotted earlier is cast from exile, not from their hand
+        for (id in given.getExile(seats.oppo)) {
+            if (given.getEntity(id)?.has<PlottedComponent>() != true) continue
+            val name = snapshotter.name(given, id) ?: continue
+            needed[name]?.let { if (it > 1) needed[name] = it - 1 else needed.remove(name) }
+        }
         val state = unrevealFillers(given, seats.oppo, needed.keys)
         val free = mutableListOf<EntityId>()
         for (id in state.getHand(seats.oppo)) {
@@ -1365,6 +1377,7 @@ class Reconstructor(
         if (plan.lands.isNotEmpty()) add("lands ${plan.lands}")
         plan.spells.forEach { (side, left) -> if (left.isNotEmpty()) add("$side spells $left") }
         plan.activations.forEach { (side, left) -> if (left.isNotEmpty()) add("$side abilities $left") }
+        plan.plots.forEach { (side, left) -> if (left.isNotEmpty()) add("$side plots $left") }
         if (plan.attacked.isNotEmpty() && !plan.attacksDone) add("attack ${plan.attacked}")
         if (plan.blocking.isNotEmpty() && !plan.blocksDone) add("block ${plan.blocking}")
     }.joinToString(", ")

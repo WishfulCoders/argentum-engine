@@ -18,9 +18,14 @@ data class Plan(
     val blocked: List<String>,
     val attacksDone: Boolean = false,
     val blocksDone: Boolean = false,
+    /** Cards still to plot, by side and name. */
+    val plots: Map<String, Map<String, Int>> = emptyMap(),
 ) {
     fun canPlayLand(name: String): Boolean = (lands[name] ?: 0) > 0
     fun playLand(name: String): Plan = copy(lands = lands.dec(name))
+
+    fun canPlot(side: String, name: String): Boolean = (plots[side]?.get(name) ?: 0) > 0
+    fun plot(side: String, name: String): Plan = copy(plots = plots + (side to plots[side].orEmpty().dec(name)))
 
     fun canCast(side: String, name: String): Boolean = (spells[side]?.get(name) ?: 0) > 0
     fun cast(side: String, name: String): Plan =
@@ -39,6 +44,7 @@ data class Plan(
 
     val done: Boolean
         get() = lands.isEmpty() && spells.values.all { it.isEmpty() } && activations.values.all { it.none(::required) } &&
+            plots.values.all { it.isEmpty() } &&
             (attacked.isEmpty() || attacksDone) && (blocking.isEmpty() || blocksDone)
 
     companion object {
@@ -55,6 +61,7 @@ data class Plan(
                 attacked = ht.attacked,
                 blocking = ht.blocking,
                 blocked = ht.blocked,
+                plots = ht.plotted.filterValues { it.isNotEmpty() }.mapValues { Snapshotter.counts(it.value) },
             )
         }
     }
