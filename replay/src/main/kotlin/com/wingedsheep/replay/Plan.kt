@@ -104,6 +104,10 @@ fun matchesActivation(engine: String, recorded: String): Boolean {
     fun words(t: String, n: Int) = t.split(' ').take(n)
     // the engine spells Station out: "Tap another untapped creature you control: Put charge counters ..."
     if (r == "station") return "charge counters" in e
+    // plain cycling: the engine says "Cycle Shefet Archfiend", 17Lands "Cycling {2}"
+    if (e.startsWith("cycle ")) return r.startsWith("cycling")
+    // a Class's level: the engine says "Level up to level 2", 17Lands "{1}{G}: Level 2"
+    if (e.startsWith("level up to level ")) return r.substringAfter(": ") == e.removePrefix("level up to ")
     // cycling on the keyword ("basic landcycling"): the engine follows it with the card's name
     // ("Islandcycling Giant Koi"), 17Lands with the cost
     fun keyword(t: String) = t.split(' ').let { w -> w.take(w.indexOfFirst { "cycling" in it } + 1) }
