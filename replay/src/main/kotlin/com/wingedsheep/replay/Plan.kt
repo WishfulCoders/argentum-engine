@@ -26,6 +26,8 @@ data class Plan(
     val faceDown: Map<String, List<String>> = emptyMap(),
     /** Face-down cards still to turn face up, by side and name. */
     val turnUps: Map<String, Map<String, Int>> = emptyMap(),
+    /** Prepare spells still to cast (a copy from a prepared creature), by side and card name. */
+    val prepared: Map<String, Map<String, Int>> = emptyMap(),
 ) {
     fun canPlayLand(name: String): Boolean = (lands[name] ?: 0) > 0
     fun playLand(name: String): Plan = copy(lands = lands.dec(name))
@@ -42,6 +44,9 @@ data class Plan(
         left.removeAt(left.indexOf(name).takeIf { it >= 0 } ?: left.indexOf(""))
         return copy(faceDown = faceDown + (side to left))
     }
+
+    fun canCastPrepared(side: String, name: String): Boolean = (prepared[side]?.get(name) ?: 0) > 0
+    fun castPrepared(side: String, name: String): Plan = copy(prepared = prepared + (side to prepared[side].orEmpty().dec(name)))
 
     fun canTurnUp(side: String, name: String): Boolean = (turnUps[side]?.get(name) ?: 0) > 0
     fun turnUp(side: String, name: String): Plan = copy(turnUps = turnUps + (side to turnUps[side].orEmpty().dec(name)))
@@ -63,7 +68,7 @@ data class Plan(
 
     val done: Boolean
         get() = lands.isEmpty() && spells.values.all { it.isEmpty() } && activations.values.all { it.none(::required) } &&
-            plots.values.all { it.isEmpty() } && unlocks.values.all { it.isEmpty() } && faceDown.values.all { it.isEmpty() } && turnUps.values.all { it.isEmpty() } &&
+            plots.values.all { it.isEmpty() } && unlocks.values.all { it.isEmpty() } && faceDown.values.all { it.isEmpty() } && turnUps.values.all { it.isEmpty() } && prepared.values.all { it.isEmpty() } &&
             (attacked.isEmpty() || attacksDone) && (blocking.isEmpty() || blocksDone)
 
     companion object {
@@ -86,6 +91,7 @@ data class Plan(
                     List(n) { ht.faceDownAs[side]?.getOrNull(it).orEmpty() }
                 },
                 turnUps = ht.turnedUp.filterValues { it.isNotEmpty() }.mapValues { Snapshotter.counts(it.value) },
+                prepared = ht.prepared.filterValues { it.isNotEmpty() }.mapValues { Snapshotter.counts(it.value) },
             )
         }
     }

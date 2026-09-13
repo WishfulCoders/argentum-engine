@@ -51,12 +51,16 @@ data class HalfTurnSpec(
     /** Room doors unlocked by the special action, per side (DSK; inferred from the doors' unlock triggers). */
     val unlocked: Map<String, List<String>> = emptyMap(),
     val instants: Map<String, List<String>> = emptyMap(),
+    /** Prepare cards' spells cast, per side (SOS): a copy cast while the creature is prepared, not from hand. */
+    val prepared: Map<String, List<String>> = emptyMap(),
     /** Permanents the non-active player added: flash casts, which the file never records. */
     val flash: Map<String, List<String>> = emptyMap(),
     /** Cards cast face down (disguise, morph), per side: the opponent's, which 17Lands logs unnamed. */
     val faceDown: Map<String, Int> = emptyMap(),
     /** What those face-down cards were, where a later turn-up or death showed it ("" if never). */
     val faceDownAs: Map<String, List<String>> = emptyMap(),
+    /** What the opponent's face-down permanents that arrived uncast (manifest dread, cloak) were, where shown ("" if never). */
+    val manifestedAs: Map<String, List<String>> = emptyMap(),
     /** Face-down cards turned face up, per side: the opponent's, inferred by the exporter. */
     val turnedUp: Map<String, List<String>> = emptyMap(),
     /** Activated abilities per side, in the engine's notation (`{T}, Blight 1: Surveil 1.`). */

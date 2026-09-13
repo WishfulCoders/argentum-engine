@@ -23,6 +23,8 @@ import com.wingedsheep.engine.state.components.stack.ChosenTarget
 import com.wingedsheep.engine.state.components.stack.SpellOnStackComponent
 import com.wingedsheep.engine.state.components.stack.TriggeredAbilityOnStackComponent
 import com.wingedsheep.gym.GameEnvironment
+import com.wingedsheep.engine.state.components.battlefield.PreparedSpellCopyComponent
+import com.wingedsheep.engine.state.components.identity.FaceDownComponent
 import com.wingedsheep.engine.state.components.battlefield.TappedComponent
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.ManaCost
@@ -223,11 +225,9 @@ class Reconstructor(
         val search = Search()
         search.outside = spec.halfTurns.drop(i).take(3).flatMap { it.outsideHand }
         search.draws = spec.halfTurns.drop(i).flatMap { it.drawn + it.tutored + it.outsideHand }
-        // The active player's lands stay tapped through the next half-turn: if they cast there,
-        // which lands pay now matters, and end states differing in it are kept apart.
-        keepMana = spec.halfTurns.getOrNull(i + 1)
-            ?.takeIf { it.instants[ht.active].orEmpty().isNotEmpty() || it.flash[ht.active].orEmpty().isNotEmpty() }
-            ?.let { ht.active }
+        // The active player's lands stay tapped through the next half-turn: if they cast or
+        // activate there, which lands pay now matters, and end states differing in it are kept apart.
+        keepMana = spec.halfTurns.getOrNull(i + 1)?.takeIf { offTurnMana(it, ht.active) }?.let { ht.active }
         search.groupOf = { s -> unseen(s, seats) }
         search.perGroup = beamWidth
         search.oppoLater = spec.halfTurns.drop(i + 1).take(2).flatMap { h ->
@@ -246,7 +246,7 @@ class Reconstructor(
                 search.near(listOf("could not write the opponent's cards into hidden slots: $lastError"))
                 continue
             }
-            for ((v, revealed) in oppoLibraryVariants(written, seats, ht).withIndex()) {
+            for ((v, revealed) in oppoDrawOrders(written, seats).flatMap { oppoLibraryVariants(it, seats, ht) }.withIndex()) {
                 val readies = if (ht.active == "user" || ht.drawn.isNotEmpty()) {
                     val restacked = restackUser(revealed, seats, ht, laterDraws(spec, i))
                         ?: revealed.also { search.tracer?.line("restack failed: $lastError") }
@@ -266,7 +266,7 @@ class Reconstructor(
                     // a library variant is a group of its own: its search must not wait on the other's;
                     // so are the non-active player's untapped lands when they cast this half-turn
                     val other = if (ht.active == "user") "oppo" else "user"
-                    val lands = if (ht.instants[other].orEmpty().isNotEmpty() || ht.flash[other].orEmpty().isNotEmpty()) {
+                    val lands = if (offTurnMana(ht, other)) {
                         untappedLands(ready, seats.of(other))
                     } else emptyList()
                     groups.getOrPut(snapshotter.hidden(ready, seats) + lands + "library variant $v/$u") { mutableListOf() } +=
@@ -291,6 +291,11 @@ class Reconstructor(
         return search
     }
 
+    /** Whether [side] spends mana in [ht] though not its active player: an instant, a flash cast, a costed activation. */
+    private fun offTurnMana(ht: HalfTurnSpec, side: String): Boolean =
+        ht.instants[side].orEmpty().isNotEmpty() || ht.flash[side].orEmpty().isNotEmpty() ||
+            ht.prepared[side].orEmpty().isNotEmpty() || ht.activated[side].orEmpty().any { ": " in it && '{' in it.substringBefore(": ") }
+
     // =========================================================================
     // Search
     // =========================================================================
@@ -301,6 +306,8 @@ class Reconstructor(
             val node = stack.removeLast().let { n ->
                 impulseTop(n.state, seats, search)?.let { n.copy(state = it) } ?: n
             }.let { n -> manifestTop(n.state, seats, ht, search)?.let { n.copy(state = it) } ?: n }
+                .let { n -> discoverTop(n.state, seats, n.plan, search)?.let { n.copy(state = it) } ?: n }
+                .let { n -> oppoManifestTop(n.state, seats, ht, search)?.let { n.copy(state = it) } ?: n }
             // The opponent's impulse may or may not have exiled the cards they play next: the line
             // where it did is searched first, then this one.
             if (node.state !in search.branched) {
@@ -468,11 +475,13 @@ class Reconstructor(
                 }
                 action is CastSpell -> {
                     val name = snapshotter.name(s, action.cardId) ?: continue
+                    // a prepare card's spell (SOS) is a copy in exile, cast while the creature is prepared
+                    val copy = s.getEntity(action.cardId)?.has<PreparedSpellCopyComponent>() == true
                     when {
-                        !plan.canCast(side, name) -> skip(la, "not in the plan")
+                        !(if (copy) plan.canCastPrepared(side, name) else plan.canCast(side, name)) -> skip(la, "not in the plan")
                         !la.affordable -> skip(la, "in the plan, NOT AFFORDABLE")
                         else -> {
-                            val after = plan.cast(side, name)
+                            val after = if (copy) plan.castPrepared(side, name) else plan.cast(side, name)
                             // which lands pay only matters if this side casts again this half-turn,
                             // or in the next one while these lands are still tapped, or if the spell
                             // asks what was spent (Wistfulness: "if {G}{G} was spent to cast it")
@@ -901,7 +910,7 @@ class Reconstructor(
         for (r in responses) {
             val submit = SubmitDecision(d.playerId, r)
             val next = apply(s, submit)
-            if (next != null) out += Node(next, node.plan, node.line.then(s, submit, how)) else refusals += lastError ?: "?"
+            if (next != null) out += Node(next, castByEffect(s, next, node.plan), node.line.then(s, submit, how)) else refusals += lastError ?: "?"
         }
         notes?.add("  decision ${d::class.simpleName} (${d.context.sourceName}: ${d.prompt.take(80)}): " +
             "${out.size}/${responses.size} responses taken" +
@@ -1169,6 +1178,7 @@ class Reconstructor(
         }
         val missing = needed.flatMap { (name, k) -> List(k) { name } }
         revealNote = null
+        revealedIntoLibrary = emptyList()
         if (missing.isEmpty()) return state
         val slots = (free + state.getLibrary(seats.oppo)).toMutableList()
         val refused = mutableListOf<String>()
@@ -1177,6 +1187,7 @@ class Reconstructor(
             val pick = slots.take(missing.size)
             materialize(state, pick.zip(missing).toMap())?.let { written ->
                 val zones = pick.map { if (it in free) "hand" else "library ${state.getLibrary(seats.oppo).indexOf(it)}" }
+                revealedIntoLibrary = pick.filterNot { it in free }
                 revealNote = "wrote $missing into $zones" + if (refused.isEmpty()) "" else "; refused: $refused"
                 return written
             }
@@ -1223,6 +1234,25 @@ class Reconstructor(
 
     /** What [revealOppo] last wrote where, for the trace. */
     private var revealNote: String? = null
+
+    /** The library cards [revealOppo] last wrote, top first: the hand had no room for them. */
+    private var revealedIntoLibrary: List<EntityId> = emptyList()
+
+    /**
+     * [revealOppo] writes the cards the opponent plays that their hand has no room for over the top
+     * of their library, in the record's order; the draw step takes only the top one, and the rest
+     * come from draws later in the half-turn (a cantrip, a sacrificed Clue). Which was drawn first is
+     * not recorded, so each other card of those also goes on top in a variant of its own.
+     */
+    private fun oppoDrawOrders(state: GameState, seats: Seats): List<GameState> {
+        val cards = revealedIntoLibrary
+        if (cards.size < 2) return listOf(state)
+        val library = state.getLibrary(seats.oppo)
+        val key = ZoneKey(seats.oppo, Zone.LIBRARY)
+        return listOf(state) + cards.drop(1).distinctBy { snapshotter.name(state, it) }
+            .filter { snapshotter.name(state, it) != snapshotter.name(state, cards.first()) }
+            .map { first -> state.copy(zones = state.zones + (key to listOf(first) + (library - first))) }
+    }
 
     /**
      * The opponent's unseen library is basic lands, so an effect of theirs that reads their top card
@@ -1312,6 +1342,88 @@ class Reconstructor(
         } ?: return null
         search.tracer?.line("  manifest dread ($source): library top ${snapshotter.name(s, pick)}")
         return s.copy(zones = s.zones + (ZoneKey(seats.user, Zone.LIBRARY) to listOf(pick) + (library - pick)))
+    }
+
+    /**
+     * Discover N (LCI): exile cards from the top of the library until a nonland card of mana value N
+     * or less, then cast it free or put it into hand. When a player's discover is about to resolve, a
+     * card the record has them cast this half-turn from outside their hand goes on top of their
+     * library. The user's (a planned spell not in their hand, or an outside-hand play) is moved there;
+     * the opponent's library is filler, basic lands a discover passes over, and [revealOppo] has
+     * written the cards they cast into their hand, so a planned spell there trades places with the
+     * top unseen card (their hand keeps its size, as it did), else one is written on top. Null when
+     * nothing moves.
+     */
+    private fun discoverTop(s: GameState, seats: Seats, plan: Plan, search: Search): GameState? {
+        val (controller, source) = stackTop(s) ?: return null
+        val n = DISCOVER.find(def(source)?.oracleText ?: return null)?.groupValues?.get(1)?.toInt() ?: return null
+        val side = seats.sideOf(controller)
+        fun fits(name: String?) = name?.let(::def)?.let { !it.typeLine.isLand && it.cmc <= n } == true
+        val handIds = s.getHand(controller)
+        val hand = handIds.mapNotNull { snapshotter.name(s, it) }.toSet()
+        val planned = plan.spells[side].orEmpty().keys - source
+        val wanted = (if (side == "user") planned.filter { it !in hand } + search.outside else planned.toList())
+            .filter(::fits).distinct()
+        if (wanted.isEmpty()) return null
+        val library = s.getLibrary(controller)
+        // already what the discover would find
+        val hit = library.firstOrNull { fits(snapshotter.name(s, it)) }
+        if (hit != null && snapshotter.name(s, hit) in wanted) return null
+        fun unseen(id: EntityId) = s.getEntity(id)?.has<RevealedToComponent>() != true
+        val key = ZoneKey(controller, Zone.LIBRARY)
+        val moved = if (side == "user") {
+            val pick = library.firstOrNull { snapshotter.name(s, it) in wanted && unseen(it) } ?: return null
+            s.copy(zones = s.zones + (key to listOf(pick) + (library - pick)))
+        } else {
+            val slot = library.firstOrNull(::unseen) ?: return null
+            val held = handIds.firstOrNull { snapshotter.name(s, it) in wanted && unseen(it) }
+            if (held != null) {
+                val handKey = ZoneKey(controller, Zone.HAND)
+                s.copy(zones = s.zones + (handKey to handIds.map { if (it == held) slot else it }) +
+                    (key to listOf(held) + (library - slot)))
+            } else {
+                val written = materialize(s, mapOf(slot to wanted.first())) ?: return null
+                written.copy(zones = written.zones + (key to listOf(slot) + (written.getLibrary(controller) - slot)))
+            }
+        }
+        search.tracer?.line("  discover ($source): ${side}'s library top ${snapshotter.name(moved, moved.getLibrary(controller).first())}")
+        return moved
+    }
+
+    /** A planned spell a resolving effect cast (discover's "cast it without paying", cascade) counts as cast. */
+    private fun castByEffect(before: GameState, after: GameState, plan: Plan): Plan {
+        val seats = Seats.of(after)
+        var p = plan
+        for (id in after.stack - before.stack.toSet()) {
+            val caster = after.getEntity(id)?.get<SpellOnStackComponent>()?.casterId ?: continue
+            val side = seats.sideOf(caster)
+            val name = snapshotter.name(after, id) ?: continue
+            if (p.canCast(side, name)) p = p.cast(side, name)
+        }
+        return p
+    }
+
+    /**
+     * The opponent's manifest dread or cloak puts a card of their filler library face down; a
+     * later turn-up or death shows what it was ([HalfTurnSpec.manifestedAs]). Before it resolves,
+     * the first such card not already face down on their side is written over the top unseen card
+     * of their library. Null when nothing moves.
+     */
+    private fun oppoManifestTop(s: GameState, seats: Seats, ht: HalfTurnSpec, search: Search): GameState? {
+        val wanted = ht.manifestedAs["oppo"].orEmpty().filter { it.isNotEmpty() }
+        if (wanted.isEmpty()) return null
+        val (controller, source) = stackTop(s) ?: return null
+        val text = def(source)?.oracleText?.lowercase() ?: return null
+        if (controller != seats.oppo || ("manifest" !in text && "cloak" !in text)) return null
+        val down = s.controlledBattlefield(seats.oppo).filter { s.getEntity(it)?.has<FaceDownComponent>() == true }
+            .mapNotNull { snapshotter.name(s, it) }.toMutableList()
+        val name = wanted.firstOrNull { !down.remove(it) } ?: return null
+        val library = s.getLibrary(seats.oppo)
+        if (library.firstOrNull()?.let { snapshotter.name(s, it) } == name) return null
+        val slot = library.firstOrNull { s.getEntity(it)?.has<RevealedToComponent>() != true } ?: return null
+        val written = materialize(s, mapOf(slot to name)) ?: return null
+        search.tracer?.line("  opponent manifest ($source): library top $name")
+        return written.copy(zones = written.zones + (ZoneKey(seats.oppo, Zone.LIBRARY) to listOf(slot) + (written.getLibrary(seats.oppo) - slot)))
     }
 
     private fun impulseOnTop(s: GameState): Impulse? {
@@ -1459,6 +1571,7 @@ class Reconstructor(
         plan.unlocks.forEach { (side, left) -> if (left.isNotEmpty()) add("$side unlocks $left") }
         plan.faceDown.forEach { (side, left) -> if (left.isNotEmpty()) add("$side face-down casts ${left.map { it.ifEmpty { "?" } }}") }
         plan.turnUps.forEach { (side, left) -> if (left.isNotEmpty()) add("$side turn-ups $left") }
+        plan.prepared.forEach { (side, left) -> if (left.isNotEmpty()) add("$side prepared spells $left") }
         if (plan.attacked.isNotEmpty() && !plan.attacksDone) add("attack ${plan.attacked}")
         if (plan.blocking.isNotEmpty() && !plan.blocksDone) add("block ${plan.blocking}")
     }.joinToString(", ")
@@ -1478,6 +1591,7 @@ class Reconstructor(
         const val SLICE_NODES = 256
         const val MAX_SLOT_RETRIES = 8
         private val BEHOLD = Regex("""\bbehold an? ([A-Z][a-z]+)""")
+        private val DISCOVER = Regex("""\bdiscover (\d+)""", RegexOption.IGNORE_CASE)
         const val LIBRARY_VARIANT_DEPTH = 4
         private val READS_LIBRARY_TOP = Regex("""\bexplores?\b|\btop card of your library\b""")
         /** An impulse draw: exiles cards off the top of its controller's library, which may then be played. */

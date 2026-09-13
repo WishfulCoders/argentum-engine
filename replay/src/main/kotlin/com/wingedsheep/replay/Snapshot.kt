@@ -5,6 +5,7 @@ import com.wingedsheep.engine.state.components.battlefield.AttachedToComponent
 import com.wingedsheep.engine.state.components.battlefield.CastChoicesComponent
 import com.wingedsheep.engine.state.components.battlefield.ChoiceValue
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
+import com.wingedsheep.engine.state.components.battlefield.PreparedSpellCopyComponent
 import com.wingedsheep.engine.state.components.battlefield.TappedComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.identity.ControllerComponent
@@ -65,6 +66,8 @@ class Snapshotter(definitions: Iterable<CardDefinition>, private val compareToke
      */
     fun name(state: GameState, id: EntityId): String? {
         val e = state.getEntity(id) ?: return null
+        // a prepare spell's copy (SOS) is logged under its card's name, as the creature is
+        if (e.has<PreparedSpellCopyComponent>()) return e.get<CardComponent>()?.name?.let(::canonical)
         val copy = e.get<CopyOfComponent>()
         val printed = copy?.let { it.originalCardComponent?.name ?: it.originalCardDefinitionId }
         return (printed ?: e.get<CardComponent>()?.name)?.let(::canonical)
