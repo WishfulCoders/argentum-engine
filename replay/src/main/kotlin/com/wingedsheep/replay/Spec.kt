@@ -48,6 +48,8 @@ data class HalfTurnSpec(
     val discarded: List<String> = emptyList(),
     /** Cards plotted, per side (OTJ; never logged, inferred by the exporter), cast later from exile. */
     val plotted: Map<String, List<String>> = emptyMap(),
+    /** Room doors unlocked by the special action, per side (DSK; inferred from the doors' unlock triggers). */
+    val unlocked: Map<String, List<String>> = emptyMap(),
     val instants: Map<String, List<String>> = emptyMap(),
     /** Permanents the non-active player added: flash casts, which the file never records. */
     val flash: Map<String, List<String>> = emptyMap(),

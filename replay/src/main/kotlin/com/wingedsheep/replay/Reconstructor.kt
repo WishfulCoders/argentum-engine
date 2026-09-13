@@ -299,7 +299,7 @@ class Reconstructor(
         while (stack.isNotEmpty() && search.nodes < search.nodeCap && search.ends.size < MAX_ENDS) {
             val node = stack.removeLast().let { n ->
                 impulseTop(n.state, seats, search)?.let { n.copy(state = it) } ?: n
-            }
+            }.let { n -> manifestTop(n.state, seats, ht, search)?.let { n.copy(state = it) } ?: n }
             // The opponent's impulse may or may not have exiled the cards they play next: the line
             // where it did is searched first, then this one.
             if (node.state !in search.branched) {
@@ -484,6 +484,12 @@ class Reconstructor(
                     val name = snapshotter.name(s, action.cardId) ?: continue
                     if (!plan.canPlot(side, name)) skip(la, "not in the plan")
                     else tryAll(s, la, listOf(action), notes).forEach { (st, a) -> out += Node(st, plan.plot(side, name), node.line.then(s, a, PLAN)) }
+                }
+                action is UnlockRoomDoor -> {
+                    // "Unlock Painter's Studio ({2}{R})"
+                    val door = la.description.removePrefix("Unlock ").substringBeforeLast(" (")
+                    if (!plan.canUnlock(side, door)) skip(la, "not in the plan")
+                    else tryAll(s, la, listOf(action), notes).forEach { (st, a) -> out += Node(st, plan.unlock(side, door), node.line.then(s, a, PLAN)) }
                 }
                 action is CrewVehicle || action is SaddleMount -> {
                     // 17Lands logs the keyword with its number ("Crew 2"), not the Vehicle
@@ -1243,13 +1249,40 @@ class Reconstructor(
     /** An impulse draw on top of the stack: its controller, source card name and how many cards it exiles. */
     private data class Impulse(val controller: EntityId, val source: String, val count: Int)
 
-    private fun impulseOnTop(s: GameState): Impulse? {
+    /** The top of the stack's controller and source card name (canonical). */
+    private fun stackTop(s: GameState): Pair<EntityId, String>? {
         val e = s.stack.lastOrNull()?.let { s.getEntity(it) } ?: return null
         val (controller, source) = e.get<SpellOnStackComponent>()?.let { it.casterId to e.get<CardComponent>()?.name }
             ?: e.get<TriggeredAbilityOnStackComponent>()?.let { it.controllerId to it.sourceName }
             ?: e.get<ActivatedAbilityOnStackComponent>()?.let { it.controllerId to it.sourceName }
             ?: return null
-        val name = source?.let(snapshotter::canonical) ?: return null
+        return source?.let { controller to snapshotter.canonical(it) }
+    }
+
+    /**
+     * Manifest dread (DSK: look at the top two cards of your library, manifest one face down). The
+     * user's face-down cards are logged by name, so the record says which card they manifested: a
+     * permanent they have more of at the end of the half-turn than now. Unless one is in the top two
+     * already, the first such card in their library (whose order past the recorded draws is made up)
+     * goes on top before the manifest resolves. Null when nothing moves.
+     */
+    private fun manifestTop(s: GameState, seats: Seats, ht: HalfTurnSpec, search: Search): GameState? {
+        val (controller, source) = stackTop(s) ?: return null
+        if (controller != seats.user || def(source)?.oracleText?.contains("manifest dread", ignoreCase = true) != true) return null
+        val now = Snapshotter.counts(s.controlledBattlefield(seats.user).filterNot { snapshotter.isToken(s, it) }
+            .mapNotNull { snapshotter.name(s, it) })
+        val wanted = Snapshotter.counts(ht.eot.battlefield["user"].orEmpty()).filter { (n, k) -> k > (now[n] ?: 0) }.keys
+        val library = s.getLibrary(seats.user)
+        if (wanted.isEmpty() || library.take(2).any { snapshotter.name(s, it) in wanted }) return null
+        val pick = library.firstOrNull { id ->
+            snapshotter.name(s, id) in wanted && s.getEntity(id)?.has<RevealedToComponent>() != true
+        } ?: return null
+        search.tracer?.line("  manifest dread ($source): library top ${snapshotter.name(s, pick)}")
+        return s.copy(zones = s.zones + (ZoneKey(seats.user, Zone.LIBRARY) to listOf(pick) + (library - pick)))
+    }
+
+    private fun impulseOnTop(s: GameState): Impulse? {
+        val (controller, name) = stackTop(s) ?: return null
         val text = def(name)?.oracleText ?: return null
         if (!IMPULSE_EXILE.containsMatchIn(text) || !IMPULSE_PLAY.containsMatchIn(text)) return null
         // "the top card" 1, "the top two cards ... three cards instead" 3, "that many cards" unknown
@@ -1378,6 +1411,7 @@ class Reconstructor(
         plan.spells.forEach { (side, left) -> if (left.isNotEmpty()) add("$side spells $left") }
         plan.activations.forEach { (side, left) -> if (left.isNotEmpty()) add("$side abilities $left") }
         plan.plots.forEach { (side, left) -> if (left.isNotEmpty()) add("$side plots $left") }
+        plan.unlocks.forEach { (side, left) -> if (left.isNotEmpty()) add("$side unlocks $left") }
         if (plan.attacked.isNotEmpty() && !plan.attacksDone) add("attack ${plan.attacked}")
         if (plan.blocking.isNotEmpty() && !plan.blocksDone) add("block ${plan.blocking}")
     }.joinToString(", ")
