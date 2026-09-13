@@ -10,13 +10,16 @@ import kotlinx.serialization.json.jsonObject
 import java.io.File
 import java.util.concurrent.Callable
 import java.util.concurrent.Executors
+import java.util.zip.GZIPOutputStream
 
 /**
- * `replay <specs.jsonl> <results.jsonl> [maxGames] [beamWidth] [nodeBudget] [threads]`
+ * `replay <specs.jsonl> <results.jsonl> [maxGames] [beamWidth] [nodeBudget] [threads] [lines.jsonl.gz]`
  *
  * Reconstructs each game spec (from `mtgdraft replay-export`) and writes one [GameResult] per line,
  * then prints a summary: how many games were reproduced end to end, what share of half-turns were
- * reproduced in order, and the most common reasons a game stopped.
+ * reproduced in order, and the most common reasons a game stopped. With a lines file, also writes
+ * each game's accepted line ([GameLine], gzipped JSONL): the whole game when it was reproduced, the
+ * half-turns before the failure otherwise.
  *
  * `replay trace <specs.jsonl> <gameId> [halfTurn] [nodeBudget] [tracedNodes] [beamWidth]` prints the
  * search of one half-turn node by node ([Tracer]); without a half-turn, the one where the game fails.
@@ -32,6 +35,7 @@ fun main(args: Array<String>) {
     val beamWidth = args.getOrNull(3)?.toInt() ?: 8
     val nodeBudget = args.getOrNull(4)?.toInt() ?: 20_000
     val threads = args.getOrNull(5)?.toInt() ?: Runtime.getRuntime().availableProcessors()
+    val linesFile = args.getOrNull(6)?.let(::File)
 
     val specs = input.readLines().filter { it.isNotBlank() }.take(maxGames)
         .map { specJson.decodeFromString<GameSpec>(it) }
@@ -39,29 +43,54 @@ fun main(args: Array<String>) {
     println("replay: ${specs.size} games, beam $beamWidth, budget $nodeBudget nodes/half-turn, $threads threads")
 
     val local = ThreadLocal.withInitial { Reconstructor(registry, snapshotter, beamWidth, nodeBudget) }
+    val writers = ThreadLocal.withInitial { LineWriter(registry) }
     val pool = Executors.newFixedThreadPool(threads)
     val futures = specs.map { spec ->
         pool.submit(Callable {
-            try {
-                local.get().run(spec)
+            val reconstructor = local.get()
+            val result = try {
+                reconstructor.run(spec)
             } catch (e: Throwable) {
-                GameResult(spec.gameId, "error", spec.halfTurns.size, 0, reason = e.toString().take(300))
+                return@Callable GameResult(spec.gameId, "error", spec.halfTurns.size, 0, reason = e.toString().take(300)) to null
             }
+            val line = reconstructor.acceptedLine?.takeIf { linesFile != null }?.toList()?.let { steps ->
+                try {
+                    val seats = Seats.of(steps.first().before)
+                    lineJson.encodeToString(GameLine.serializer(),
+                        writers.get().line(spec, result, seats, steps, reconstructor.acceptedThrough))
+                } catch (e: Throwable) {
+                    System.err.println("line ${spec.gameId}: $e")
+                    null
+                }
+            }
+            result to line
         })
     }
     val results = mutableListOf<GameResult>()
     output.parentFile?.mkdirs()
+    val lines = linesFile?.let { f ->
+        f.parentFile?.mkdirs()
+        GZIPOutputStream(f.outputStream()).bufferedWriter()
+    }
+    var written = 0
     output.bufferedWriter().use { w ->
         futures.forEachIndexed { i, f ->
-            val r = f.get()
+            val (r, line) = f.get()
             results += r
             w.write(specJson.encodeToString(r))
             w.newLine()
+            if (line != null && lines != null) {
+                lines.write(line)
+                lines.newLine()
+                written++
+            }
             if ((i + 1) % 10 == 0 || i + 1 == futures.size) {
                 println("  ${i + 1}/${futures.size} done")
             }
         }
     }
+    lines?.close()
+    if (linesFile != null) println("lines: $written games to $linesFile")
     pool.shutdown()
     summarize(results)
 }

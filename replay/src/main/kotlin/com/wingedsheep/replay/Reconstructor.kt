@@ -81,10 +81,29 @@ class Reconstructor(
     /** The side whose untapped lands this half-turn leaves matter: it casts in the next one. */
     private var keepMana: String? = null
 
-    private data class Node(val state: GameState, val plan: Plan)
+    private data class Node(val state: GameState, val plan: Plan, val line: Move? = null)
+
+    /** A matching end state and the line of actions that reached it. */
+    class Kept(val state: GameState, val line: Move?)
+
+    /** Half-turn being searched, stamped on each [Move]. */
+    private var halfTurnIndex = 0
+
+    /** The accepted line of the last [run]: a reproduced game's whole line, a failed one's up to [acceptedThrough]. */
+    var acceptedLine: Move? = null
+        private set
+    /** Half-turns [acceptedLine] covers. */
+    var acceptedThrough = 0
+        private set
+
+    private fun Move?.then(before: GameState, action: GameAction, how: String) =
+        Move(before, action, halfTurnIndex, how, this)
+
+    private fun Move?.then(steps: List<Pair<GameState, GameAction>>, how: String): Move? =
+        steps.fold(this) { line, (before, action) -> line.then(before, action, how) }
 
     private class Search {
-        val ends = mutableListOf<GameState>()
+        val ends = mutableListOf<Kept>()
         var nodes = 0
         var closest: List<String>? = null
         var tracer: Tracer? = null
@@ -106,13 +125,13 @@ class Reconstructor(
          * subtree that differs only in what nobody can see (every colour an aura's land could be,
          * on the wrong host) must not fill [MAX_ENDS] before the other hosts are looked at.
          */
-        fun end(s: GameState) {
+        fun end(s: GameState, line: Move?) {
             if (!digests.add(StateProgress.digest(s))) return
             val k = groupOf(s)
             val n = groupSizes[k] ?: 0
             if (n < perGroup) {
                 groupSizes[k] = n + 1
-                ends += s
+                ends += Kept(s, line)
             }
         }
 
@@ -134,6 +153,8 @@ class Reconstructor(
             beamSizes.toList(), nodeCounts.toList(), System.currentTimeMillis() - t0,
         )
 
+        acceptedLine = null
+        acceptedThrough = 0
         missingCard(spec)?.let { return result("skipped", 0, reason = "card not in engine: $it") }
         val init = try {
             GameInitializer(registry).initializeGame(
@@ -154,9 +175,9 @@ class Reconstructor(
         val stacked = stackUser(init.state, seats, spec)
             ?: return result("skipped", 0, reason = "the recorded draws do not fit the user's deck")
 
-        var beam = listOf(stacked)
+        var beam = listOf(Kept(stacked, null))
         // the previous half-turn's matching end states left out of the beam
-        var spare = emptyList<GameState>()
+        var spare = emptyList<Kept>()
         for (i in spec.halfTurns.indices) {
             var search = searchStep(spec, i, beam, seats, withDrawOrders = false)
             nodeCounts += search.nodes
@@ -184,6 +205,8 @@ class Reconstructor(
             beam = pickBeam(search.ends, search.groupOf)
             spare = search.ends.filter { e -> beam.none { it === e } }
             beamSizes += beam.size
+            acceptedLine = beam.first().line
+            acceptedThrough = i + 1
         }
         return result("reproduced", spec.halfTurns.size)
     }
@@ -192,8 +215,9 @@ class Reconstructor(
      * Searches half-turn [i] from the [beam]'s states; the [Search] holds the matching end states.
      * With [withDrawOrders], also from each other order of the half-turn's draws ([drawOrders]).
      */
-    private fun searchStep(spec: GameSpec, i: Int, beam: List<GameState>, seats: Seats, withDrawOrders: Boolean): Search {
+    private fun searchStep(spec: GameSpec, i: Int, beam: List<Kept>, seats: Seats, withDrawOrders: Boolean): Search {
         val ht = spec.halfTurns[i]
+        halfTurnIndex = i
         val search = Search()
         search.outside = spec.halfTurns.drop(i).take(3).flatMap { it.outsideHand }
         search.draws = spec.halfTurns.drop(i).flatMap { it.drawn + it.tutored + it.outsideHand }
@@ -214,7 +238,7 @@ class Reconstructor(
         // start states grouped by what the snapshot cannot see, in beam order
         val groups = linkedMapOf<List<String>, MutableList<ArrayDeque<Node>>>()
         var starts = 0
-        for (start in beam) {
+        for ((start, line) in beam.map { it.state to it.line }) {
             val written = revealOppo(start, seats, ht)
             if (written == null) {
                 search.near(listOf("could not write the opponent's cards into hidden slots: $lastError"))
@@ -244,7 +268,7 @@ class Reconstructor(
                         untappedLands(ready, seats.of(other))
                     } else emptyList()
                     groups.getOrPut(snapshotter.hidden(ready, seats) + lands + "library variant $v/$u") { mutableListOf() } +=
-                        ArrayDeque(listOf(Node(ready, Plan.of(ht))))
+                        ArrayDeque(listOf(Node(ready, Plan.of(ht), line)))
                 }
             }
         }
@@ -288,14 +312,14 @@ class Reconstructor(
             search.nodes++
             val s = node.state
             if (s.gameOver) {
-                if (ht.last) search.end(s)
+                if (ht.last) search.end(s, node.line)
                 continue
             }
             // The last half-turn's snapshot was taken when the game ended, possibly mid-turn.
             if (ht.last && node.plan.done && s.pendingDecision == null) {
                 val diff = snapshotter.diff(snapshotter.take(s, seats), ht.eot)
                 if (diff.isEmpty()) {
-                    search.end(s)
+                    search.end(s, node.line)
                     continue
                 }
                 search.near(diff)
@@ -319,7 +343,7 @@ class Reconstructor(
                     val diff = snapshotter.diff(snapshotter.take(s, seats), ht.eot)
                     if (diff.isEmpty()) {
                         search.tracer?.line("    end check: matches the snapshot")
-                        search.end(child.state)
+                        search.end(child.state, child.line)
                     } else {
                         search.near(diff)
                         search.tracer?.line("      board: ${snapshotter.board(s, seats)}")
@@ -358,9 +382,9 @@ class Reconstructor(
      * Up to [beamWidth] distinct states from [ends], one per [groupOf] group ([unseen]) in turn, in
      * the order the search found them.
      */
-    private fun pickBeam(ends: List<GameState>, groupOf: (GameState) -> List<String>): List<GameState> {
-        val groups = ends.distinctBy { StateProgress.digest(it) }.groupBy(groupOf).values
-        val out = mutableListOf<GameState>()
+    private fun pickBeam(ends: List<Kept>, groupOf: (GameState) -> List<String>): List<Kept> {
+        val groups = ends.distinctBy { StateProgress.digest(it.state) }.groupBy { groupOf(it.state) }.values
+        val out = mutableListOf<Kept>()
         var round = 0
         while (out.size < beamWidth && groups.any { round < it.size }) {
             for (g in groups) if (round < g.size && out.size < beamWidth) out += g[round]
@@ -415,7 +439,7 @@ class Reconstructor(
                     when {
                         !active -> skip(la, "not the active player")
                         !plan.canPlayLand(name) -> skip(la, "not in the plan")
-                        else -> tryAll(s, la, listOf(action), notes).forEach { out += Node(it, plan.playLand(name)) }
+                        else -> tryAll(s, la, listOf(action), notes).forEach { (st, a) -> out += Node(st, plan.playLand(name), node.line.then(s, a, PLAN)) }
                     }
                 }
                 action is CastSpell -> {
@@ -435,8 +459,10 @@ class Reconstructor(
                                 .flatMap { withCostPayments(s, plan, la, it) }
                                 .flatMap { withManaChoices(s, la, it, more, manaSources) }
                             val taken = tryAll(s, la, variants, notes)
-                            taken.forEach { out += Node(it, after) }
-                            if (taken.isEmpty()) floatThenCast(s, la, variants.first(), sacrificeMana, notes).forEach { out += Node(it, after) }
+                            taken.forEach { (st, a) -> out += Node(st, after, node.line.then(s, a, PLAN)) }
+                            if (taken.isEmpty()) floatThenCast(s, la, variants.first(), sacrificeMana, notes).forEach { (st, steps) ->
+                                out += Node(st, after, node.line.then(steps, PLAN))
+                            }
                             if (out.any { it.plan === after }) cast = true
                         }
                     }
@@ -449,7 +475,7 @@ class Reconstructor(
                         else {
                             val variants = withTargets(s, la, player).flatMap { withX(la, it) }
                                 .flatMap { withCostPayments(s, plan, la, it) }
-                            tryAll(s, la, variants, notes).forEach { out += Node(it, plan.activate(side, i)) }
+                            tryAll(s, la, variants, notes).forEach { (st, a) -> out += Node(st, plan.activate(side, i), node.line.then(s, a, PLAN)) }
                         }
                     }
                 }
@@ -458,7 +484,7 @@ class Reconstructor(
                     val keyword = if (action is CrewVehicle) "Crew" else "Saddle"
                     val i = plan.activation(side, "$keyword ${la.tapForPowerRequired}")
                     if (i < 0) skip(la, "not in the plan")
-                    else tryAll(s, la, tapForPower(s, la), notes).forEach { out += Node(it, plan.activate(side, i)) }
+                    else tryAll(s, la, tapForPower(s, la), notes).forEach { (st, a) -> out += Node(st, plan.activate(side, i), node.line.then(s, a, PLAN)) }
                 }
                 la.actionType == "DeclareAttackers" -> when {
                     !active || plan.attacksDone -> skip(la, "attacks already declared or not the active player")
@@ -467,7 +493,7 @@ class Reconstructor(
                         if (options.isEmpty()) {
                             skip(la, "no attackers match ${plan.attacked} among ${names(s, la.validAttackers)}")
                         }
-                        tryAll(s, la, options, notes).forEach { out += Node(it, plan.copy(attacksDone = true)) }
+                        tryAll(s, la, options, notes).forEach { (st, a) -> out += Node(st, plan.copy(attacksDone = true), node.line.then(s, a, PLAN)) }
                     }
                 }
                 la.actionType == "DeclareBlockers" -> when {
@@ -478,7 +504,7 @@ class Reconstructor(
                             skip(la, "no blockers match ${plan.blocking} -> ${plan.blocked} among " +
                                 "${names(s, la.validBlockers)}")
                         }
-                        tryAll(s, la, options, notes).forEach { out += Node(it, plan.copy(blocksDone = true)) }
+                        tryAll(s, la, options, notes).forEach { (st, a) -> out += Node(st, plan.copy(blocksDone = true), node.line.then(s, a, PLAN)) }
                     }
                 }
                 else -> skip(la, "not modelled")
@@ -525,7 +551,7 @@ class Reconstructor(
                     } else emptyList()
                 val variants = choices.flatMap { c -> payments.map { c.copy(paymentStrategy = it) } }
                     .flatMap { withCostPayments(s, plan, la, it) }.take(MAX_PAYMENT_OPTIONS)
-                tryAll(s, la, variants, notes).forEach { out += Node(it, plan) }
+                tryAll(s, la, variants, notes).forEach { (st, a) -> out += Node(st, plan, node.line.then(s, a, SEARCH)) }
             }
         }
         if (notes != null && unoffered.isNotEmpty()) {
@@ -535,14 +561,14 @@ class Reconstructor(
         }
         pass?.let { p ->
             val passed = apply(s, p)
-            if (passed != null) out += Node(passed, plan) else notes?.add("  ! pass refused: $lastError")
+            if (passed != null) out += Node(passed, plan, node.line.then(s, p, SEARCH)) else notes?.add("  ! pass refused: $lastError")
         }
         if (out.isEmpty()) {
             // A mandatory action the plan does not model (damage assignment order, a second
             // combat's declaration): let each legal action through.
             notes?.add("  fallback: trying the first $MAX_FALLBACK_ACTIONS legal actions")
             for (la in legal.take(MAX_FALLBACK_ACTIONS)) {
-                tryAll(s, la, listOf(la.action), notes).forEach { out += Node(it, plan) }
+                tryAll(s, la, listOf(la.action), notes).forEach { (st, a) -> out += Node(st, plan, node.line.then(s, a, SEARCH)) }
             }
         }
         return out
@@ -556,27 +582,30 @@ class Reconstructor(
      */
     private fun floatThenCast(
         s: GameState, la: LegalAction, cast: GameAction, floats: List<LegalAction>, notes: MutableList<String>?,
-    ): List<GameState> {
+    ): List<Pair<GameState, List<Pair<GameState, GameAction>>>> {
         if (floats.isEmpty()) return emptyList()
         val cost = la.manaCostString?.let { runCatching { ManaCost.parse(it) }.getOrNull() } ?: return emptyList()
         val colours = cost.symbols.flatMap { it.colors }.distinct()
             .ifEmpty { listOfNotNull(floats.first().availableManaColors?.firstOrNull()) }
-        val out = mutableListOf<GameState>()
+        val out = mutableListOf<Pair<GameState, List<Pair<GameState, GameAction>>>>()
         val refusals = mutableListOf<String>()
         for (k in 1..minOf(floats.size, cost.cmc)) {
             var picks: List<List<com.wingedsheep.sdk.core.Color?>> = listOf(emptyList())
             repeat(k) { picks = picks.flatMap { p -> colours.ifEmpty { listOf(null) }.map { p + it } }.take(MAX_TARGET_COMBOS) }
             for (pick in picks) {
                 var st: GameState? = s
+                val steps = mutableListOf<Pair<GameState, GameAction>>()
                 // the same Treasure's ability re-enumerated each time: it names the next untapped one
                 for (c in pick) {
                     val cur = st ?: break
                     val next = enumerator.enumerate(cur, la.action.playerId, EnumerationMode.ACTIONS_ONLY)
                         .firstOrNull { it.isManaAbility && it.description == floats.first().description }
-                    st = next?.let { apply(cur, (it.action as ActivateAbility).copy(manaColorChoice = c)) }
+                    val activation = (next?.action as? ActivateAbility)?.copy(manaColorChoice = c)
+                    st = activation?.let { apply(cur, it) }
+                    if (activation != null) steps += cur to activation
                 }
                 val done = st?.let { apply(it, cast) }
-                if (done != null) out += done else refusals += lastError ?: "?"
+                if (done != null) out += done to (steps + (st!! to cast)) else refusals += lastError ?: "?"
             }
             if (out.isNotEmpty()) break
         }
@@ -586,12 +615,12 @@ class Reconstructor(
     }
 
     /** Applies each variant of [la]; with [notes], reports how many the engine took and why it refused the rest. */
-    private fun tryAll(s: GameState, la: LegalAction, variants: List<GameAction>, notes: MutableList<String>?): List<GameState> {
-        val taken = mutableListOf<GameState>()
+    private fun tryAll(s: GameState, la: LegalAction, variants: List<GameAction>, notes: MutableList<String>?): List<Pair<GameState, GameAction>> {
+        val taken = mutableListOf<Pair<GameState, GameAction>>()
         val refusals = mutableListOf<String>()
         for (v in variants) {
             val next = apply(s, v)
-            if (next != null) taken += next else refusals += lastError ?: "?"
+            if (next != null) taken += next to v else refusals += lastError ?: "?"
         }
         notes?.add(buildString {
             append("  + ${la.description} [${la.actionType}]: ${taken.size}/${variants.size} taken")
@@ -798,6 +827,9 @@ class Reconstructor(
 
     private fun decide(node: Node, d: PendingDecision, ht: HalfTurnSpec, notes: MutableList<String>? = null): List<Node> {
         val s = node.state
+        // the AI's responder answers what the search does not enumerate
+        var how = SEARCH
+        fun heuristic(s: GameState, d: PendingDecision) = this@Reconstructor.heuristic(s, d).also { how = AI }
         val responses: List<DecisionResponse> = when (d) {
             is YesNoDecision -> listOf(YesNoResponse(d.id, true), YesNoResponse(d.id, false))
             is ChooseModeDecision ->
@@ -830,8 +862,9 @@ class Reconstructor(
         val out = mutableListOf<Node>()
         val refusals = mutableListOf<String>()
         for (r in responses) {
-            val next = apply(s, SubmitDecision(d.playerId, r))
-            if (next != null) out += Node(next, node.plan) else refusals += lastError ?: "?"
+            val submit = SubmitDecision(d.playerId, r)
+            val next = apply(s, submit)
+            if (next != null) out += Node(next, node.plan, node.line.then(s, submit, how)) else refusals += lastError ?: "?"
         }
         notes?.add("  decision ${d::class.simpleName} (${d.context.sourceName}: ${d.prompt.take(80)}): " +
             "${out.size}/${responses.size} responses taken" +
@@ -1364,6 +1397,10 @@ class Reconstructor(
         /** Cards an impulse exiles when its text gives no number ("that many"). */
         const val IMPULSE_DEFAULT_COUNT = 3
         const val MAX_PAYMENT_OPTIONS = 12
+        /** How a [Move] was chosen: it used up a recorded action; the search chose it; the AI's responder did. */
+        const val PLAN = "plan"
+        const val SEARCH = "search"
+        const val AI = "ai"
         /** Creature sets enumerated for a crew or saddle cost before the minimal ones are kept. */
         const val MAX_TAP_SETS = 512
         val BASICS = mapOf('W' to "Plains", 'U' to "Island", 'B' to "Swamp", 'R' to "Mountain", 'G' to "Forest")
