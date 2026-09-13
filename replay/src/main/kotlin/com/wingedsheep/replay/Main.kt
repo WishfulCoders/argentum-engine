@@ -13,13 +13,14 @@ import java.util.concurrent.Executors
 import java.util.zip.GZIPOutputStream
 
 /**
- * `replay <specs.jsonl> <results.jsonl> [maxGames] [beamWidth] [nodeBudget] [threads] [lines.jsonl.gz]`
+ * `replay <specs.jsonl> <results.jsonl> [maxGames] [beamWidth] [nodeBudget] [threads] [lines.jsonl.gz] [prefs.jsonl.gz]`
  *
  * Reconstructs each game spec (from `mtgdraft replay-export`) and writes one [GameResult] per line,
  * then prints a summary: how many games were reproduced end to end, what share of half-turns were
  * reproduced in order, and the most common reasons a game stopped. With a lines file, also writes
  * each game's accepted line ([GameLine], gzipped JSONL): the whole game when it was reproduced, the
- * half-turns before the failure otherwise.
+ * half-turns before the failure otherwise. With a prefs file, also writes the user's priority choices on
+ * that line with every alternative simulated ([PreferenceWriter]; pass `-` for no lines file).
  *
  * `replay trace <specs.jsonl> <gameId> [halfTurn] [nodeBudget] [tracedNodes] [beamWidth]` prints the
  * search of one half-turn node by node ([Tracer]); without a half-turn, the one where the game fails.
@@ -35,7 +36,8 @@ fun main(args: Array<String>) {
     val beamWidth = args.getOrNull(3)?.toInt() ?: 8
     val nodeBudget = args.getOrNull(4)?.toInt() ?: 20_000
     val threads = args.getOrNull(5)?.toInt() ?: Runtime.getRuntime().availableProcessors()
-    val linesFile = args.getOrNull(6)?.let(::File)
+    val linesFile = args.getOrNull(6)?.takeIf { it != "-" }?.let(::File)
+    val prefsFile = args.getOrNull(7)?.let(::File)
 
     val specs = input.readLines().filter { it.isNotBlank() }.take(maxGames)
         .map { specJson.decodeFromString<GameSpec>(it) }
@@ -44,6 +46,7 @@ fun main(args: Array<String>) {
 
     val local = ThreadLocal.withInitial { Reconstructor(registry, snapshotter, beamWidth, nodeBudget) }
     val writers = ThreadLocal.withInitial { LineWriter(registry) }
+    val prefWriters = ThreadLocal.withInitial { PreferenceWriter(registry) }
     val pool = Executors.newFixedThreadPool(threads)
     val futures = specs.map { spec ->
         pool.submit(Callable {
@@ -51,9 +54,10 @@ fun main(args: Array<String>) {
             val result = try {
                 reconstructor.run(spec)
             } catch (e: Throwable) {
-                return@Callable GameResult(spec.gameId, "error", spec.halfTurns.size, 0, reason = e.toString().take(300)) to null
+                return@Callable Triple(GameResult(spec.gameId, "error", spec.halfTurns.size, 0, reason = e.toString().take(300)), null, null)
             }
-            val line = reconstructor.acceptedLine?.takeIf { linesFile != null }?.toList()?.let { steps ->
+            val accepted = reconstructor.acceptedLine?.takeIf { linesFile != null || prefsFile != null }?.toList()
+            val line = accepted?.takeIf { linesFile != null }?.let { steps ->
                 try {
                     val seats = Seats.of(steps.first().before)
                     lineJson.encodeToString(GameLine.serializer(),
@@ -63,7 +67,16 @@ fun main(args: Array<String>) {
                     null
                 }
             }
-            result to line
+            val prefs = accepted?.takeIf { prefsFile != null }?.let { steps ->
+                try {
+                    prefWriters.get().roots(spec, Seats.of(steps.first().before), steps)
+                        .map { lineJson.encodeToString(PrefRoot.serializer(), it) }
+                } catch (e: Throwable) {
+                    System.err.println("prefs ${spec.gameId}: $e")
+                    null
+                }
+            }
+            Triple(result, line, prefs)
         })
     }
     val results = mutableListOf<GameResult>()
@@ -72,10 +85,18 @@ fun main(args: Array<String>) {
         f.parentFile?.mkdirs()
         GZIPOutputStream(f.outputStream()).bufferedWriter()
     }
+    val prefs = prefsFile?.let { f ->
+        f.parentFile?.mkdirs()
+        GZIPOutputStream(f.outputStream()).bufferedWriter().also {
+            it.write(lineJson.encodeToString(PrefHeader.serializer(), PrefHeader(PreferenceWriter.FEATURES)))
+            it.newLine()
+        }
+    }
     var written = 0
+    var roots = 0
     output.bufferedWriter().use { w ->
         futures.forEachIndexed { i, f ->
-            val (r, line) = f.get()
+            val (r, line, rootLines) = f.get()
             results += r
             w.write(specJson.encodeToString(r))
             w.newLine()
@@ -84,6 +105,10 @@ fun main(args: Array<String>) {
                 lines.newLine()
                 written++
             }
+            if (rootLines != null && prefs != null) {
+                for (root in rootLines) { prefs.write(root); prefs.newLine() }
+                roots += rootLines.size
+            }
             if ((i + 1) % 10 == 0 || i + 1 == futures.size) {
                 println("  ${i + 1}/${futures.size} done")
             }
@@ -91,6 +116,8 @@ fun main(args: Array<String>) {
     }
     lines?.close()
     if (linesFile != null) println("lines: $written games to $linesFile")
+    prefs?.close()
+    if (prefsFile != null) println("prefs: $roots choices to $prefsFile")
     pool.shutdown()
     summarize(results)
 }

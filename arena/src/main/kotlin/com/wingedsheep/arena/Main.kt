@@ -1,6 +1,7 @@
 package com.wingedsheep.arena
 
 import com.wingedsheep.ai.engine.AiProfile
+import com.wingedsheep.ai.engine.evaluation.EvalWeights
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.mtg.sets.MtgSetCatalog
 import com.wingedsheep.mtg.sets.tokens.PredefinedTokens
@@ -38,7 +39,8 @@ fun main(args: Array<String>) {
     val runSeed = args.getOrNull(6)?.toLong() ?: 0L
 
     val registry = eclRegistry()
-    val profile = AiProfile.CURRENT
+    val profile = arenaProfile(System.getProperty("arena.profile") ?: "current")
+    val targetProfile = System.getProperty("arena.targetProfile")?.let(::arenaProfile) ?: profile
 
     val decks = input.readLines().filter { it.isNotBlank() }.map { arenaJson.decodeFromString<DeckSpec>(it) }
     val (known, unknown) = decks.partition { d -> d.cards.all { registry.hasCard(it) } }
@@ -66,7 +68,7 @@ fun main(args: Array<String>) {
     }
     println(
         "arena: ${targets.size} targets x ${opponents.size} opponents x $gamesPerPair games, " +
-            "${jobs.size} to play (${done.size} already done), profile ${profile.id}, $threads threads",
+            "${jobs.size} to play (${done.size} already done), profile ${profile.id}, target ${targetProfile.id}, $threads threads",
     )
     if (jobs.isEmpty()) return
 
@@ -86,7 +88,7 @@ fun main(args: Array<String>) {
             else listOf(job.opponent.cards, job.target.cards)
             val base = GameRecord(job.target.id, job.opponent.id, job.game, targetSeat, job.seed)
             try {
-                val o = local.get().play(seats, job.seed)
+                val o = local.get().play(seats, job.seed, if (targetSeat == 0) listOf(targetProfile, profile) else listOf(profile, targetProfile))
                 base.copy(
                     winnerSeat = o.winnerSeat,
                     targetWon = o.winnerSeat?.let { it == targetSeat },
@@ -126,6 +128,23 @@ fun main(args: Array<String>) {
         }
     }
     pool.shutdown()
+}
+
+/**
+ * `-Darena.profile` (both seats) and `-Darena.targetProfile` (the target's seat only): `current`, the
+ * default AI, or `apprentice`, the same AI with its evaluator replaced by the linear model in
+ * `shared-apprentice.json` under `-Dargentum.ai.apprentice.dir` (the gameplay pilot, `docs/26`).
+ * An apprentice that did not load is an error, not a silent fallback to the default evaluator.
+ */
+private fun arenaProfile(name: String): AiProfile = when (name) {
+    "current" -> AiProfile.CURRENT
+    "apprentice" -> {
+        require(EvalWeights.isRawProfile("shared-apprentice")) {
+            "no valid shared-apprentice.json under -Dargentum.ai.apprentice.dir"
+        }
+        AiProfile.CURRENT.copy(id = "current-apprentice", evalWeightsId = "shared-apprentice")
+    }
+    else -> error("unknown profile $name")
 }
 
 /**

@@ -52,7 +52,8 @@ class GameRunner(
         val reason: String,
     )
 
-    fun play(decks: List<List<String>>, seed: Long): Outcome {
+    /** [seatProfiles] overrides [profile] seat by seat (a one-sided A/B); null plays [profile] on both. */
+    fun play(decks: List<List<String>>, seed: Long, seatProfiles: List<AiProfile>? = null): Outcome {
         val init = initializer.initializeGame(
             GameConfig(
                 players = decks.mapIndexed { seat, deck -> PlayerConfig("Seat$seat", Deck(deck)) },
@@ -66,7 +67,9 @@ class GameRunner(
         val decklists = seatIds.mapIndexed { seat, id ->
             id to OpponentModel.KnownDecklist(decks[seat].groupingBy { it }.eachCount())
         }.toMap()
-        val players = seatIds.map { id -> AIPlayer.create(registry, id, profile, decklists) }
+        val players = seatIds.mapIndexed { seat, id ->
+            AIPlayer.create(registry, id, seatProfiles?.get(seat) ?: profile, decklists)
+        }
         fun aiFor(playerId: EntityId) = players[bySeat.getValue(playerId)]
 
         var state: GameState = init.state
