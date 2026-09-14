@@ -712,6 +712,16 @@ data class AiProfile(
         )
 
         /**
+         * [CURRENT] plus [discountedRaceClock] alone: the gameplay pilot's base once the legacy
+         * clock's 99-turn sentinel is gone (mtg-draft-ai `docs/28` §5.1, where the sentinel is 8 %
+         * of the human choices and the current AI picks the human's move there at near chance).
+         */
+        val CURRENT_RACECLOCK = CURRENT.copy(
+            id = "current-raceclock",
+            discountedRaceClock = true,
+        )
+
+        /**
          * [PRODUCTION_CANDIDATE_TRICKWINDOW] plus [discountedRaceClock] — the agent that stops
          * pricing an empty board as a 99-turn clock.
          *

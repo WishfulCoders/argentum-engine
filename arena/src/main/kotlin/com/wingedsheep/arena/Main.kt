@@ -132,32 +132,36 @@ fun main(args: Array<String>) {
 
 /**
  * `-Darena.profile` (both seats) and `-Darena.targetProfile` (the target's seat only): `current`, the
- * default AI, or `apprentice`, the same AI whose priority choices (not combat or decisions) are scored
- * by the linear model in `shared-apprentice.json` under `-Dargentum.ai.apprentice.dir` (the
- * gameplay pilot, mtg-draft-ai `docs/28`); `correction`, the current AI whose priority choices add
- * the linear term in `shared-correction.json` (same directory) to its own score, and
- * `correction-actions`, the same term choosing only which action once the current score has chosen
- * to act (`docs/28` §5).
+ * default AI; `raceclock`, the same with the discounted race clock ([AiProfile.CURRENT_RACECLOCK]);
+ * `apprentice`, whose priority choices (not combat or decisions) are scored by the linear model in
+ * `shared-apprentice.json` under `-Dargentum.ai.apprentice.dir` (the gameplay pilot, mtg-draft-ai
+ * `docs/28`); `correction`, whose priority choices add the linear term in `shared-correction.json` (same
+ * directory) to its own score; and `correction-actions`, the same term choosing only which action once
+ * the uncorrected score has chosen to act (`docs/28` §5). `raceclock+<one of the last three>` puts that
+ * change on the raceclock AI instead of the default.
  * An apprentice or correction that did not load is an error, not a silent fallback to the default evaluator.
  */
-private fun arenaProfile(name: String): AiProfile = when (name) {
-    "current" -> AiProfile.CURRENT
-    "apprentice" -> {
-        require(EvalWeights.isRawProfile("shared-apprentice")) {
-            "no valid shared-apprentice.json under -Dargentum.ai.apprentice.dir"
+private fun arenaProfile(name: String): AiProfile {
+    val base = if (name == "raceclock" || name.startsWith("raceclock+")) AiProfile.CURRENT_RACECLOCK else AiProfile.CURRENT
+    return when (name.removePrefix("raceclock+")) {
+        "current", "raceclock" -> base
+        "apprentice" -> {
+            require(EvalWeights.isRawProfile("shared-apprentice")) {
+                "no valid shared-apprentice.json under -Dargentum.ai.apprentice.dir"
+            }
+            base.copy(id = "${base.id}-apprentice", priorityEvalWeightsId = "shared-apprentice")
         }
-        AiProfile.CURRENT.copy(id = "current-apprentice", priorityEvalWeightsId = "shared-apprentice")
-    }
-    "correction", "correction-actions" -> {
-        requireNotNull(EvalWeights.correction("shared-correction")) {
-            "no valid shared-correction.json under -Dargentum.ai.apprentice.dir"
+        "correction", "correction-actions" -> {
+            requireNotNull(EvalWeights.correction("shared-correction")) {
+                "no valid shared-correction.json under -Dargentum.ai.apprentice.dir"
+            }
+            base.copy(
+                id = "${base.id}-${name.removePrefix("raceclock+")}", priorityCorrectionId = "shared-correction",
+                priorityCorrectionChoosesActionOnly = name.endsWith("correction-actions"),
+            )
         }
-        AiProfile.CURRENT.copy(
-            id = "current-$name", priorityCorrectionId = "shared-correction",
-            priorityCorrectionChoosesActionOnly = name == "correction-actions",
-        )
+        else -> error("unknown profile $name")
     }
-    else -> error("unknown profile $name")
 }
 
 /**

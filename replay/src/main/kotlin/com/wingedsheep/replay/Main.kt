@@ -20,7 +20,8 @@ import java.util.zip.GZIPOutputStream
  * reproduced in order, and the most common reasons a game stopped. With a lines file, also writes
  * each game's accepted line ([GameLine], gzipped JSONL): the whole game when it was reproduced, the
  * half-turns before the failure otherwise. With a prefs file, also writes the user's priority choices on
- * that line with every alternative simulated ([PreferenceWriter]; pass `-` for no lines file).
+ * that line with every alternative simulated ([PreferenceWriter]; pass `-` for no lines file), scored by
+ * `-Dreplay.prefsProfile` (`current`, or `raceclock`).
  *
  * `replay trace <specs.jsonl> <gameId> [halfTurn] [nodeBudget] [tracedNodes] [beamWidth]` prints the
  * search of one half-turn node by node ([Tracer]); without a half-turn, the one where the game fails.
@@ -46,7 +47,8 @@ fun main(args: Array<String>) {
 
     val local = ThreadLocal.withInitial { Reconstructor(registry, snapshotter, beamWidth, nodeBudget) }
     val writers = ThreadLocal.withInitial { LineWriter(registry) }
-    val prefWriters = ThreadLocal.withInitial { PreferenceWriter(registry) }
+    val prefsBase = PreferenceWriter.baseProfile(System.getProperty("replay.prefsProfile"))
+    val prefWriters = ThreadLocal.withInitial { PreferenceWriter(registry, prefsBase) }
     val pool = Executors.newFixedThreadPool(threads)
     val futures = specs.map { spec ->
         pool.submit(Callable {
@@ -88,7 +90,7 @@ fun main(args: Array<String>) {
     val prefs = prefsFile?.let { f ->
         f.parentFile?.mkdirs()
         GZIPOutputStream(f.outputStream()).bufferedWriter().also {
-            it.write(lineJson.encodeToString(PrefHeader.serializer(), PrefHeader(PreferenceWriter.FEATURES)))
+            it.write(lineJson.encodeToString(PrefHeader.serializer(), PrefHeader(PreferenceWriter.FEATURES, prefsBase.id)))
             it.newLine()
         }
     }

@@ -26,9 +26,9 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonObject
 
-/** The feature order of [PrefCandidate.f]: the first line of a prefs file. */
+/** The feature order of [PrefCandidate.f], and the profile [PrefCandidate.base] scores with: the first line of a prefs file. */
 @Serializable
-data class PrefHeader(val features: List<String>)
+data class PrefHeader(val features: List<String>, val baseProfile: String = AiProfile.CURRENT.id)
 
 /** One of the user's priority choices on a rebuilt line: the move they made and the alternatives. */
 @Serializable
@@ -53,7 +53,7 @@ data class PrefCandidate(
     val result: String,
     /** [RawBoardFeatures] of the quiet state from the user's side, in [PrefHeader.features] order. */
     val f: List<Int>,
-    /** [AiProfile.CURRENT]'s evaluator on the quiet state: what the arena's AI would compare. */
+    /** The base profile's evaluator on the quiet state ([PrefHeader.baseProfile]): what that AI would compare. */
     val base: Double,
     /** Set when the candidate ends the game: whether the user won. */
     val won: Boolean? = null,
@@ -64,14 +64,14 @@ data class PrefCandidate(
  *
  * At each user priority action on an accepted line (decisions, attacks and blocks excluded), every
  * legal alternative is simulated to its quiet state as the AI's own one-ply search does it — with
- * [TargetSelection.fillHeuristically]'s targets and [AiProfile.CURRENT]'s decision responder — and
- * read as [RawBoardFeatures]. One per thread, like [LineWriter].
+ * [TargetSelection.fillHeuristically]'s targets and [base]'s decision responder — and read as
+ * [RawBoardFeatures]. One per thread, like [LineWriter].
  */
-class PreferenceWriter(registry: CardRegistry) {
+class PreferenceWriter(registry: CardRegistry, base: AiProfile = AiProfile.CURRENT) {
     private val enumerator = LegalActionEnumerator.create(registry)
     private val simulator = GameSimulator(registry)
     private val intents = IntentCatalog.of(registry)
-    private val baseline: BoardEvaluator = AiProfile.CURRENT.let { p ->
+    private val baseline: BoardEvaluator = base.let { p ->
         EvalWeights.resolveEvaluator(
             p.evalWeightsId, IntentCatalog.NONE, p.landDropIsNotCardLoss, p.sequenceLandsByUsableMana,
             p.discountedRaceClock, p.creatureValuation, p.priceLandsInHandAsMana,
@@ -138,5 +138,12 @@ class PreferenceWriter(registry: CardRegistry) {
 
     companion object {
         val FEATURES: List<String> = RawBoardFeatures.names.toList()
+
+        /** `-Dreplay.prefsProfile`: `current` (the default) or `raceclock` ([AiProfile.CURRENT_RACECLOCK]). */
+        fun baseProfile(name: String?): AiProfile = when (name ?: "current") {
+            "current" -> AiProfile.CURRENT
+            "raceclock" -> AiProfile.CURRENT_RACECLOCK
+            else -> error("unknown prefs profile $name")
+        }
     }
 }
