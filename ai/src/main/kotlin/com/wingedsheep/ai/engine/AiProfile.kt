@@ -380,7 +380,7 @@ data class AiProfile(
     /**
      * An evaluator for the Strategist's priority choices only (which land, spell or ability, or to
      * pass); combat and decision responses keep [evalWeightsId]. For an evaluator fit to priority
-     * choices alone (mtg-draft-ai `docs/26`), which says nothing about combat. Null: [evalWeightsId].
+     * choices alone (mtg-draft-ai `docs/28`), which says nothing about combat. Null: [evalWeightsId].
      */
     val priorityEvalWeightsId: String? = null,
 ) {

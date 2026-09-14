@@ -60,7 +60,7 @@ data class PrefCandidate(
 )
 
 /**
- * Preference records for fitting an evaluator to human play (the gameplay pilot, `docs/26`).
+ * Preference records for fitting an evaluator to human play (the gameplay pilot, `docs/28`).
  *
  * At each user priority action on an accepted line (decisions, attacks and blocks excluded), every
  * legal alternative is simulated to its quiet state as the AI's own one-ply search does it — with

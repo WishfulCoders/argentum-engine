@@ -134,7 +134,7 @@ fun main(args: Array<String>) {
  * `-Darena.profile` (both seats) and `-Darena.targetProfile` (the target's seat only): `current`, the
  * default AI, or `apprentice`, the same AI whose priority choices (not combat or decisions) are scored
  * by the linear model in `shared-apprentice.json` under `-Dargentum.ai.apprentice.dir` (the
- * gameplay pilot, mtg-draft-ai `docs/26`).
+ * gameplay pilot, mtg-draft-ai `docs/28`).
  * An apprentice that did not load is an error, not a silent fallback to the default evaluator.
  */
 private fun arenaProfile(name: String): AiProfile = when (name) {
