@@ -22,6 +22,12 @@ data class Plan(
     val plots: Map<String, Map<String, Int>> = emptyMap(),
     /** Room doors still to unlock, by side and door name. */
     val unlocks: Map<String, Map<String, Int>> = emptyMap(),
+    /** Cards still to cast face down, by side: the card each turned out to be, or "" for any. */
+    val faceDown: Map<String, List<String>> = emptyMap(),
+    /** Face-down cards still to turn face up, by side and name. */
+    val turnUps: Map<String, Map<String, Int>> = emptyMap(),
+    /** Prepare spells still to cast (a copy from a prepared creature), by side and card name. */
+    val prepared: Map<String, Map<String, Int>> = emptyMap(),
 ) {
     fun canPlayLand(name: String): Boolean = (lands[name] ?: 0) > 0
     fun playLand(name: String): Plan = copy(lands = lands.dec(name))
@@ -31,6 +37,19 @@ data class Plan(
 
     fun canUnlock(side: String, door: String): Boolean = (unlocks[side]?.get(door) ?: 0) > 0
     fun unlock(side: String, door: String): Plan = copy(unlocks = unlocks + (side to unlocks[side].orEmpty().dec(door)))
+
+    fun canCastFaceDown(side: String, name: String): Boolean = faceDown[side].orEmpty().let { name in it || "" in it }
+    fun castFaceDown(side: String, name: String): Plan {
+        val left = faceDown.getValue(side).toMutableList()
+        left.removeAt(left.indexOf(name).takeIf { it >= 0 } ?: left.indexOf(""))
+        return copy(faceDown = faceDown + (side to left))
+    }
+
+    fun canCastPrepared(side: String, name: String): Boolean = (prepared[side]?.get(name) ?: 0) > 0
+    fun castPrepared(side: String, name: String): Plan = copy(prepared = prepared + (side to prepared[side].orEmpty().dec(name)))
+
+    fun canTurnUp(side: String, name: String): Boolean = (turnUps[side]?.get(name) ?: 0) > 0
+    fun turnUp(side: String, name: String): Plan = copy(turnUps = turnUps + (side to turnUps[side].orEmpty().dec(name)))
 
     fun canCast(side: String, name: String): Boolean = (spells[side]?.get(name) ?: 0) > 0
     fun cast(side: String, name: String): Plan =
@@ -49,7 +68,7 @@ data class Plan(
 
     val done: Boolean
         get() = lands.isEmpty() && spells.values.all { it.isEmpty() } && activations.values.all { it.none(::required) } &&
-            plots.values.all { it.isEmpty() } && unlocks.values.all { it.isEmpty() } &&
+            plots.values.all { it.isEmpty() } && unlocks.values.all { it.isEmpty() } && faceDown.values.all { it.isEmpty() } && turnUps.values.all { it.isEmpty() } && prepared.values.all { it.isEmpty() } &&
             (attacked.isEmpty() || attacksDone) && (blocking.isEmpty() || blocksDone)
 
     companion object {
@@ -68,6 +87,11 @@ data class Plan(
                 blocked = ht.blocked,
                 plots = ht.plotted.filterValues { it.isNotEmpty() }.mapValues { Snapshotter.counts(it.value) },
                 unlocks = ht.unlocked.filterValues { it.isNotEmpty() }.mapValues { Snapshotter.counts(it.value) },
+                faceDown = ht.faceDown.filterValues { it > 0 }.mapValues { (side, n) ->
+                    List(n) { ht.faceDownAs[side]?.getOrNull(it).orEmpty() }
+                },
+                turnUps = ht.turnedUp.filterValues { it.isNotEmpty() }.mapValues { Snapshotter.counts(it.value) },
+                prepared = ht.prepared.filterValues { it.isNotEmpty() }.mapValues { Snapshotter.counts(it.value) },
             )
         }
     }
@@ -86,6 +110,9 @@ private fun Map<String, Int>.dec(name: String): Map<String, Int> {
 private fun required(recorded: String): Boolean =
     ": " in recorded || "cycling" in recorded.lowercase() || KEYWORD.containsMatchIn(recorded)
 
+/** A permanent's reference to itself, as 17Lands (CARDNAME) and the engine ("this creature") write it. */
+private val SELF = Regex("""\b(?:cardname|this (?:creature|permanent|artifact|enchantment|land|vehicle|aura|equipment|card))\b""")
+
 /** Activated abilities 17Lands logs by keyword alone; the export keeps them ("Crew 2", "Station"). */
 private val KEYWORD = Regex("""^(?:[^—]+ — )?(?:Equip|Crew|Saddle|Station)\b""")
 
@@ -95,15 +122,25 @@ private val KEYWORD = Regex("""^(?:[^—]+ — )?(?:Equip|Crew|Saddle|Station)\b
  * 1, Sacrifice CARDNAME: Exile enchanted creature."). The two word their costs differently ("this
  * Aura", CARDNAME), so costs are compared part by part on their first word; a recorded text with no
  * cost (a loyalty ability, logged without its "+1") is compared on its first words, and cycling on
- * the keyword alone.
+ * the keyword alone. An ability word ("Exhaust — ") is dropped only before the cost: the dash of a
+ * modal effect ("{2}, Sacrifice CARDNAME: Choose one — ...") is part of the text. The card's name
+ * and "this creature" / "this artifact" / ... are one word (the engine drops some costs from its
+ * descriptions: "This creature fights target creature ...").
  */
 fun matchesActivation(engine: String, recorded: String): Boolean {
-    fun norm(t: String) = t.substringAfter(" — ").lowercase().replace(Regex("\\s+"), " ").trim()
+    fun norm(t: String): String {
+        val dash = t.indexOf(" — ")
+        val colon = t.indexOf(": ")
+        val body = if (dash >= 0 && (colon < 0 || dash < colon)) t.substring(dash + 3) else t
+        return body.lowercase().replace(Regex("\\s+"), " ").replace(SELF, "~").trim()
+    }
     val e = norm(engine)
     val r = norm(recorded)
     fun words(t: String, n: Int) = t.split(' ').take(n)
     // the engine spells Station out: "Tap another untapped creature you control: Put charge counters ..."
     if (r == "station") return "charge counters" in e
+    // an equip with another cost: 17Lands "Equip—Pay {3} or discard a card.", the engine "Equip {3}"
+    if (r.startsWith("equip—") && e.startsWith("equip")) return true
     // plain cycling: the engine says "Cycle Shefet Archfiend", 17Lands "Cycling {2}"
     if (e.startsWith("cycle ")) return r.startsWith("cycling")
     // a Class's level: the engine says "Level up to level 2", 17Lands "{1}{G}: Level 2"
