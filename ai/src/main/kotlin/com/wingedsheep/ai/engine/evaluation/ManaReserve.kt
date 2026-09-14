@@ -59,11 +59,15 @@ class ManaReserve(
 
     /** Instant-speed answers among every card the player owns, counted once per game (the deck). */
     private fun answersInDeck(state: GameState, playerId: EntityId): Double {
-        val zones = state.getLibrary(playerId) + state.getHand(playerId) + state.getGraveyard(playerId) +
-            state.getExile(playerId) + state.projectedState.getBattlefieldControlledBy(playerId)
-        return zones.count { id ->
-            val card = state.getEntity(id)?.get<CardComponent>()
-            card != null && card.ownerId == playerId && isAnswer(intents.forName(card.name))
+        // Library, hand, graveyard and exile are the player's own zones; on the battlefield, skip
+        // what they control but do not own.
+        val owned = state.getLibrary(playerId) + state.getHand(playerId) + state.getGraveyard(playerId) +
+            state.getExile(playerId) +
+            state.projectedState.getBattlefieldControlledBy(playerId).filter { id ->
+                state.getEntity(id)?.get<CardComponent>()?.ownerId.let { it == null || it == playerId }
+            }
+        return owned.count { id ->
+            state.getEntity(id)?.get<CardComponent>()?.let { isAnswer(intents.forName(it.name)) } == true
         }.toDouble()
     }
 
