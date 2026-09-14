@@ -383,6 +383,19 @@ data class AiProfile(
      * choices alone (mtg-draft-ai `docs/28`), which says nothing about combat. Null: [evalWeightsId].
      */
     val priorityEvalWeightsId: String? = null,
+    /**
+     * A fitted linear term ([com.wingedsheep.ai.engine.evaluation.EvalWeights.correction]) added to
+     * the evaluator for the Strategist's priority choices only — a correction to [evalWeightsId]'s
+     * evaluator rather than a replacement for it (mtg-draft-ai `docs/28` §5). Null, or not loaded:
+     * no correction.
+     */
+    val priorityCorrectionId: String? = null,
+    /**
+     * With [priorityCorrectionId]: the uncorrected scores decide whether to act, the correction only
+     * which action (and never the targets). For a correction fit to moves a player made, which
+     * never show a pass.
+     */
+    val priorityCorrectionChoosesActionOnly: Boolean = false,
 ) {
     companion object {
         /**

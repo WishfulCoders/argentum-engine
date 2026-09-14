@@ -267,8 +267,14 @@ class AIPlayer(
                 creatureValuation = profile.creatureValuation,
                 priceLandsInHandAsMana = profile.priceLandsInHandAsMana,
             )
+            // Its features read the full catalog, as they did where it was fit (replay's PreferenceWriter).
+            val correction = profile.priorityCorrectionId?.let(EvalWeights::correction)
+                ?.toCorrection(IntentCatalog.of(cardRegistry))
             val priorityEvaluator = profile.priorityEvalWeightsId
                 ?.let { EvalWeights.resolveEvaluator(it, IntentCatalog.of(cardRegistry)) }
+                ?: correction?.takeUnless { profile.priorityCorrectionChoosesActionOnly }?.let { term ->
+                    BoardEvaluator { state, projected, id -> evaluator.evaluate(state, projected, id) + term.evaluate(state, projected, id) }
+                }
                 ?: evaluator
             val combatAdvisor = CombatAdvisor(
                 simulator, evaluator, cardRegistry, advisorRegistry,
@@ -324,6 +330,7 @@ class AIPlayer(
                         null
                     },
                     insightSink = insightSink,
+                    actionCorrection = correction?.takeIf { profile.priorityCorrectionChoosesActionOnly },
                 ),
                 responder = responder,
                 useMeaningfulFilter = profile.useMeaningfulFilter,

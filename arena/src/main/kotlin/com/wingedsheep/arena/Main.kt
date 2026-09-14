@@ -134,8 +134,11 @@ fun main(args: Array<String>) {
  * `-Darena.profile` (both seats) and `-Darena.targetProfile` (the target's seat only): `current`, the
  * default AI, or `apprentice`, the same AI whose priority choices (not combat or decisions) are scored
  * by the linear model in `shared-apprentice.json` under `-Dargentum.ai.apprentice.dir` (the
- * gameplay pilot, mtg-draft-ai `docs/28`).
- * An apprentice that did not load is an error, not a silent fallback to the default evaluator.
+ * gameplay pilot, mtg-draft-ai `docs/28`); `correction`, the current AI whose priority choices add
+ * the linear term in `shared-correction.json` (same directory) to its own score, and
+ * `correction-actions`, the same term choosing only which action once the current score has chosen
+ * to act (`docs/28` §5).
+ * An apprentice or correction that did not load is an error, not a silent fallback to the default evaluator.
  */
 private fun arenaProfile(name: String): AiProfile = when (name) {
     "current" -> AiProfile.CURRENT
@@ -144,6 +147,15 @@ private fun arenaProfile(name: String): AiProfile = when (name) {
             "no valid shared-apprentice.json under -Dargentum.ai.apprentice.dir"
         }
         AiProfile.CURRENT.copy(id = "current-apprentice", priorityEvalWeightsId = "shared-apprentice")
+    }
+    "correction", "correction-actions" -> {
+        requireNotNull(EvalWeights.correction("shared-correction")) {
+            "no valid shared-correction.json under -Dargentum.ai.apprentice.dir"
+        }
+        AiProfile.CURRENT.copy(
+            id = "current-$name", priorityCorrectionId = "shared-correction",
+            priorityCorrectionChoosesActionOnly = name == "correction-actions",
+        )
     }
     else -> error("unknown profile $name")
 }

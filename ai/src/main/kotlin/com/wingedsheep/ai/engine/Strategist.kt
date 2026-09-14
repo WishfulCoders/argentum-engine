@@ -129,6 +129,12 @@ class Strategist(
      * null check — the numbers are already being computed either way, so recording adds no search.
      */
     private val insightSink: AiInsightSink? = null,
+    /**
+     * [AiProfile.priorityCorrectionChoosesActionOnly]: a term added to each action's score to pick
+     * *which* action to take, once the uncorrected scores have said to act at all. Null: the best
+     * uncorrected action, as always.
+     */
+    private val actionCorrection: BoardEvaluator? = null,
 ) {
     private val holdPolicy = HoldPolicy(
         intents,
@@ -301,12 +307,21 @@ class Strategist(
 
         val best = scored.maxByOrNull { it.second }
         val takeAction = best != null && best.second > adjustedPassScore
+        // Whether to act is the uncorrected scores' call; which action, the correction's.
+        val action = if (takeAction && actionCorrection != null) {
+            scored.indices.maxBy { j ->
+                val leaf = leafStates[firstCandidate + j]
+                scored[j].second + actionCorrection.evaluate(leaf, leaf.projectedState, playerId)
+            }.let { scored[it].first }
+        } else {
+            best?.first
+        }
         val chosen = if (takeAction) {
             remember(here)
             // Fill in targets on the returned action so the processor can execute it.
             // The committed target is chosen by simulation (not just the heuristic) so the
             // AI sees the real resolved board, including effects already on the stack.
-            best.first
+            action!!
         } else {
             pass ?: legalActions.first()
         }
@@ -316,7 +331,7 @@ class Strategist(
                 state, evaluationState, playerId, startNanos,
                 pass = pass, passScore = passScore, adjustedPassScore = adjustedPassScore,
                 adjusted = adjusted, dropped = dropped.orEmpty(),
-                chosenAction = if (takeAction) best.first else null,
+                chosenAction = if (takeAction) action else null,
             )
         }
         return chosen

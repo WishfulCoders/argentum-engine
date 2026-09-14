@@ -117,7 +117,7 @@ object EvalWeights {
     private val apprenticeWeights: Map<String, RawEvaluationWeights> by lazy {
         val directory = System.getProperty("argentum.ai.apprentice.dir")?.takeIf { it.isNotBlank() }
             ?: return@lazy emptyMap()
-        listOf("shared-apprentice", "ecl-apprentice", "ecl-overlay").mapNotNull { id ->
+        listOf("shared-apprentice", "ecl-apprentice", "ecl-overlay", "shared-correction").mapNotNull { id ->
             val path = Path.of(directory, "$id.json")
             if (!Files.isRegularFile(path)) return@mapNotNull null
             val expectedSet = if (id.startsWith("ecl-")) "ECL" else null
@@ -151,6 +151,9 @@ object EvalWeights {
                 intents, landDropIsNotCardLoss, sequenceLandsByUsableMana, discountedRaceClock,
                 creatureValuation, priceLandsInHandAsMana,
             )
+
+    /** An installed linear correction ([RawEvaluationWeights.toCorrection]), or null if none loaded. */
+    fun correction(id: String): RawEvaluationWeights? = apprenticeWeights[id]?.takeIf(RawEvaluationWeights::isValid)
 
     /** Whether [id] selects a complete, finite raw vector rather than the composite fallback. */
     fun isRawProfile(id: String): Boolean = apprenticeWeights[id]?.isValid() == true || rawResourceWeights[id]?.isValid() == true
