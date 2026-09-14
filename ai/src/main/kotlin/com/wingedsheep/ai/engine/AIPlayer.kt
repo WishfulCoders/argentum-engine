@@ -270,12 +270,17 @@ class AIPlayer(
             // Its features read the full catalog, as they did where it was fit (replay's PreferenceWriter).
             val correction = profile.priorityCorrectionId?.let(EvalWeights::correction)
                 ?.toCorrection(IntentCatalog.of(cardRegistry))
-            val priorityEvaluator = profile.priorityEvalWeightsId
+            val uncorrected = profile.priorityEvalWeightsId
                 ?.let { EvalWeights.resolveEvaluator(it, IntentCatalog.of(cardRegistry)) }
                 ?: correction?.takeUnless { profile.priorityCorrectionChoosesActionOnly }?.let { term ->
                     BoardEvaluator { state, projected, id -> evaluator.evaluate(state, projected, id) + term.evaluate(state, projected, id) }
                 }
                 ?: evaluator
+            val reserve = profile.manaReserveWeight.takeIf { it != 0.0 }
+                ?.let { ManaReserve(IntentCatalog.of(cardRegistry), it, profile.manaReserveScalesWithDeck) }
+            val priorityEvaluator = reserve?.let { term ->
+                BoardEvaluator { state, projected, id -> uncorrected.evaluate(state, projected, id) + term.evaluate(state, projected, id) }
+            } ?: uncorrected
             val combatAdvisor = CombatAdvisor(
                 simulator, evaluator, cardRegistry, advisorRegistry,
                 priceCrackBackAsLife = profile.priceCrackBackAsLife,

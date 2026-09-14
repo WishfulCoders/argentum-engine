@@ -139,9 +139,35 @@ fun main(args: Array<String>) {
  * `correction-actions`, the same term choosing only which action once the current score has chosen
  * to act (`docs/28` §5).
  * An apprentice or correction that did not load is an error, not a silent fallback to the default evaluator.
+ *
+ * mtg-draft-ai `docs/27` §3: `intent`, the current AI with card knowledge; `timing`, that plus the
+ * upstream hold rules (no rollouts); `reserve`, `timing` plus [com.wingedsheep.ai.engine.evaluation.ManaReserve]
+ * at `-Darena.reserveWeight` (default 1.5), scaled by the deck's answers with `-Darena.reserveScaled=true`.
  */
+private val TIMING = AiProfile.CURRENT.copy(
+    id = "current-timing",
+    useCardIntent = true,
+    holdRemovalForBetterTargets = true,
+    holdCountersForBetterSpells = true,
+    cashCantripsInTheEndStep = true,
+    holdFlashPermanentsForAmbush = true,
+    holdExpiringGrantsForCombat = true,
+    // combatTricksWaitForBlocks is left off: upstream pairs it with TieredBudgetPolicy and says the
+    // two do not separate.
+)
+
 private fun arenaProfile(name: String): AiProfile = when (name) {
     "current" -> AiProfile.CURRENT
+    "intent" -> AiProfile.CURRENT.copy(id = "current-intent", useCardIntent = true)
+    "timing" -> TIMING
+    "reserve" -> {
+        val weight = System.getProperty("arena.reserveWeight")?.toDouble() ?: 1.5
+        val scaled = System.getProperty("arena.reserveScaled").toBoolean()
+        TIMING.copy(
+            id = "timing-reserve-$weight" + if (scaled) "-scaled" else "",
+            manaReserveWeight = weight, manaReserveScalesWithDeck = scaled,
+        )
+    }
     "apprentice" -> {
         require(EvalWeights.isRawProfile("shared-apprentice")) {
             "no valid shared-apprentice.json under -Dargentum.ai.apprentice.dir"
