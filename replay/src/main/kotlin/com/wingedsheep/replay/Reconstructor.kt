@@ -1164,7 +1164,7 @@ class Reconstructor(
         // stands in, unless a card in their hand already can.
         for (text in ht.activated["oppo"].orEmpty().filter { "cycling" in it.lowercase() }) {
             val keyword = text.substringAfter(" — ").trim()
-            if ((held + needed.keys).none { def(it)?.oracleText?.contains(keyword) == true }) {
+            if ((held + needed.keys).none { cyclesWith(it, keyword) }) {
                 cyclingFiller(keyword)?.let { needed[it] = (needed[it] ?: 0) + 1 }
             }
         }
@@ -1513,7 +1513,16 @@ class Reconstructor(
     /** A card with [keyword] ("Islandcycling {2}") to stand in for a card an opponent cycled. */
     private val cyclingFillers = mutableMapOf<String, String?>()
     private fun cyclingFiller(keyword: String): String? = cyclingFillers.getOrPut(keyword) {
-        registry.allCardNames().sorted().firstOrNull { registry.getCard(it)?.oracleText?.contains(keyword) == true }
+        registry.allCardNames().sorted().firstOrNull { cyclesWith(it, keyword) }
+    }
+
+    /**
+     * Whether [name] cycles for exactly [keyword] ("Cycling {2}"): a plain substring test also takes
+     * "Cycling {2}{G}" (Agonasaur Rex), which a red opponent cannot pay.
+     */
+    private fun cyclesWith(name: String, keyword: String): Boolean {
+        val text = def(name)?.oracleText ?: registry.getCard(name)?.oracleText ?: return false
+        return Regex(Regex.escape(keyword) + """(?![{\w])""").containsMatchIn(text)
     }
 
     private fun castsFaceDown(name: String, keyword: (KeywordAbility) -> Boolean = { it is KeywordAbility.Morph || it is KeywordAbility.Disguise }) =

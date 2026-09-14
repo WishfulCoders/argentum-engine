@@ -110,6 +110,9 @@ private fun Map<String, Int>.dec(name: String): Map<String, Int> {
 private fun required(recorded: String): Boolean =
     ": " in recorded || "cycling" in recorded.lowercase() || KEYWORD.containsMatchIn(recorded)
 
+/** A permanent's reference to itself, as 17Lands (CARDNAME) and the engine ("this creature") write it. */
+private val SELF = Regex("""\b(?:cardname|this (?:creature|permanent|artifact|enchantment|land|vehicle|aura|equipment|card))\b""")
+
 /** Activated abilities 17Lands logs by keyword alone; the export keeps them ("Crew 2", "Station"). */
 private val KEYWORD = Regex("""^(?:[^—]+ — )?(?:Equip|Crew|Saddle|Station)\b""")
 
@@ -119,15 +122,25 @@ private val KEYWORD = Regex("""^(?:[^—]+ — )?(?:Equip|Crew|Saddle|Station)\b
  * 1, Sacrifice CARDNAME: Exile enchanted creature."). The two word their costs differently ("this
  * Aura", CARDNAME), so costs are compared part by part on their first word; a recorded text with no
  * cost (a loyalty ability, logged without its "+1") is compared on its first words, and cycling on
- * the keyword alone.
+ * the keyword alone. An ability word ("Exhaust — ") is dropped only before the cost: the dash of a
+ * modal effect ("{2}, Sacrifice CARDNAME: Choose one — ...") is part of the text. The card's name
+ * and "this creature" / "this artifact" / ... are one word (the engine drops some costs from its
+ * descriptions: "This creature fights target creature ...").
  */
 fun matchesActivation(engine: String, recorded: String): Boolean {
-    fun norm(t: String) = t.substringAfter(" — ").lowercase().replace(Regex("\\s+"), " ").trim()
+    fun norm(t: String): String {
+        val dash = t.indexOf(" — ")
+        val colon = t.indexOf(": ")
+        val body = if (dash >= 0 && (colon < 0 || dash < colon)) t.substring(dash + 3) else t
+        return body.lowercase().replace(Regex("\\s+"), " ").replace(SELF, "~").trim()
+    }
     val e = norm(engine)
     val r = norm(recorded)
     fun words(t: String, n: Int) = t.split(' ').take(n)
     // the engine spells Station out: "Tap another untapped creature you control: Put charge counters ..."
     if (r == "station") return "charge counters" in e
+    // an equip with another cost: 17Lands "Equip—Pay {3} or discard a card.", the engine "Equip {3}"
+    if (r.startsWith("equip—") && e.startsWith("equip")) return true
     // plain cycling: the engine says "Cycle Shefet Archfiend", 17Lands "Cycling {2}"
     if (e.startsWith("cycle ")) return r.startsWith("cycling")
     // a Class's level: the engine says "Level up to level 2", 17Lands "{1}{G}: Level 2"
