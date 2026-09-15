@@ -1,5 +1,6 @@
 package com.wingedsheep.replay
 
+import com.wingedsheep.arena.arenaProfile
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.mtg.sets.MtgSetCatalog
 import com.wingedsheep.mtg.sets.tokens.PredefinedTokens
@@ -21,7 +22,9 @@ import java.util.zip.GZIPOutputStream
  * each game's accepted line ([GameLine], gzipped JSONL): the whole game when it was reproduced, the
  * half-turns before the failure otherwise. With a prefs file, also writes the user's priority choices on
  * that line with every alternative simulated ([PreferenceWriter]; pass `-` for no lines file), scored by
- * `-Dreplay.prefsProfile` (`current`, or `raceclock`).
+ * `-Dreplay.prefsProfile` (`current`, or `raceclock`). With `-Dreplay.playOn=PILOT[,PILOT...]` (arena profile names, e.g.
+ * `current,raceclock+timing+correction-actions`) and `-Dreplay.playOnOut=FILE`, also plays every failed game on from the
+ * start of its failed half-turn with each pilot in both seats ([PlayOn], C1), one [PlayOnRecord] per line.
  *
  * `replay trace <specs.jsonl> <gameId> [halfTurn] [nodeBudget] [tracedNodes] [beamWidth]` prints the
  * search of one half-turn node by node ([Tracer]); without a half-turn, the one where the game fails.
@@ -49,6 +52,10 @@ fun main(args: Array<String>) {
     val writers = ThreadLocal.withInitial { LineWriter(registry) }
     val prefsBase = PreferenceWriter.baseProfile(System.getProperty("replay.prefsProfile"))
     val prefWriters = ThreadLocal.withInitial { PreferenceWriter(registry, prefsBase) }
+    val playOnFile = System.getProperty("replay.playOnOut")?.let(::File)
+    val playOnPilots = System.getProperty("replay.playOn")?.split(',')?.map { it to arenaProfile(it) }
+    require((playOnFile == null) == (playOnPilots == null)) { "-Dreplay.playOn and -Dreplay.playOnOut go together" }
+    val playOns = playOnPilots?.let { pilots -> ThreadLocal.withInitial { PlayOn(registry, pilots) } }
     val pool = Executors.newFixedThreadPool(threads)
     val futures = specs.map { spec ->
         pool.submit(Callable {
@@ -56,7 +63,7 @@ fun main(args: Array<String>) {
             val result = try {
                 reconstructor.run(spec)
             } catch (e: Throwable) {
-                return@Callable Triple(GameResult(spec.gameId, "error", spec.halfTurns.size, 0, reason = e.toString().take(300)), null, null)
+                return@Callable GameOut(GameResult(spec.gameId, "error", spec.halfTurns.size, 0, reason = e.toString().take(300)))
             }
             val accepted = reconstructor.acceptedLine?.takeIf { linesFile != null || prefsFile != null }?.toList()
             val line = accepted?.takeIf { linesFile != null }?.let { steps ->
@@ -78,7 +85,16 @@ fun main(args: Array<String>) {
                     null
                 }
             }
-            Triple(result, line, prefs)
+            val start = reconstructor.acceptedState
+            val playOn = if (playOns != null && result.status == "failed" && start != null) {
+                try {
+                    playOns.get().play(spec, result, start).map { lineJson.encodeToString(PlayOnRecord.serializer(), it) }
+                } catch (e: Throwable) {
+                    System.err.println("playOn ${spec.gameId}: $e")
+                    null
+                }
+            } else null
+            GameOut(result, line, prefs, playOn)
         })
     }
     val results = mutableListOf<GameResult>()
@@ -94,11 +110,13 @@ fun main(args: Array<String>) {
             it.newLine()
         }
     }
+    val playOnOut = playOnFile?.let { f -> f.parentFile?.mkdirs(); f.bufferedWriter() }
     var written = 0
     var roots = 0
+    var playedOn = 0
     output.bufferedWriter().use { w ->
         futures.forEachIndexed { i, f ->
-            val (r, line, rootLines) = f.get()
+            val (r, line, rootLines, playOnLines) = f.get()
             results += r
             w.write(specJson.encodeToString(r))
             w.newLine()
@@ -111,6 +129,10 @@ fun main(args: Array<String>) {
                 for (root in rootLines) { prefs.write(root); prefs.newLine() }
                 roots += rootLines.size
             }
+            if (playOnLines != null && playOnOut != null) {
+                for (p in playOnLines) { playOnOut.write(p); playOnOut.newLine() }
+                playedOn++
+            }
             if ((i + 1) % 10 == 0 || i + 1 == futures.size) {
                 println("  ${i + 1}/${futures.size} done")
             }
@@ -120,9 +142,19 @@ fun main(args: Array<String>) {
     if (linesFile != null) println("lines: $written games to $linesFile")
     prefs?.close()
     if (prefsFile != null) println("prefs: $roots choices to $prefsFile")
+    playOnOut?.close()
+    if (playOnFile != null) println("play-on: $playedOn broken games x ${playOnPilots!!.size} pilots to $playOnFile")
     pool.shutdown()
     summarize(results)
 }
+
+/** One game's outputs, gathered on the worker thread. */
+private data class GameOut(
+    val result: GameResult,
+    val line: String? = null,
+    val prefs: List<String>? = null,
+    val playOn: List<String>? = null,
+)
 
 /**
  * Every set, so Special Guests and bonus sheets printed elsewhere resolve; [setCode] last so its

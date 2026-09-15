@@ -63,22 +63,30 @@ class GameRunner(
             )
         )
         val seatIds = init.state.turnOrder
-        val bySeat = seatIds.withIndex().associate { (seat, id) -> id to seat }
         val decklists = seatIds.mapIndexed { seat, id ->
             id to OpponentModel.KnownDecklist(decks[seat].groupingBy { it }.eachCount())
         }.toMap()
-        val players = seatIds.mapIndexed { seat, id ->
-            AIPlayer.create(registry, id, seatProfiles?.get(seat) ?: profile, decklists)
-        }
+        return playFrom(init.state, seatIds.indices.map { seatProfiles?.get(it) ?: profile }, decklists)
+    }
+
+    /**
+     * Plays [start] to the end with [seatProfiles] seat by seat, in `turnOrder`; [decklists] are the decks each
+     * AI's opponent model may assume. What [play] does after dealing, and what the replay module plays on from a
+     * rebuilt game's break with (mtg-draft-ai `docs/27` §5, C1). Seats in the [Outcome] are `turnOrder` indices.
+     */
+    fun playFrom(start: GameState, seatProfiles: List<AiProfile>, decklists: Map<EntityId, OpponentModel>): Outcome {
+        val seatIds = start.turnOrder
+        val bySeat = seatIds.withIndex().associate { (seat, id) -> id to seat }
+        val players = seatIds.mapIndexed { seat, id -> AIPlayer.create(registry, id, seatProfiles[seat], decklists) }
         fun aiFor(playerId: EntityId) = players[bySeat.getValue(playerId)]
 
-        var state: GameState = init.state
+        var state: GameState = start
         var actionCount = 0
         var illegal = 0
         var lastActivePlayer: EntityId? = null
         var lastProgressAction = 0
         var reason = ""
-        val maxPlayerTurns = maxTurnsPerSeat * decks.size
+        val maxPlayerTurns = maxTurnsPerSeat * seatIds.size
         try {
             while (!state.gameOver && state.turnNumber < maxPlayerTurns && actionCount < maxActions) {
                 if (actionCount - lastProgressAction > STUCK_ACTIONS_PER_TURN) {

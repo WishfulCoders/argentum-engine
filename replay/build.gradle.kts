@@ -12,6 +12,8 @@ dependencies {
     implementation(project(":mtg-sets"))
     implementation(project(":ai"))
     implementation(project(":gym"))
+    // C1 (mtg-draft-ai docs/27 §5): a broken game played on with the arena's game loop and pilot profiles.
+    implementation(project(":arena"))
 
     implementation(libs.bundles.kotlinxEcosystem)
     runtimeOnly(libs.slf4jApi)

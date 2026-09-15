@@ -99,6 +99,12 @@ class Reconstructor(
     /** Half-turns [acceptedLine] covers. */
     var acceptedThrough = 0
         private set
+    /**
+     * The state at the end of [acceptedLine] (the beam's first matching state): a failed game's position at the
+     * start of its failed half-turn, which C1 plays on from (mtg-draft-ai `docs/27` §5, [PlayOn]).
+     */
+    var acceptedState: GameState? = null
+        private set
 
     private fun Move?.then(before: GameState, action: GameAction, how: String) =
         Move(before, action, halfTurnIndex, how, this)
@@ -159,6 +165,7 @@ class Reconstructor(
 
         acceptedLine = null
         acceptedThrough = 0
+        acceptedState = null
         missingCard(spec)?.let { return result("skipped", 0, reason = "card not in engine: $it") }
         val init = try {
             GameInitializer(registry).initializeGame(
@@ -180,6 +187,7 @@ class Reconstructor(
             ?: return result("skipped", 0, reason = "the recorded draws do not fit the user's deck")
 
         var beam = listOf(Kept(stacked, null))
+        acceptedState = stacked
         // the previous half-turn's matching end states left out of the beam
         var spare = emptyList<Kept>()
         for (i in spec.halfTurns.indices) {
@@ -210,6 +218,7 @@ class Reconstructor(
             spare = search.ends.filter { e -> beam.none { it === e } }
             beamSizes += beam.size
             acceptedLine = beam.first().line
+            acceptedState = beam.first().state
             acceptedThrough = i + 1
         }
         return result("reproduced", spec.halfTurns.size)

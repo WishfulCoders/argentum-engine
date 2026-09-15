@@ -156,7 +156,7 @@ fun main(args: Array<String>) {
  * So `raceclock+timing+correction-actions` is the race clock, the hold rules and the correction together.
  * An apprentice or correction that did not load is an error, not a silent fallback to the default evaluator.
  */
-private fun arenaProfile(name: String): AiProfile =
+fun arenaProfile(name: String): AiProfile =
     name.split('+').fold(AiProfile.CURRENT) { profile, token -> withToken(profile, token) }
 
 private fun withToken(p: AiProfile, token: String): AiProfile {
