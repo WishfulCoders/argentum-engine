@@ -34,7 +34,7 @@ class PlayOn(registry: CardRegistry, private val pilots: List<Pair<String, AiPro
                 userWonRecord = spec.won,
                 winner = o.winnerSeat?.let { seats.sideOf(start.turnOrder[it]) },
                 turns = o.turns, actions = o.actions, illegal = o.illegal, end = o.reason,
-                cycleUser = o.cycle?.get(userSeat), castsUser = o.casts?.get(userSeat),
+                cycleUser = o.cycle?.get(userSeat), castsUser = o.casts?.get(userSeat), tappedOutUser = o.tappedOut?.get(userSeat),
             )
         }
     }
@@ -67,4 +67,5 @@ data class PlayOnRecord(
     /** The user's seat's mana over the turn cycle and casts by turn/step/kind ([GameRunner.Outcome.cycle], `.casts`). */
     val cycleUser: List<Int>? = null,
     val castsUser: Map<String, Int>? = null,
+    val tappedOutUser: List<Int>? = null,
 )

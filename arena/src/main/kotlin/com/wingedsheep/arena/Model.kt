@@ -40,6 +40,7 @@ data class GameRecord(
     /** [GameRunner.Outcome.cycle] and [GameRunner.Outcome.casts], with `-Darena.holding=true`. */
     val cycle: List<List<Int>>? = null,
     val casts: List<Map<String, Int>>? = null,
+    val tappedOut: List<List<Int>>? = null,
 ) {
     val key: String get() = "$target|$opponent|$game"
 }
