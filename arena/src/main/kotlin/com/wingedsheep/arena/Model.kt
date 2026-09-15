@@ -35,6 +35,8 @@ data class GameRecord(
     /** Empty when the game ended by the rules; otherwise why the loop stopped. */
     val reason: String = "",
     val millis: Long = 0,
+    /** [GameRunner.Outcome.holding], seat by seat, with `-Darena.holding=true`. */
+    val holding: List<List<Int>>? = null,
 ) {
     val key: String get() = "$target|$opponent|$game"
 }

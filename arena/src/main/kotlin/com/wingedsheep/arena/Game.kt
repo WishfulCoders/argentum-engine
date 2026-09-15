@@ -4,6 +4,7 @@ import com.wingedsheep.ai.engine.AIPlayer
 import com.wingedsheep.ai.engine.AiProfile
 import com.wingedsheep.ai.engine.hidden.OpponentModel
 import com.wingedsheep.engine.core.ActionProcessor
+import com.wingedsheep.engine.core.CastSpell
 import com.wingedsheep.engine.core.DeclareAttackers
 import com.wingedsheep.engine.core.DeclareBlockers
 import com.wingedsheep.engine.core.GameAction
@@ -18,6 +19,7 @@ import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.combat.AttackersDeclaredThisCombatComponent
 import com.wingedsheep.engine.state.components.combat.BlockersDeclaredThisCombatComponent
+import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
@@ -38,6 +40,8 @@ class GameRunner(
     private val maxActions: Int = 20_000,
     /** Print the stack trace of an exception that ends a game (the `one` mode). */
     private val printTraces: Boolean = false,
+    /** Count [Outcome.holding] (mtg-draft-ai `docs/28` §8); off, a game is not enumerated twice. */
+    private val measureHolding: Boolean = false,
 ) {
     private val processor = ActionProcessor(registry)
     private val enumerator = LegalActionEnumerator.create(registry)
@@ -50,6 +54,13 @@ class GameRunner(
         val illegal: Int,
         val life: List<Int>,
         val reason: String,
+        /**
+         * Per seat, `[windows, passed, castTheInstant]`: priority on its own main phase with an empty stack and an
+         * affordable instant in hand, and how often it passed or cast that instant there (anything else is the rest).
+         * The engine's side of the own-games timing table (`own_games_timing.py`, `docs/32` §11). Null unless
+         * [measureHolding].
+         */
+        val holding: List<List<Int>>? = null,
     )
 
     /** [seatProfiles] overrides [profile] seat by seat (a one-sided A/B); null plays [profile] on both. */
@@ -86,6 +97,7 @@ class GameRunner(
         var lastActivePlayer: EntityId? = null
         var lastProgressAction = 0
         var reason = ""
+        val holding = if (measureHolding) seatIds.map { IntArray(3) } else null
         val maxPlayerTurns = maxTurnsPerSeat * seatIds.size
         try {
             while (!state.gameOver && state.turnNumber < maxPlayerTurns && actionCount < maxActions) {
@@ -115,7 +127,13 @@ class GameRunner(
                     break
                 }
                 actionCount++
+                val instants = if (holding != null) affordableInstants(state, priorityPlayer) else emptySet()
                 val action = aiFor(priorityPlayer).chooseAction(state)
+                if (instants.isNotEmpty()) {
+                    val h = holding!![bySeat.getValue(priorityPlayer)]
+                    h[0]++
+                    if (action is PassPriority) h[1]++ else if (action is CastSpell && action.cardId in instants) h[2]++
+                }
                 val r = processor.process(state, action).result
                 val next = if (r.error != null) {
                     illegal++
@@ -140,7 +158,20 @@ class GameRunner(
             reason = "exception(${e::class.simpleName}: ${e.message?.take(200)})"
         }
         val winnerSeat = if (state.gameOver) state.winnerId?.let { bySeat[it] } else null
-        return Outcome(winnerSeat, state.turnNumber, actionCount, illegal, seatIds.map { state.lifeTotal(it) }, reason)
+        return Outcome(
+            winnerSeat, state.turnNumber, actionCount, illegal, seatIds.map { state.lifeTotal(it) }, reason,
+            holding?.map { it.toList() },
+        )
+    }
+
+    /** The instants [playerId] could cast now, when it is their own main phase with an empty stack; else none. */
+    private fun affordableInstants(state: GameState, playerId: EntityId): Set<EntityId> {
+        if (state.activePlayerId != playerId || !state.step.isMainPhase || state.stack.isNotEmpty()) return emptySet()
+        return enumerator.enumerate(state, playerId, EnumerationMode.ACTIONS_ONLY).mapNotNull { la ->
+            (la.action as? CastSpell)?.cardId?.takeIf {
+                la.affordable && state.getEntity(it)?.get<CardComponent>()?.typeLine?.isInstant == true
+            }
+        }.toSet()
     }
 
     /** Copy of the AI test support's fallback: pass, unless a combat declaration is owed. */
