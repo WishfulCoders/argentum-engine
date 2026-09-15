@@ -37,22 +37,7 @@ class ManaReserve(
     private val deckScale = ConcurrentHashMap<EntityId, Double>()
 
     override fun evaluate(state: GameState, projected: ProjectedState, playerId: EntityId): Double {
-        if (weight == 0.0 || state.gameOver || state.activePlayerId != playerId) return 0.0
-        val opponent = state.getOpponents(playerId).firstOrNull() ?: return 0.0
-        val opponentHasSomething = state.getHand(opponent).isNotEmpty() ||
-            projected.getBattlefieldControlledBy(opponent).any { projected.hasType(it, "CREATURE") }
-        if (!opponentHasSomething) return 0.0
-
-        val cheapest = state.getHand(playerId).mapNotNull { id ->
-            val card = state.getEntity(id)?.get<CardComponent>() ?: return@mapNotNull null
-            card.manaValue.takeIf { isAnswer(intents.forName(card.name)) }
-        }.minOrNull() ?: return 0.0
-
-        val untappedLands = projected.getBattlefieldControlledBy(playerId)
-            .filter { projected.hasType(it, "LAND") }
-            .count { state.getEntity(it)?.has<TappedComponent>() != true }
-        if (untappedLands < cheapest) return 0.0
-
+        if (weight == 0.0 || !holdsUpAnswer(state, projected, playerId, intents)) return 0.0
         val scale = if (scaleWithDeck) deckScale.getOrPut(playerId) { answersInDeck(state, playerId) / TYPICAL_ANSWERS } else 1.0
         return weight * scale.coerceAtMost(2.0)
     }
@@ -71,11 +56,34 @@ class ManaReserve(
         }.toDouble()
     }
 
-    private fun isAnswer(intent: CardIntent?): Boolean =
-        intent != null && intent.speed == Speed.INSTANT &&
-            (intent.flashPermanent || intent.tags.any { it in ANSWER_TAGS })
-
     companion object {
+        /**
+         * The position this score rewards, and the one `AiProfile.rolloutsOnlyWhenHolding` searches: our
+         * turn, an instant-speed answer in hand that our untapped lands still pay for, and something across
+         * the table for it to answer.
+         */
+        fun holdsUpAnswer(state: GameState, projected: ProjectedState, playerId: EntityId, intents: IntentCatalog): Boolean {
+            if (state.gameOver || state.activePlayerId != playerId) return false
+            val opponent = state.getOpponents(playerId).firstOrNull() ?: return false
+            val opponentHasSomething = state.getHand(opponent).isNotEmpty() ||
+                projected.getBattlefieldControlledBy(opponent).any { projected.hasType(it, "CREATURE") }
+            if (!opponentHasSomething) return false
+
+            val cheapest = state.getHand(playerId).mapNotNull { id ->
+                val card = state.getEntity(id)?.get<CardComponent>() ?: return@mapNotNull null
+                card.manaValue.takeIf { isAnswer(intents.forName(card.name)) }
+            }.minOrNull() ?: return false
+
+            val untappedLands = projected.getBattlefieldControlledBy(playerId)
+                .filter { projected.hasType(it, "LAND") }
+                .count { state.getEntity(it)?.has<TappedComponent>() != true }
+            return untappedLands >= cheapest
+        }
+
+        private fun isAnswer(intent: CardIntent?): Boolean =
+            intent != null && intent.speed == Speed.INSTANT &&
+                (intent.flashPermanent || intent.tags.any { it in ANSWER_TAGS })
+
         /** Combat tricks are left out: they are spent on our own turn as often as on theirs. */
         private val ANSWER_TAGS = setOf(IntentTag.COUNTERSPELL, IntentTag.REMOVAL, IntentTag.EXILE_REMOVAL)
 

@@ -11,6 +11,7 @@ import com.wingedsheep.ai.engine.rollout.CandidateEvaluator
 import com.wingedsheep.ai.engine.rollout.FastDecisionResponder
 import com.wingedsheep.ai.engine.rollout.PlayoutEngine
 import com.wingedsheep.ai.engine.rollout.PlayoutPolicy
+import com.wingedsheep.ai.engine.rollout.HoldingGatedEvaluator
 import com.wingedsheep.ai.engine.rollout.RolloutCandidateEvaluator
 import com.wingedsheep.ai.engine.rollout.StaticCandidateEvaluator
 import com.wingedsheep.engine.core.*
@@ -374,12 +375,14 @@ class AIPlayer(
                 settings = settings,
                 winProbabilityScale = winProbabilityScale,
             )
-            return RolloutCandidateEvaluator(
+            val rollout = RolloutCandidateEvaluator(
                 playouts = engine,
                 staticEvaluator = evaluator,
                 settings = settings,
                 winProbabilityScale = winProbabilityScale,
             )
+            if (!profile.rolloutsOnlyWhenHolding) return rollout
+            return HoldingGatedEvaluator(IntentCatalog.of(cardRegistry), rollout, StaticCandidateEvaluator(evaluator))
         }
 
         /**

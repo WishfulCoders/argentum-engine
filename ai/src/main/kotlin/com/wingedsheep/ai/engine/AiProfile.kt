@@ -75,6 +75,13 @@ data class AiProfile(
      */
     val rollouts: RolloutSettings? = null,
     /**
+     * Spend [rollouts] only on decisions where keeping mana up is the question — our turn, an empty
+     * stack, an instant-speed answer in hand that our untapped lands pay for — and score every other
+     * decision with the static leaf ([com.wingedsheep.ai.engine.rollout.HoldingGatedEvaluator],
+     * mtg-draft-ai `docs/28` §7). Needs [rollouts]; ignored without them.
+     */
+    val rolloutsOnlyWhenHolding: Boolean = false,
+    /**
      * Phase 8: sample opponent hand identities and library order before rollout evaluation.
      * Off preserves the historical full-information agents used as arena controls.
      */

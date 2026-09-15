@@ -2,6 +2,7 @@ package com.wingedsheep.arena
 
 import com.wingedsheep.ai.engine.AiProfile
 import com.wingedsheep.ai.engine.evaluation.EvalWeights
+import com.wingedsheep.ai.engine.rollout.RolloutSettings
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.mtg.sets.MtgSetCatalog
 import com.wingedsheep.mtg.sets.tokens.PredefinedTokens
@@ -145,6 +146,10 @@ fun main(args: Array<String>) {
  *   profile's own score; `correction-actions`: the same term choosing only which action once the
  *   uncorrected score has chosen to act (`docs/28` §5).
  *
+ * - `rollout`: upstream's rollout evaluator on every decision; `holdup`: the same only where keeping mana up is
+ *   the question ([AiProfile.rolloutsOnlyWhenHolding], `docs/28` §7). Both sample the opponent's hidden cards
+ *   ([AiProfile.determinizeHiddenInformation]), so a playout never plays their real hand.
+ *
  * So `raceclock+timing+correction-actions` is the race clock, the hold rules and the correction together.
  * An apprentice or correction that did not load is an error, not a silent fallback to the default evaluator.
  */
@@ -176,6 +181,11 @@ private fun withToken(p: AiProfile, token: String): AiProfile {
                 manaReserveWeight = weight, manaReserveScalesWithDeck = scaled,
             )
         }
+        "rollout" -> p.copy(id = id, rollouts = RolloutSettings.DEFAULT, determinizeHiddenInformation = true)
+        "holdup" -> p.copy(
+            id = id, rollouts = RolloutSettings.DEFAULT, rolloutsOnlyWhenHolding = true,
+            determinizeHiddenInformation = true,
+        )
         "apprentice" -> {
             require(EvalWeights.isRawProfile("shared-apprentice")) {
                 "no valid shared-apprentice.json under -Dargentum.ai.apprentice.dir"
