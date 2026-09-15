@@ -149,7 +149,8 @@ fun main(args: Array<String>) {
  *   uncorrected score has chosen to act (`docs/28` §5).
  *
  * - `rollout`: upstream's rollout evaluator on every decision; `holdup`: the same only where keeping mana up is
- *   the question ([AiProfile.rolloutsOnlyWhenHolding], `docs/28` §7). Both sample the opponent's hidden cards
+ *   the question ([AiProfile.rolloutsOnlyWhenHolding], `docs/28` §7), with the static leaf's share of a gated score at
+ *   `-Darena.holdupStaticWeight` (default upstream's 0.75). Both sample the opponent's hidden cards
  *   ([AiProfile.determinizeHiddenInformation]), so a playout never plays their real hand.
  *
  * So `raceclock+timing+correction-actions` is the race clock, the hold rules and the correction together.
@@ -184,10 +185,14 @@ private fun withToken(p: AiProfile, token: String): AiProfile {
             )
         }
         "rollout" -> p.copy(id = id, rollouts = RolloutSettings.DEFAULT, determinizeHiddenInformation = true)
-        "holdup" -> p.copy(
-            id = id, rollouts = RolloutSettings.DEFAULT, rolloutsOnlyWhenHolding = true,
-            determinizeHiddenInformation = true,
-        )
+        "holdup" -> {
+            val staticWeight = System.getProperty("arena.holdupStaticWeight")?.toDouble()
+            p.copy(
+                id = id + (staticWeight?.let { "-$it" } ?: ""),
+                rollouts = staticWeight?.let { RolloutSettings.DEFAULT.copy(staticWeight = it) } ?: RolloutSettings.DEFAULT,
+                rolloutsOnlyWhenHolding = true, determinizeHiddenInformation = true,
+            )
+        }
         "apprentice" -> {
             require(EvalWeights.isRawProfile("shared-apprentice")) {
                 "no valid shared-apprentice.json under -Dargentum.ai.apprentice.dir"
