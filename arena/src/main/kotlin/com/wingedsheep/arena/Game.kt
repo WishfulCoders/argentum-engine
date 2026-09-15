@@ -19,6 +19,7 @@ import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.combat.AttackersDeclaredThisCombatComponent
 import com.wingedsheep.engine.state.components.combat.BlockersDeclaredThisCombatComponent
+import com.wingedsheep.engine.state.components.battlefield.TappedComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.model.Deck
@@ -61,6 +62,14 @@ class GameRunner(
          * [measureHolding].
          */
         val holding: List<List<Int>>? = null,
+        /**
+         * Per seat, mana over the turn cycle (lands only), summed over turns: `[ownTurnEnds, lands, untapped]` at the
+         * end of its own turns, then the same at the end of the opponent's turns. Untapped at the end of the
+         * opponent's turn is wasted (it untaps next); own-turn untapped minus that was spent on the opponent's turn.
+         */
+        val cycle: List<List<Int>>? = null,
+        /** Per seat, casts by `own|opp:STEP:instant|creature|other`. */
+        val casts: List<Map<String, Int>>? = null,
     )
 
     /** [seatProfiles] overrides [profile] seat by seat (a one-sided A/B); null plays [profile] on both. */
@@ -98,6 +107,12 @@ class GameRunner(
         var lastProgressAction = 0
         var reason = ""
         val holding = if (measureHolding) seatIds.map { IntArray(3) } else null
+        val cycle = if (measureHolding) seatIds.map { IntArray(6) } else null
+        val casts = if (measureHolding) seatIds.map { mutableMapOf<String, Int>() } else null
+        // Each seat's lands and untapped lands at the last step seen, committed when the turn passes.
+        val lastLands = IntArray(seatIds.size)
+        val lastUntapped = IntArray(seatIds.size)
+        var cycleActive: EntityId? = null
         val maxPlayerTurns = maxTurnsPerSeat * seatIds.size
         try {
             while (!state.gameOver && state.turnNumber < maxPlayerTurns && actionCount < maxActions) {
@@ -108,6 +123,21 @@ class GameRunner(
                 if (state.activePlayerId != lastActivePlayer) {
                     lastActivePlayer = state.activePlayerId
                     lastProgressAction = actionCount
+                }
+                if (cycle != null) {
+                    val active = state.activePlayerId
+                    if (cycleActive != null && active != cycleActive) {
+                        for ((seat, id) in seatIds.withIndex()) {
+                            val o = if (id == cycleActive) 0 else 3
+                            cycle[seat][o]++; cycle[seat][o + 1] += lastLands[seat]; cycle[seat][o + 2] += lastUntapped[seat]
+                        }
+                    }
+                    cycleActive = active
+                    for ((seat, id) in seatIds.withIndex()) {
+                        val lands = state.projectedState.getBattlefieldControlledBy(id).filter { state.projectedState.hasType(it, "LAND") }
+                        lastLands[seat] = lands.size
+                        lastUntapped[seat] = lands.count { state.getEntity(it)?.has<TappedComponent>() != true }
+                    }
                 }
                 val decision = state.pendingDecision
                 if (decision != null) {
@@ -129,6 +159,12 @@ class GameRunner(
                 actionCount++
                 val instants = if (holding != null) affordableInstants(state, priorityPlayer) else emptySet()
                 val action = aiFor(priorityPlayer).chooseAction(state)
+                if (casts != null && action is CastSpell) {
+                    val type = state.getEntity(action.cardId)?.get<CardComponent>()?.typeLine
+                    val kind = when { type?.isInstant == true -> "instant"; type?.isCreature == true -> "creature"; else -> "other" }
+                    val whose = if (state.activePlayerId == priorityPlayer) "own" else "opp"
+                    casts[bySeat.getValue(priorityPlayer)].merge("$whose:${state.step.name}:$kind", 1, Int::plus)
+                }
                 if (instants.isNotEmpty()) {
                     val h = holding!![bySeat.getValue(priorityPlayer)]
                     h[0]++
@@ -160,7 +196,7 @@ class GameRunner(
         val winnerSeat = if (state.gameOver) state.winnerId?.let { bySeat[it] } else null
         return Outcome(
             winnerSeat, state.turnNumber, actionCount, illegal, seatIds.map { state.lifeTotal(it) }, reason,
-            holding?.map { it.toList() },
+            holding?.map { it.toList() }, cycle?.map { it.toList() }, casts,
         )
     }
 

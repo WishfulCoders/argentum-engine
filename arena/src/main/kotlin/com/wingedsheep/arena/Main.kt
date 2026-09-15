@@ -97,6 +97,7 @@ fun main(args: Array<String>) {
                     targetWon = o.winnerSeat?.let { it == targetSeat },
                     turns = o.turns, actions = o.actions, illegal = o.illegal, life = o.life,
                     reason = o.reason, millis = System.currentTimeMillis() - t0, holding = o.holding,
+                    cycle = o.cycle, casts = o.casts,
                 )
             } catch (e: Throwable) {
                 base.copy(reason = "init(${e::class.simpleName}: ${e.message?.take(200)})", millis = System.currentTimeMillis() - t0)

@@ -37,6 +37,9 @@ data class GameRecord(
     val millis: Long = 0,
     /** [GameRunner.Outcome.holding], seat by seat, with `-Darena.holding=true`. */
     val holding: List<List<Int>>? = null,
+    /** [GameRunner.Outcome.cycle] and [GameRunner.Outcome.casts], with `-Darena.holding=true`. */
+    val cycle: List<List<Int>>? = null,
+    val casts: List<Map<String, Int>>? = null,
 ) {
     val key: String get() = "$target|$opponent|$game"
 }
