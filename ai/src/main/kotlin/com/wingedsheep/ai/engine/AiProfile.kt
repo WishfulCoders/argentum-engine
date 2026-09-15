@@ -396,6 +396,14 @@ data class AiProfile(
      * never show a pass.
      */
     val priorityCorrectionChoosesActionOnly: Boolean = false,
+    /**
+     * Board points for keeping mana up for a held instant-speed answer on our own turn
+     * ([com.wingedsheep.ai.engine.evaluation.ManaReserve], mtg-draft-ai `docs/27` §3), added to the
+     * evaluator for the Strategist's priority choices only. 0: off.
+     */
+    val manaReserveWeight: Double = 0.0,
+    /** With [manaReserveWeight]: scale it by the deck's count of instant-speed answers. */
+    val manaReserveScalesWithDeck: Boolean = false,
 ) {
     companion object {
         /**

@@ -131,36 +131,67 @@ fun main(args: Array<String>) {
 }
 
 /**
- * `-Darena.profile` (both seats) and `-Darena.targetProfile` (the target's seat only): `current`, the
- * default AI; `raceclock`, the same with the discounted race clock ([AiProfile.CURRENT_RACECLOCK]);
- * `apprentice`, whose priority choices (not combat or decisions) are scored by the linear model in
- * `shared-apprentice.json` under `-Dargentum.ai.apprentice.dir` (the gameplay pilot, mtg-draft-ai
- * `docs/28`); `correction`, whose priority choices add the linear term in `shared-correction.json` (same
- * directory) to its own score; and `correction-actions`, the same term choosing only which action once
- * the uncorrected score has chosen to act (`docs/28` §5). `raceclock+<one of the last three>` puts that
- * change on the raceclock AI instead of the default.
+ * `-Darena.profile` (both seats) and `-Darena.targetProfile` (the target's seat only): `+`-joined tokens,
+ * applied left to right to [AiProfile.CURRENT], the default AI.
+ *
+ * - `current`: nothing.
+ * - `raceclock`: the discounted race clock ([AiProfile.discountedRaceClock]; mtg-draft-ai `docs/28` §6).
+ * - `intent`: card knowledge ([AiProfile.useCardIntent]); `timing`: that plus the upstream hold rules, no
+ *   rollouts (`docs/27` §3, §7); `reserve`: `timing` plus [com.wingedsheep.ai.engine.evaluation.ManaReserve]
+ *   at `-Darena.reserveWeight` (default 1.5), scaled by the deck's answers with `-Darena.reserveScaled=true`.
+ * - `apprentice`: priority choices (not combat or decisions) scored by the linear model in
+ *   `shared-apprentice.json` under `-Dargentum.ai.apprentice.dir` (the gameplay pilot, `docs/28`);
+ *   `correction`: priority choices add the linear term in `shared-correction.json` (same directory) to the
+ *   profile's own score; `correction-actions`: the same term choosing only which action once the
+ *   uncorrected score has chosen to act (`docs/28` §5).
+ *
+ * So `raceclock+timing+correction-actions` is the race clock, the hold rules and the correction together.
  * An apprentice or correction that did not load is an error, not a silent fallback to the default evaluator.
  */
-private fun arenaProfile(name: String): AiProfile {
-    val base = if (name == "raceclock" || name.startsWith("raceclock+")) AiProfile.CURRENT_RACECLOCK else AiProfile.CURRENT
-    return when (name.removePrefix("raceclock+")) {
-        "current", "raceclock" -> base
+private fun arenaProfile(name: String): AiProfile =
+    name.split('+').fold(AiProfile.CURRENT) { profile, token -> withToken(profile, token) }
+
+private fun withToken(p: AiProfile, token: String): AiProfile {
+    val id = if (p.id == AiProfile.CURRENT.id) "current-$token" else "${p.id}-$token"
+    return when (token) {
+        "current" -> p
+        "raceclock" -> p.copy(id = id, discountedRaceClock = true)
+        "intent" -> p.copy(id = id, useCardIntent = true)
+        "timing" -> p.copy(
+            id = id,
+            useCardIntent = true,
+            holdRemovalForBetterTargets = true,
+            holdCountersForBetterSpells = true,
+            cashCantripsInTheEndStep = true,
+            holdFlashPermanentsForAmbush = true,
+            holdExpiringGrantsForCombat = true,
+            // combatTricksWaitForBlocks is left off: upstream pairs it with TieredBudgetPolicy and says the
+            // two do not separate.
+        )
+        "reserve" -> {
+            val weight = System.getProperty("arena.reserveWeight")?.toDouble() ?: 1.5
+            val scaled = System.getProperty("arena.reserveScaled").toBoolean()
+            withToken(p, "timing").copy(
+                id = "${id}-$weight" + if (scaled) "-scaled" else "",
+                manaReserveWeight = weight, manaReserveScalesWithDeck = scaled,
+            )
+        }
         "apprentice" -> {
             require(EvalWeights.isRawProfile("shared-apprentice")) {
                 "no valid shared-apprentice.json under -Dargentum.ai.apprentice.dir"
             }
-            base.copy(id = "${base.id}-apprentice", priorityEvalWeightsId = "shared-apprentice")
+            p.copy(id = id, priorityEvalWeightsId = "shared-apprentice")
         }
         "correction", "correction-actions" -> {
             requireNotNull(EvalWeights.correction("shared-correction")) {
                 "no valid shared-correction.json under -Dargentum.ai.apprentice.dir"
             }
-            base.copy(
-                id = "${base.id}-${name.removePrefix("raceclock+")}", priorityCorrectionId = "shared-correction",
-                priorityCorrectionChoosesActionOnly = name.endsWith("correction-actions"),
+            p.copy(
+                id = id, priorityCorrectionId = "shared-correction",
+                priorityCorrectionChoosesActionOnly = token == "correction-actions",
             )
         }
-        else -> error("unknown profile $name")
+        else -> error("unknown profile token $token in -Darena.(target)profile")
     }
 }
 
