@@ -2,6 +2,7 @@ package com.wingedsheep.arena
 
 import com.wingedsheep.ai.engine.AiProfile
 import com.wingedsheep.ai.engine.evaluation.EvalWeights
+import com.wingedsheep.ai.engine.rollout.HoldingGatedEvaluator
 import com.wingedsheep.ai.engine.rollout.RolloutSettings
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.mtg.sets.MtgSetCatalog
@@ -129,6 +130,7 @@ fun main(args: Array<String>) {
         }
     }
     pool.shutdown()
+    if (profile.rolloutsOnlyWhenHolding || targetProfile.rolloutsOnlyWhenHolding) println(HoldingGatedEvaluator.summary())
 }
 
 /**

@@ -5,6 +5,7 @@ import com.wingedsheep.ai.engine.evaluation.ManaReserve
 import com.wingedsheep.ai.engine.knowledge.IntentCatalog
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.sdk.model.EntityId
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Rollouts only where keeping mana up is the question — mtg-draft-ai `docs/28` §7.
@@ -31,7 +32,15 @@ class HoldingGatedEvaluator(
         afterActions: List<GameState>,
         playerId: EntityId,
         budget: DecisionBudget,
-    ): List<Double> = pick(root, playerId).scoreAll(root, afterActions, playerId, budget)
+    ): List<Double> {
+        decisions.incrementAndGet()
+        if (!holding(root, playerId)) return static.scoreAll(root, afterActions, playerId, budget)
+        gated.incrementAndGet()
+        val scores = rollout.scoreAll(root, afterActions, playerId, budget)
+        // Diagnostic only (`docs/28` §7.3): a static leaf costs ~nothing next to the playouts.
+        if (argmax(scores) != argmax(static.scoreAll(root, afterActions, playerId, budget))) overturned.incrementAndGet()
+        return scores
+    }
 
     /** Whether a decision from [root] is one this evaluator hands to the rollouts. */
     fun holding(root: GameState, playerId: EntityId): Boolean =
@@ -41,4 +50,17 @@ class HoldingGatedEvaluator(
         if (holding(root, playerId)) rollout else static
 
     override fun toString(): String = "rollout-when-holding($rollout)"
+
+    companion object {
+        private val decisions = AtomicLong()
+        private val gated = AtomicLong()
+        private val overturned = AtomicLong()
+
+        private fun argmax(scores: List<Double>): Int = scores.indices.maxByOrNull { scores[it] } ?: -1
+
+        /** Counts across every instance in the process, for the arena's end-of-run line. */
+        fun summary(): String =
+            "holdup gate: ${gated.get()} of ${decisions.get()} scored decisions went to the rollouts; " +
+                "their best leaf differed from the static leaf's in ${overturned.get()}"
+    }
 }
