@@ -215,7 +215,8 @@ class GameRunner(
         val winnerSeat = if (state.gameOver) state.winnerId?.let { bySeat[it] } else null
         return Outcome(
             winnerSeat, state.turnNumber, actionCount, illegal, seatIds.map { state.lifeTotal(it) }, reason,
-            holding?.map { it.toList() }, cycle?.map { it.toList() }, casts, tappedOut?.map { it.toList() },
+            holding = holding?.map { it.toList() }, cycle = cycle?.map { it.toList() }, casts = casts,
+            tappedOut = tappedOut?.map { it.toList() },
         )
     }
 
