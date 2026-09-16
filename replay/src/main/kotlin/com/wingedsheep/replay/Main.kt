@@ -22,7 +22,10 @@ import java.util.zip.GZIPOutputStream
  * each game's accepted line ([GameLine], gzipped JSONL): the whole game when it was reproduced, the
  * half-turns before the failure otherwise. With a prefs file, also writes the user's priority choices on
  * that line with every alternative simulated ([PreferenceWriter]; pass `-` for no lines file), scored by
- * `-Dreplay.prefsProfile` (`current`, or `raceclock`). With `-Dreplay.playOn=PILOT[,PILOT...]` (arena profile names, e.g.
+ * `-Dreplay.prefsProfile` (`current`, or `raceclock`). With `-Dreplay.rollouts=N -Dreplay.rollPilots=ACTING[,OPP...]`
+ * each candidate is also played on to a winner N times ([RolloutWriter], mtg-draft-ai `docs/36`), optionally capped at
+ * `-Dreplay.rollMaxCands` candidates per choice and tuned by `-Dreplay.rollSeed`, `-Dreplay.rollShuffle`,
+ * `-Dreplay.rollMaxTurns`. With `-Dreplay.playOn=PILOT[,PILOT...]` (arena profile names, e.g.
  * `current,raceclock+timing+correction-actions`) and `-Dreplay.playOnOut=FILE`, also plays every failed game on from the
  * start of its failed half-turn with each pilot in both seats ([PlayOn], C1), one [PlayOnRecord] per line.
  *
@@ -51,7 +54,23 @@ fun main(args: Array<String>) {
     val local = ThreadLocal.withInitial { Reconstructor(registry, snapshotter, beamWidth, nodeBudget) }
     val writers = ThreadLocal.withInitial { LineWriter(registry) }
     val prefsBase = PreferenceWriter.baseProfile(System.getProperty("replay.prefsProfile"))
-    val prefWriters = ThreadLocal.withInitial { PreferenceWriter(registry, prefsBase) }
+    val rollN = System.getProperty("replay.rollouts")?.toInt() ?: 0
+    val rollPilots = System.getProperty("replay.rollPilots")?.let(RolloutWriter::pilots)
+    val rollSeed = System.getProperty("replay.rollSeed")?.toLong() ?: 1L
+    val rollMaxCands = System.getProperty("replay.rollMaxCands")?.toInt() ?: Int.MAX_VALUE
+    val rollShuffle = System.getProperty("replay.rollShuffle")?.toBooleanStrict() ?: true
+    val rollMaxTurns = System.getProperty("replay.rollMaxTurns")?.toInt() ?: 50
+    require((rollN > 0) == (rollPilots != null)) { "-Dreplay.rollouts and -Dreplay.rollPilots go together" }
+    require(rollN == 0 || prefsFile != null) { "-Dreplay.rollouts needs a prefs file" }
+    val rollHeader = rollPilots?.let { (acting, opponents) ->
+        RollHeader(acting.first, opponents.map { it.first }, rollN, rollSeed, rollShuffle, rollMaxTurns, rollMaxCands)
+    }
+    val prefWriters = ThreadLocal.withInitial {
+        val roller = rollPilots?.let { (acting, opponents) ->
+            RolloutWriter(registry, acting, opponents, rollN, rollSeed, rollShuffle, rollMaxTurns)
+        }
+        PreferenceWriter(registry, prefsBase, roller, rollMaxCands)
+    }
     val playOnFile = System.getProperty("replay.playOnOut")?.let(::File)
     val playOnPilots = System.getProperty("replay.playOn")?.split(',')?.map { it to arenaProfile(it) }
     require((playOnFile == null) == (playOnPilots == null)) { "-Dreplay.playOn and -Dreplay.playOnOut go together" }
@@ -106,7 +125,9 @@ fun main(args: Array<String>) {
     val prefs = prefsFile?.let { f ->
         f.parentFile?.mkdirs()
         GZIPOutputStream(f.outputStream()).bufferedWriter().also {
-            it.write(lineJson.encodeToString(PrefHeader.serializer(), PrefHeader(PreferenceWriter.FEATURES, prefsBase.id)))
+            it.write(lineJson.encodeToString(
+                PrefHeader.serializer(), PrefHeader(PreferenceWriter.FEATURES, prefsBase.id, rollHeader),
+            ))
             it.newLine()
         }
     }
