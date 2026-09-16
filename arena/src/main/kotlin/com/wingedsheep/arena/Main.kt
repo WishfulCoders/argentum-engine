@@ -75,7 +75,10 @@ fun main(args: Array<String>) {
     if (jobs.isEmpty()) return
 
     val measureHolding = System.getProperty("arena.holding").toBoolean()
-    val local = ThreadLocal.withInitial { GameRunner(registry, profile, measureHolding = measureHolding) }
+    val measureCards = System.getProperty("arena.cards").toBoolean()
+    val local = ThreadLocal.withInitial {
+        GameRunner(registry, profile, measureHolding = measureHolding, measureCards = measureCards)
+    }
     val pool = Executors.newFixedThreadPool(threads)
     val completion = ExecutorCompletionService<GameRecord>(pool)
     val submitted = AtomicInteger(0)
@@ -97,7 +100,7 @@ fun main(args: Array<String>) {
                     targetWon = o.winnerSeat?.let { it == targetSeat },
                     turns = o.turns, actions = o.actions, illegal = o.illegal, life = o.life,
                     reason = o.reason, millis = System.currentTimeMillis() - t0, holding = o.holding,
-                    cycle = o.cycle, casts = o.casts, tappedOut = o.tappedOut,
+                    cycle = o.cycle, casts = o.casts, tappedOut = o.tappedOut, cards = o.cards,
                 )
             } catch (e: Throwable) {
                 base.copy(reason = "init(${e::class.simpleName}: ${e.message?.take(200)})", millis = System.currentTimeMillis() - t0)

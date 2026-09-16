@@ -22,6 +22,7 @@ import com.wingedsheep.engine.state.components.combat.BlockersDeclaredThisCombat
 import com.wingedsheep.engine.state.components.battlefield.SummoningSicknessComponent
 import com.wingedsheep.engine.state.components.battlefield.TappedComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
+import com.wingedsheep.engine.state.components.stack.ChosenTarget
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
@@ -45,6 +46,8 @@ class GameRunner(
     private val printTraces: Boolean = false,
     /** Count [Outcome.holding] (mtg-draft-ai `docs/28` §8); off, a game is not enumerated twice. */
     private val measureHolding: Boolean = false,
+    /** Count [Outcome.cards] (mtg-draft-ai `docs/33` §13); off, a game is not enumerated twice. */
+    private val measureCards: Boolean = false,
 ) {
     private val processor = ActionProcessor(registry)
     private val enumerator = LegalActionEnumerator.create(registry)
@@ -78,6 +81,14 @@ class GameRunner(
         val tappedOut: List<List<Int>>? = null,
         /** Per seat, casts by `own|opp:STEP:instant|creature|other`. */
         val casts: List<Map<String, Int>>? = null,
+        /**
+         * Per seat, per card name, the counts named by [CARD_FIELDS]: copies seen in hand; casts on its own turn
+         * and on the opponent's; its own turns on which a copy in hand was castable in a main phase with an empty
+         * stack, and how many of those turns ended with no copy cast; copies in hand when the game ended; the sum
+         * of X over casts; casts whose player target was the caster, and the opponent. What the AI does with the
+         * cards it is worst at (mtg-draft-ai `docs/33` §13). Null unless [measureCards].
+         */
+        val cards: List<Map<String, List<Int>>>? = null,
     )
 
     /** [seatProfiles] overrides [profile] seat by seat (a one-sided A/B); null plays [profile] on both. */
@@ -118,6 +129,23 @@ class GameRunner(
         val cycle = if (measureHolding) seatIds.map { IntArray(6) } else null
         val casts = if (measureHolding) seatIds.map { mutableMapOf<String, Int>() } else null
         val tappedOut = if (measureHolding) seatIds.map { IntArray(2) } else null
+        val cards = if (measureCards) seatIds.map { HashMap<String, IntArray>() } else null
+        val seen = seatIds.map { HashSet<EntityId>() }
+        // This turn's names castable in the active seat's main phase, and the names it cast this turn.
+        val castableNow = HashSet<String>()
+        val castNow = HashSet<String>()
+        var cardsTurn = -1
+        var cardsSeat = -1
+        fun stat(seat: Int, name: String) = cards!![seat].getOrPut(name) { IntArray(CARD_FIELDS.size) }
+        fun nameOf(s: GameState, id: EntityId) = s.getEntity(id)?.get<CardComponent>()?.name
+        fun commitTurn() {
+            for (name in castableNow) {
+                val c = stat(cardsSeat, name)
+                c[CASTABLE_TURNS]++
+                if (name !in castNow) c[CASTABLE_NOT_CAST]++
+            }
+            castableNow.clear(); castNow.clear()
+        }
         // Each seat's lands and untapped lands at the last step seen, committed when the turn passes.
         val lastLands = IntArray(seatIds.size)
         val lastUntapped = IntArray(seatIds.size)
@@ -132,6 +160,16 @@ class GameRunner(
                 if (state.activePlayerId != lastActivePlayer) {
                     lastActivePlayer = state.activePlayerId
                     lastProgressAction = actionCount
+                }
+                if (cards != null) {
+                    if (state.turnNumber != cardsTurn) {
+                        if (cardsTurn >= 0) commitTurn()
+                        cardsTurn = state.turnNumber
+                        cardsSeat = bySeat[state.activePlayerId] ?: -1
+                    }
+                    for ((seat, id) in seatIds.withIndex()) for (card in state.getHand(id)) {
+                        if (seen[seat].add(card)) nameOf(state, card)?.let { stat(seat, it)[SEEN]++ }
+                    }
                 }
                 if (cycle != null) {
                     val active = state.activePlayerId
@@ -167,7 +205,17 @@ class GameRunner(
                 }
                 actionCount++
                 val instants = if (holding != null) affordableInstants(state, priorityPlayer) else emptySet()
+                val castable = if (cards != null) affordableCasts(state, priorityPlayer) else emptySet()
+                for (card in castable) if (card in state.getHand(priorityPlayer)) nameOf(state, card)?.let(castableNow::add)
                 val action = aiFor(priorityPlayer).chooseAction(state)
+                if (cards != null && action is CastSpell) nameOf(state, action.cardId)?.let { name ->
+                    val c = stat(bySeat.getValue(priorityPlayer), name)
+                    if (state.activePlayerId == priorityPlayer) { c[CAST_OWN]++; castNow += name } else c[CAST_OPP]++
+                    c[X_SUM] += action.xValue ?: 0
+                    for (t in action.targets) if (t is ChosenTarget.Player) {
+                        if (t.playerId == priorityPlayer) c[TARGET_SELF]++ else c[TARGET_OPPONENT]++
+                    }
+                }
                 if (casts != null && action is CastSpell) {
                     val type = state.getEntity(action.cardId)?.get<CardComponent>()?.typeLine
                     val kind = when { type?.isInstant == true -> "instant"; type?.isCreature == true -> "creature"; else -> "other" }
@@ -212,11 +260,18 @@ class GameRunner(
             if (printTraces) e.printStackTrace()
             reason = "exception(${e::class.simpleName}: ${e.message?.take(200)})"
         }
+        if (cards != null) {
+            if (cardsSeat >= 0) commitTurn()
+            for ((seat, id) in seatIds.withIndex()) for (card in state.getHand(id)) {
+                nameOf(state, card)?.let { stat(seat, it)[END_IN_HAND]++ }
+            }
+        }
         val winnerSeat = if (state.gameOver) state.winnerId?.let { bySeat[it] } else null
         return Outcome(
             winnerSeat, state.turnNumber, actionCount, illegal, seatIds.map { state.lifeTotal(it) }, reason,
             holding = holding?.map { it.toList() }, cycle = cycle?.map { it.toList() }, casts = casts,
             tappedOut = tappedOut?.map { it.toList() },
+            cards = cards?.map { seat -> seat.mapValues { it.value.toList() } },
         )
     }
 
@@ -242,12 +297,16 @@ class GameRunner(
     }
 
     /** The instants [playerId] could cast now, when it is their own main phase with an empty stack; else none. */
-    private fun affordableInstants(state: GameState, playerId: EntityId): Set<EntityId> {
+    private fun affordableInstants(state: GameState, playerId: EntityId): Set<EntityId> =
+        affordableCasts(state, playerId).filterTo(HashSet()) {
+            state.getEntity(it)?.get<CardComponent>()?.typeLine?.isInstant == true
+        }
+
+    /** The cards [playerId] could cast now, when it is their own main phase with an empty stack; else none. */
+    private fun affordableCasts(state: GameState, playerId: EntityId): Set<EntityId> {
         if (state.activePlayerId != playerId || !state.step.isMainPhase || state.stack.isNotEmpty()) return emptySet()
         return enumerator.enumerate(state, playerId, EnumerationMode.ACTIONS_ONLY).mapNotNull { la ->
-            (la.action as? CastSpell)?.cardId?.takeIf {
-                la.affordable && state.getEntity(it)?.get<CardComponent>()?.typeLine?.isInstant == true
-            }
+            (la.action as? CastSpell)?.cardId?.takeIf { la.affordable }
         }.toSet()
     }
 
@@ -278,5 +337,20 @@ class GameRunner(
 
     companion object {
         const val STUCK_ACTIONS_PER_TURN = 300
+
+        /** [Outcome.cards]' fields, in order. */
+        val CARD_FIELDS = listOf(
+            "seen", "cast_own", "cast_opp", "castable_turns", "castable_not_cast", "end_in_hand", "x_sum",
+            "target_self", "target_opponent",
+        )
+        private const val SEEN = 0
+        private const val CAST_OWN = 1
+        private const val CAST_OPP = 2
+        private const val CASTABLE_TURNS = 3
+        private const val CASTABLE_NOT_CAST = 4
+        private const val END_IN_HAND = 5
+        private const val X_SUM = 6
+        private const val TARGET_SELF = 7
+        private const val TARGET_OPPONENT = 8
     }
 }
