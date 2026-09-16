@@ -3,6 +3,7 @@ package com.wingedsheep.arena
 import com.wingedsheep.ai.engine.AIPlayer
 import com.wingedsheep.ai.engine.AiProfile
 import com.wingedsheep.ai.engine.hidden.OpponentModel
+import com.wingedsheep.ai.insight.AiInsightSink
 import com.wingedsheep.engine.core.ActionProcessor
 import com.wingedsheep.engine.core.CastSpell
 import com.wingedsheep.engine.core.DeclareAttackers
@@ -97,6 +98,12 @@ class GameRunner(
          * card in hand was castable too, sorcery-speed casts, and anything else. With [measureCards].
          */
         val lastWindow: List<List<Int>>? = null,
+        /**
+         * With `-Darena.gaps=true` as well: per seat and card name, how far below passing the AI scored each
+         * sorcery-speed cast it passed over in its last sorcery-speed window, binned as [GAP_BINS] (the score
+         * before any idle allowance; `dropped` = never scored).
+         */
+        val gaps: List<Map<String, List<Int>>>? = null,
     )
 
     /** [seatProfiles] overrides [profile] seat by seat (a one-sided A/B); null plays [profile] on both. */
@@ -124,7 +131,25 @@ class GameRunner(
     fun playFrom(start: GameState, seatProfiles: List<AiProfile>, decklists: Map<EntityId, OpponentModel>): Outcome {
         val seatIds = start.turnOrder
         val bySeat = seatIds.withIndex().associate { (seat, id) -> id to seat }
-        val players = seatIds.mapIndexed { seat, id -> AIPlayer.create(registry, id, seatProfiles[seat], decklists) }
+        val gaps = if (measureCards && System.getProperty("arena.gaps").toBoolean()) {
+            seatIds.map { HashMap<String, IntArray>() }
+        } else null
+        val players = seatIds.mapIndexed { seat, id ->
+            val sink = gaps?.let { g ->
+                AiInsightSink { s, insight ->
+                    if (!insight.onOwnTurn || s.step != Step.POSTCOMBAT_MAIN || s.stack.isNotEmpty()) return@AiInsightSink
+                    if (insight.options.none { it.baseline && it.chosen }) return@AiInsightSink
+                    for (o in insight.options) {
+                        val cast = o.action as? CastSpell ?: continue
+                        if (cast.cardId !in s.getHand(id) || isInstantSpeed(s, cast.cardId)) continue
+                        val bin = o.advantage?.let { a -> GAP_EDGES.indexOfFirst { a < it }.let { if (it < 0) GAP_EDGES.size else it } }
+                            ?: (GAP_BINS.size - 1)
+                        g[seat].getOrPut(o.cardName ?: "?") { IntArray(GAP_BINS.size) }[bin]++
+                    }
+                }
+            }
+            AIPlayer.create(registry, id, seatProfiles[seat], decklists, insightSink = sink)
+        }
         fun aiFor(playerId: EntityId) = players[bySeat.getValue(playerId)]
 
         var state: GameState = start
@@ -308,6 +333,7 @@ class GameRunner(
             tappedOut = tappedOut?.map { it.toList() },
             cards = cards?.map { seat -> seat.mapValues { it.value.toList() } },
             lastWindow = lastWindow?.map { it.toList() },
+            gaps = gaps?.map { seat -> seat.mapValues { it.value.toList() } },
         )
     }
 
@@ -390,6 +416,10 @@ class GameRunner(
             "turns_with_main", "turns_with_postcombat_main", "windows_with_sorcery_castable", "passed",
             "passed_with_instant_castable", "cast_sorcery_speed", "other",
         )
+        private val GAP_EDGES = listOf(-10.0, -5.0, -3.0, -1.0, 0.0)
+
+        /** [Outcome.gaps]' bins: advantage over passing below −10, −10…−5, −5…−3, −3…−1, −1…0, ≥ 0, dropped. */
+        val GAP_BINS = listOf("lt-10", "-10to-5", "-5to-3", "-3to-1", "-1to0", "ge0", "dropped")
         private const val SEEN = 0
         private const val CAST_OWN = 1
         private const val CAST_OPP = 2

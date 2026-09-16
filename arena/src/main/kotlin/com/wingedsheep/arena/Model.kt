@@ -45,6 +45,8 @@ data class GameRecord(
     val cards: List<Map<String, List<Int>>>? = null,
     /** [GameRunner.Outcome.lastWindow], with `-Darena.cards=true`; fields [GameRunner.LAST_WINDOW_FIELDS]. */
     val lastWindow: List<List<Int>>? = null,
+    /** [GameRunner.Outcome.gaps], with `-Darena.cards=true -Darena.gaps=true`; bins [GameRunner.GAP_BINS]. */
+    val gaps: List<Map<String, List<Int>>>? = null,
 ) {
     val key: String get() = "$target|$opponent|$game"
 }
