@@ -94,8 +94,9 @@ class GameRunner(
         /**
          * Per seat, the last sorcery-speed window ([AiProfile.spendIdleManaAtSorcerySpeed]), [LAST_WINDOW_FIELDS]:
          * own turns with a main-phase priority, and with a postcombat-main one; postcombat-main windows (empty
-         * stack) with a sorcery-speed card castable from hand, and in those, passes, passes while an instant-speed
-         * card in hand was castable too, sorcery-speed casts, and anything else. With [measureCards].
+         * stack) with a sorcery-speed card castable from hand, and in those, passes, passes where no castable
+         * sorcery-speed card fits beside the mana the cheapest instant-speed card in hand needs (the rule's
+         * guard), sorcery-speed casts, and anything else. With [measureCards].
          */
         val lastWindow: List<List<Int>>? = null,
         /**
@@ -251,7 +252,6 @@ class GameRunner(
                 val ownMain = cards != null && state.activePlayerId == priorityPlayer && state.step.isMainPhase
                 if (ownMain) sawMain = true
                 val sorcerySpeed = castable.filter { it in state.getHand(priorityPlayer) && !isInstantSpeed(state, it) }
-                val instantSpeed = castable.filter { it in state.getHand(priorityPlayer) && isInstantSpeed(state, it) }
                 val atLastWindow = ownMain && state.step == Step.POSTCOMBAT_MAIN
                 if (atLastWindow) sawPostcombat = true
                 val action = aiFor(priorityPlayer).chooseAction(state)
@@ -259,7 +259,10 @@ class GameRunner(
                     val w = lastWindow!![bySeat.getValue(priorityPlayer)]
                     w[2]++
                     when {
-                        action is PassPriority -> { w[3]++; if (instantSpeed.isNotEmpty()) w[4]++ }
+                        action is PassPriority -> {
+                            w[3]++
+                            if (sorcerySpeed.none { manaValue(state, it) <= spareMana(state, priorityPlayer) }) w[4]++
+                        }
                         action is CastSpell && action.cardId in sorcerySpeed -> w[5]++
                         else -> w[6]++
                     }
@@ -364,6 +367,18 @@ class GameRunner(
             state.getEntity(it)?.get<CardComponent>()?.typeLine?.isInstant == true
         }
 
+    private fun manaValue(state: GameState, id: EntityId): Int = state.getEntity(id)?.get<CardComponent>()?.manaValue ?: 0
+
+    /** `Strategist`'s spare mana: untapped lands less the cheapest instant-speed card in hand they could pay for. */
+    private fun spareMana(state: GameState, playerId: EntityId): Int {
+        val untapped = state.projectedState.getBattlefieldControlledBy(playerId).count { id ->
+            state.projectedState.hasType(id, "LAND") && state.getEntity(id)?.has<TappedComponent>() != true
+        }
+        val held = state.getHand(playerId).filter { isInstantSpeed(state, it) }.map { manaValue(state, it) }
+            .filter { it <= untapped }.minOrNull() ?: 0
+        return untapped - held
+    }
+
     /** As `Strategist`'s rule reads it: an instant, or a nonland card with flash. */
     private fun isInstantSpeed(state: GameState, id: EntityId): Boolean {
         val card = state.getEntity(id)?.get<CardComponent>() ?: return false
@@ -414,7 +429,7 @@ class GameRunner(
         /** [Outcome.lastWindow]'s fields, in order. */
         val LAST_WINDOW_FIELDS = listOf(
             "turns_with_main", "turns_with_postcombat_main", "windows_with_sorcery_castable", "passed",
-            "passed_with_instant_castable", "cast_sorcery_speed", "other",
+            "passed_guard_off", "cast_sorcery_speed", "other",
         )
         private val GAP_EDGES = listOf(-10.0, -5.0, -3.0, -1.0, 0.0)
 

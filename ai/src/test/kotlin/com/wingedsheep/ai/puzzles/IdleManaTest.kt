@@ -8,7 +8,7 @@ import io.kotest.matchers.shouldBe
 
 /**
  * [AiProfile.spendIdleManaAtSorcerySpeed]: a card-neutral sorcery is cast in the last sorcery-speed window of
- * the turn, and only there, and not when the mana could still pay for an instant.
+ * the turn, and only there, and not with the mana a held instant needs.
  *
  * Kept out of [PuzzleCatalog]: the catalog is scored against [AiProfile.PRODUCTION], which has the flag off.
  */
@@ -18,10 +18,10 @@ class IdleManaTest : ScenarioTestBase() {
         val runner = PuzzleRunner(cardRegistry) { scenario() }
         val idle = AiProfile.CURRENT.copy(id = "idle", useCardIntent = true, spendIdleManaAtSorcerySpeed = 1.0)
 
-        fun sleightAt(step: Step, vararg extraHand: String) = { scenario: ScenarioBuilder ->
+        fun sleightAt(step: Step, vararg extraHand: String, islands: Int = 2) = { scenario: ScenarioBuilder ->
             var b = scenario.withPlayers()
                 .withActivePlayer(1)
-                .withLandsOnBattlefield(1, "Island", 2)
+                .withLandsOnBattlefield(1, "Island", islands)
                 .withCardInHand(1, "Sleight of Hand")
             for (card in extraHand) b = b.withCardInHand(1, card)
             b.build().advanceToPriority(1, step)
@@ -51,9 +51,18 @@ class IdleManaTest : ScenarioTestBase() {
             result.move shouldBe base.move
         }
 
-        test("an instant that could still use the mana turns the allowance off") {
+        test("the mana a held instant needs is not spent") {
             val result = runner.run(
-                puzzle("idle-03", sleightAt(Step.POSTCOMBAT_MAIN, "Opt")) { shouldNotCast("Sleight of Hand") }, idle,
+                puzzle("idle-03", sleightAt(Step.POSTCOMBAT_MAIN, "Opt", islands = 1)) { shouldNotCast("Sleight of Hand") },
+                idle,
+            )
+            withClue(result.move) { result.failure shouldBe null }
+        }
+
+        test("mana beyond what a held instant needs is spent") {
+            val result = runner.run(
+                puzzle("idle-04", sleightAt(Step.POSTCOMBAT_MAIN, "Opt", islands = 2)) { shouldCast("Sleight of Hand") },
+                idle,
             )
             withClue(result.move) { result.failure shouldBe null }
         }

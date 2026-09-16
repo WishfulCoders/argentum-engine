@@ -295,9 +295,10 @@ class Strategist(
         }
         // The last sorcery-speed window of our turn: a sorcery-speed cast that only ties passing still
         // beats letting the mana go at cleanup. See [AiProfile.spendIdleManaAtSorcerySpeed].
-        val idleWindow = idleManaAllowance > 0.0 && lastSorcerySpeedWindow(state, playerId)
+        val spare = if (idleManaAllowance > 0.0) spareManaInLastSorcerySpeedWindow(state, playerId) else null
         val scored = adjusted.map { (action, _, adjustment) ->
-            val bonus = if (idleWindow && isSorcerySpeedCast(state, action)) idleManaAllowance else 0.0
+            val cost = spare?.let { sorcerySpeedCastCost(state, action) }
+            val bonus = if (cost != null && cost <= spare) idleManaAllowance else 0.0
             action to adjustment.score + bonus
         }
 
@@ -630,26 +631,29 @@ class Strategist(
     }
 
     /**
-     * Our own postcombat main phase with an empty stack, and nothing in hand we could cast at instant
-     * speed with the lands still untapped — so mana left now is mana wasted.
+     * In our own postcombat main phase with an empty stack, the untapped lands a sorcery-speed spell may
+     * spend without giving up the cheapest instant-speed card in hand we could otherwise still cast on the
+     * opponent's turn — mana beyond that is wasted at cleanup. Null anywhere else.
      */
-    private fun lastSorcerySpeedWindow(state: GameState, playerId: EntityId): Boolean {
+    private fun spareManaInLastSorcerySpeedWindow(state: GameState, playerId: EntityId): Int? {
         if (!state.isActiveTurnFor(playerId) || state.step != Step.POSTCOMBAT_MAIN || state.stack.isNotEmpty()) {
-            return false
+            return null
         }
         val untapped = state.projectedState.getBattlefieldControlledBy(playerId).count { id ->
             state.projectedState.hasType(id, "LAND") && state.getEntity(id)?.has<TappedComponent>() != true
         }
-        return state.getHand(playerId).none { id ->
-            val card = state.getEntity(id)?.get<CardComponent>() ?: return@none false
-            isInstantSpeed(card) && card.manaValue <= untapped
-        }
+        val held = state.getHand(playerId).mapNotNull { id ->
+            state.getEntity(id)?.get<CardComponent>()?.takeIf(::isInstantSpeed)?.manaValue
+        }.filter { it <= untapped }.minOrNull() ?: 0
+        return untapped - held
     }
 
-    private fun isSorcerySpeedCast(state: GameState, action: LegalAction): Boolean {
-        val cast = action.action as? CastSpell ?: return false
-        val card = state.getEntity(cast.cardId)?.get<CardComponent>() ?: return false
-        return !isInstantSpeed(card)
+    /** The mana value of a sorcery-speed spell cast from hand, or null for anything else. */
+    private fun sorcerySpeedCastCost(state: GameState, action: LegalAction): Int? {
+        val cast = action.action as? CastSpell ?: return null
+        if (cast.cardId !in state.getHand(action.action.playerId)) return null
+        val card = state.getEntity(cast.cardId)?.get<CardComponent>() ?: return null
+        return if (isInstantSpeed(card)) null else card.manaValue + (cast.xValue ?: 0) * card.manaCost.xCount
     }
 
     private fun isInstantSpeed(card: CardComponent): Boolean =

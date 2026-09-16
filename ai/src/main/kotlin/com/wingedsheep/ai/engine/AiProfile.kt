@@ -276,15 +276,18 @@ data class AiProfile(
     /**
      * The sorcery-speed half of [cashCantripsInTheEndStep]: in our own postcombat main phase, with an
      * empty stack and no instant-speed card in hand we could still cast, a sorcery-speed spell needs to
-     * beat passing only by `-spendIdleManaAtSorcerySpeed`. 0 is off.
+     * beat passing only by `-spendIdleManaAtSorcerySpeed`, provided the lands left after it still pay for the
+     * cheapest instant-speed card in hand (if the lands pay for one now). 0 is off.
      *
      * It is the last window a sorcery-speed card gets this turn, and the mana is gone at cleanup. A
      * card-neutral spell — Sleight of Hand, Stock Up, a Clue-maker — scores about what passing scores,
      * and a tie passes, so the AI held such cards turn after turn: on Secrets of Strixhaven decks it
-     * cast 42 % of the blue sorceries it drew, against 84 % for 17Lands players (mtg-draft-ai `docs/33`
+     * cast 41 % of the blue sorceries it drew, against 84 % for 17Lands players (mtg-draft-ai `docs/33`
      * §13, the `-Darena.cards` probe). Instant-speed cards keep their own windows — the allowance never
      * touches them, so [com.wingedsheep.ai.engine.knowledge.TimingVerdict.NoWindow]'s floor still holds
-     * — and a hand that could still use the mana at instant speed turns it off.
+     * — and mana an instant in hand could use on the opponent's turn is not spent. A first version turned
+     * the allowance off whenever any instant was affordable, which in blue hands (a counterspell with
+     * nothing to counter, a trick) was most of the time.
      */
     val spendIdleManaAtSorcerySpeed: Double = 0.0,
     /**
