@@ -75,7 +75,10 @@ fun main(args: Array<String>) {
     if (jobs.isEmpty()) return
 
     val measureHolding = System.getProperty("arena.holding").toBoolean()
-    val local = ThreadLocal.withInitial { GameRunner(registry, profile, measureHolding = measureHolding) }
+    val measureCards = System.getProperty("arena.cards").toBoolean()
+    val local = ThreadLocal.withInitial {
+        GameRunner(registry, profile, measureHolding = measureHolding, measureCards = measureCards)
+    }
     val pool = Executors.newFixedThreadPool(threads)
     val completion = ExecutorCompletionService<GameRecord>(pool)
     val submitted = AtomicInteger(0)
@@ -97,7 +100,7 @@ fun main(args: Array<String>) {
                     targetWon = o.winnerSeat?.let { it == targetSeat },
                     turns = o.turns, actions = o.actions, illegal = o.illegal, life = o.life,
                     reason = o.reason, millis = System.currentTimeMillis() - t0, holding = o.holding,
-                    cycle = o.cycle, casts = o.casts, tappedOut = o.tappedOut,
+                    cycle = o.cycle, casts = o.casts, tappedOut = o.tappedOut, cards = o.cards, lastWindow = o.lastWindow, gaps = o.gaps,
                 )
             } catch (e: Throwable) {
                 base.copy(reason = "init(${e::class.simpleName}: ${e.message?.take(200)})", millis = System.currentTimeMillis() - t0)
@@ -155,6 +158,12 @@ fun main(args: Array<String>) {
  *   `-Darena.holdupStaticWeight` (default upstream's 0.75). Both sample the opponent's hidden cards
  *   ([AiProfile.determinizeHiddenInformation]), so a playout never plays their real hand.
  *
+ * - `idle`: in the last sorcery-speed window of its turn, a sorcery-speed cast needs to beat passing only by
+ *   `-Darena.idleAllowance` (default 1.0) ([AiProfile.spendIdleManaAtSorcerySpeed], `docs/33` §13).
+ *
+ * - `eot`: the same for instant-speed casts in the opponent's end step, at `-Darena.eotAllowance` (default 3.0)
+ *   ([AiProfile.spendIdleManaInTheirEndStep], `docs/33` §13.6).
+ *
  * So `raceclock+timing+correction-actions` is the race clock, the hold rules and the correction together.
  * An apprentice or correction that did not load is an error, not a silent fallback to the default evaluator.
  */
@@ -185,6 +194,14 @@ private fun withToken(p: AiProfile, token: String): AiProfile {
                 id = "${id}-$weight" + if (scaled) "-scaled" else "",
                 manaReserveWeight = weight, manaReserveScalesWithDeck = scaled,
             )
+        }
+        "idle" -> {
+            val allowance = System.getProperty("arena.idleAllowance")?.toDouble() ?: 1.0
+            p.copy(id = "$id-$allowance", spendIdleManaAtSorcerySpeed = allowance)
+        }
+        "eot" -> {
+            val allowance = System.getProperty("arena.eotAllowance")?.toDouble() ?: 3.0
+            p.copy(id = "$id-$allowance", spendIdleManaInTheirEndStep = allowance)
         }
         "rollout" -> p.copy(id = id, rollouts = RolloutSettings.DEFAULT, determinizeHiddenInformation = true)
         "holdup" -> {
