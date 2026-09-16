@@ -63,6 +63,7 @@ class RolloutWriter(
         var turns = 0
         val winsByOpponent = IntArray(opponents.size)
         val playedByOpponent = IntArray(opponents.size)
+        val outcomes = StringBuilder(n)
         for (r in 0 until n) {
             val o = r % opponents.size
             playedByOpponent[o]++
@@ -71,17 +72,20 @@ class RolloutWriter(
             val outcome = runCatching { runner.playFrom(start, profiles, decklists) }.getOrNull()
             if (outcome == null) {
                 undecided++
+                outcomes.append('U')
                 continue
             }
             illegal += outcome.illegal
             turns += outcome.turns
             when (outcome.winnerSeat?.let { seats[it] }) {
-                user -> { wins++; winsByOpponent[o]++ }
-                null -> undecided++
-                else -> {}
+                user -> { wins++; winsByOpponent[o]++; outcomes.append('W') }
+                null -> { undecided++; outcomes.append('U') }
+                else -> outcomes.append('L')
             }
         }
-        return RollResult(n, wins, undecided, illegal, turns, winsByOpponent.toList(), playedByOpponent.toList())
+        return RollResult(
+            n, wins, undecided, illegal, turns, winsByOpponent.toList(), playedByOpponent.toList(), outcomes.toString(),
+        )
     }
 
     /** [quiet] with both libraries shuffled and the generator reseeded, so this rollout draws its own game. */
@@ -135,4 +139,11 @@ data class RollResult(
     val turns: Int,
     val winsByOpponent: List<Int>,
     val playedByOpponent: List<Int>,
+    /**
+     * Rollout by rollout, `W`/`L`/`U` in rollout-index order. The labels are paired across a choice's
+     * candidates by that index (common random numbers), so the per-index differences are the low-variance
+     * estimator, and a subsample of the first `m` characters is the ranking this choice would have had at
+     * budget `m` — which is how `docs/36` §3's stability curve is drawn without rerunning anything.
+     */
+    val outcomes: String,
 )
