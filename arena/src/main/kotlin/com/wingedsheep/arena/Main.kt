@@ -104,6 +104,7 @@ fun main(args: Array<String>) {
                     reason = o.reason, millis = System.currentTimeMillis() - t0,
                     probeWindows = o.probe.windows, probeAffordable = o.probe.affordable,
                     probeStranded = o.probe.stranded, probeStrandedCards = o.probe.strandedCards,
+                    probeFixable = o.probe.fixable, probeFixMissed = o.probe.fixMissed,
                 )
             } catch (e: Throwable) {
                 base.copy(reason = "init(${e::class.simpleName}: ${e.message?.take(200)})", millis = System.currentTimeMillis() - t0)

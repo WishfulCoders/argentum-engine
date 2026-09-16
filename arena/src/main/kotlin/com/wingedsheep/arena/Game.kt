@@ -21,6 +21,7 @@ import com.wingedsheep.engine.state.components.combat.BlockersDeclaredThisCombat
 import com.wingedsheep.engine.state.components.battlefield.TappedComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.core.CastSpell
+import com.wingedsheep.engine.core.PlayLand
 import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.core.Step
@@ -84,12 +85,25 @@ class GameRunner(
      *    the test rather than the raw rate.
      *  - [strandedCards] — distinct cards ever stranded, so one unplayable bomb held for ten turns
      *    cannot look like ten problems.
+     *
+     * A strand rate on its own proves nothing about the AI: a three-colour deck is genuinely harder to
+     * cast, so a *perfect* player would strand more with one too. [fixable] and [fixMissed] are the
+     * pair that does attribute it. At a window where the land drop is still available, each land in
+     * hand is played in a copy of the state and the casts are re-enumerated:
+     *
+     *  - [fixable] — windows where some land in hand would have made a stranded card castable.
+     *  - [fixMissed] — of those, the ones where the AI then played a different land, or no land.
+     *
+     * [fixMissed] is an error the AI owns: it was holding both the answer and the question. It is a
+     * lower bound, because a window *after* a wrong land drop no longer has a drop to check.
      */
     data class StrandedProbe(
         val windows: Int = 0,
         val affordable: Int = 0,
         val stranded: Int = 0,
         val strandedCards: Int = 0,
+        val fixable: Int = 0,
+        val fixMissed: Int = 0,
     )
 
     /** [seatProfiles] overrides [profile] seat by seat (a one-sided A/B); null plays [profile] on both. */
@@ -127,8 +141,12 @@ class GameRunner(
         var probeWindows = 0
         var probeAffordable = 0
         var probeStranded = 0
+        var probeFixable = 0
+        var probeFixMissed = 0
         val probeStrandedIds = mutableSetOf<EntityId>()
         val probeId = probeSeat?.let { seatIds[it] }
+        /** Set for exactly one action: the land drops that would have cast something stranded. */
+        var probeFixingLands: Set<EntityId>? = null
         val maxPlayerTurns = maxTurnsPerSeat * decks.size
         try {
             while (!state.gameOver && state.turnNumber < maxPlayerTurns && actionCount < maxActions) {
@@ -171,6 +189,7 @@ class GameRunner(
                         .mapNotNull { (it.action as? CastSpell)?.cardId }
                         .toSet()
                     var windowCounted = false
+                    val strandedHere = mutableSetOf<EntityId>()
                     for (cardId in hand) {
                         val card = state.getEntity(cardId)?.get<CardComponent>() ?: continue
                         if (card.isLand || card.manaValue > untappedLands) continue
@@ -179,12 +198,34 @@ class GameRunner(
                         if (cardId !in castable) {
                             probeStranded++
                             probeStrandedIds += cardId
+                            strandedHere += cardId
                         }
                     }
                     if (windowCounted) probeWindows++
+                    // Could a land in hand have cast one of them? Only asked when something is
+                    // stranded and a land drop is still available, so the common window pays nothing.
+                    if (strandedHere.isNotEmpty()) {
+                        val landDrops = enumerator.enumerate(state, probeId, EnumerationMode.ACTIONS_ONLY)
+                            .filter { it.actionType == "PlayLand" }
+                        val fixing = landDrops.filter { drop ->
+                            val after = processor.process(state, drop.action).result
+                            after.error == null && enumerator
+                                .enumerate(after.state, probeId, EnumerationMode.ACTIONS_ONLY)
+                                .any { it.affordable && (it.action as? CastSpell)?.cardId in strandedHere }
+                        }.mapNotNull { (it.action as? PlayLand)?.cardId }.toSet()
+                        if (fixing.isNotEmpty()) {
+                            probeFixable++
+                            probeFixingLands = fixing
+                        }
+                    }
                 }
                 actionCount++
                 val action = aiFor(priorityPlayer).chooseAction(state)
+                if (probeFixingLands != null) {
+                    val played = (action as? PlayLand)?.cardId
+                    if (played == null || played !in probeFixingLands!!) probeFixMissed++
+                    probeFixingLands = null
+                }
                 val r = processor.process(state, action).result
                 val next = if (r.error != null) {
                     illegal++
@@ -211,7 +252,10 @@ class GameRunner(
         val winnerSeat = if (state.gameOver) state.winnerId?.let { bySeat[it] } else null
         return Outcome(
             winnerSeat, state.turnNumber, actionCount, illegal, seatIds.map { state.lifeTotal(it) }, reason,
-            StrandedProbe(probeWindows, probeAffordable, probeStranded, probeStrandedIds.size),
+            StrandedProbe(
+                probeWindows, probeAffordable, probeStranded, probeStrandedIds.size,
+                probeFixable, probeFixMissed,
+            ),
         )
     }
 
