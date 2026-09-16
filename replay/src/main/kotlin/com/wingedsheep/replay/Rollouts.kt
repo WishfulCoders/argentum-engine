@@ -44,6 +44,8 @@ class RolloutWriter(
     /** Reshuffle both libraries per rollout. Off only to measure what the recorded draws are worth. */
     val shuffle: Boolean = true,
     maxTurnsPerSeat: Int = 50,
+    /** Where the opponent's unseen cards come from; [OppoDeckMode.STUB] keeps the rebuilt state's. */
+    val oppoDecks: OppoDeckSampler? = null,
 ) {
     private val runner = GameRunner(registry, acting.second, maxTurnsPerSeat = maxTurnsPerSeat)
 
@@ -54,13 +56,18 @@ class RolloutWriter(
     /**
      * Plays [quiet] — one candidate's simulated quiet state — to a winner [n] times from the user's side.
      * [choiceSeed] is shared by every candidate of the same choice.
+     * With [oppoDecks], the opponent's hidden cards are resampled per rollout under the same seed for every
+     * candidate, and both seats' decklist models are rebuilt from the resampled state.
      */
-    fun play(quiet: GameState, user: EntityId, decklists: Map<EntityId, OpponentModel>, choiceSeed: Long): RollResult {
+    fun play(
+        quiet: GameState, user: EntityId, decklists: Map<EntityId, OpponentModel>, choiceSeed: Long, spec: GameSpec,
+    ): RollResult {
         val seats = quiet.turnOrder
         var wins = 0
         var undecided = 0
         var illegal = 0
         var turns = 0
+        var stubbed = 0
         val winsByOpponent = IntArray(opponents.size)
         val playedByOpponent = IntArray(opponents.size)
         val outcomes = StringBuilder(n)
@@ -68,8 +75,14 @@ class RolloutWriter(
             val o = r % opponents.size
             playedByOpponent[o]++
             val profiles = seats.map { if (it == user) acting.second else opponents[o].second }
-            val start = if (shuffle) reshuffled(quiet, choiceSeed * MULT + r) else quiet
-            val outcome = runCatching { runner.playFrom(start, profiles, decklists) }.getOrNull()
+            val shuffled = if (shuffle) reshuffled(quiet, choiceSeed * MULT + r) else quiet
+            val sampled = oppoDecks?.takeIf { it.mode != OppoDeckMode.STUB }?.let { s ->
+                s.resample(shuffled, spec, user, kotlin.random.Random(choiceSeed * MULT + r + DECK_SALT))
+                    .also { if (it == null) stubbed++ }
+            }
+            val start = sampled ?: shuffled
+            val models = if (sampled != null) decklists(sampled) else decklists
+            val outcome = runCatching { runner.playFrom(start, profiles, models) }.getOrNull()
             if (outcome == null) {
                 undecided++
                 outcomes.append('U')
@@ -85,6 +98,7 @@ class RolloutWriter(
         }
         return RollResult(
             n, wins, undecided, illegal, turns, winsByOpponent.toList(), playedByOpponent.toList(), outcomes.toString(),
+            stubbed,
         )
     }
 
@@ -109,6 +123,7 @@ class RolloutWriter(
 
     companion object {
         private const val MULT = 1_000_003L
+        private const val DECK_SALT = 7_919L
 
         /** The seed every candidate of one choice rolls out under: the base seed, the game and the step. */
         fun choiceSeed(seed: Long, gameId: String, step: Int): Long =
@@ -146,4 +161,6 @@ data class RollResult(
      * budget `m` — which is how `docs/36` §3's stability curve is drawn without rerunning anything.
      */
     val outcomes: String,
+    /** Rollouts that kept the stub opponent deck because resampling it was refused (`OppoDeckSampler`). */
+    val stubbed: Int = 0,
 )

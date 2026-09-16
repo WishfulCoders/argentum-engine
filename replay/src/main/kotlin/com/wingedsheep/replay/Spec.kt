@@ -20,6 +20,8 @@ data class GameSpec(
     val onPlay: Boolean,
     val won: Boolean,
     val oppColors: String = "",
+    /** The user's deck colours, as 17Lands records them; used to match donor decks (`OppoDeckSampler`). */
+    val mainColors: String = "",
     val userDeck: List<String>,
     val openingHand: List<String>,
     /** Every card the opponent was seen with, with multiplicity; the rest of their deck is filler. */

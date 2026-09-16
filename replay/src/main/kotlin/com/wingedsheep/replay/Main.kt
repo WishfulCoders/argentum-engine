@@ -25,7 +25,8 @@ import java.util.zip.GZIPOutputStream
  * `-Dreplay.prefsProfile` (`current`, or `raceclock`). With `-Dreplay.rollouts=N -Dreplay.rollPilots=ACTING[,OPP...]`
  * each candidate is also played on to a winner N times ([RolloutWriter], mtg-draft-ai `docs/36`), optionally capped at
  * `-Dreplay.rollMaxCands` candidates per choice and tuned by `-Dreplay.rollSeed`, `-Dreplay.rollShuffle`,
- * `-Dreplay.rollMaxTurns`. With `-Dreplay.playOn=PILOT[,PILOT...]` (arena profile names, e.g.
+ * `-Dreplay.rollMaxTurns`, and `-Dreplay.rollOppoDeck=stub|donor|mirror` with `-Dreplay.rollDonors=SPECS[,SPECS...]`
+ * for where the opponent's unseen cards come from ([OppoDeckSampler]). With `-Dreplay.playOn=PILOT[,PILOT...]` (arena profile names, e.g.
  * `current,raceclock+timing+correction-actions`) and `-Dreplay.playOnOut=FILE`, also plays every failed game on from the
  * start of its failed half-turn with each pilot in both seats ([PlayOn], C1), one [PlayOnRecord] per line.
  *
@@ -60,14 +61,24 @@ fun main(args: Array<String>) {
     val rollMaxCands = System.getProperty("replay.rollMaxCands")?.toInt() ?: Int.MAX_VALUE
     val rollShuffle = System.getProperty("replay.rollShuffle")?.toBooleanStrict() ?: true
     val rollMaxTurns = System.getProperty("replay.rollMaxTurns")?.toInt() ?: 50
+    val oppoMode = OppoDeckMode.valueOf((System.getProperty("replay.rollOppoDeck") ?: "stub").uppercase())
+    val donorFiles = System.getProperty("replay.rollDonors")?.split(',')?.filter { it.isNotBlank() }.orEmpty()
+    val donors = OppoDeckSampler.load(donorFiles.map(::File))
+    require(oppoMode != OppoDeckMode.DONOR || donors.isNotEmpty()) { "-Dreplay.rollOppoDeck=donor needs -Dreplay.rollDonors" }
     require((rollN > 0) == (rollPilots != null)) { "-Dreplay.rollouts and -Dreplay.rollPilots go together" }
     require(rollN == 0 || prefsFile != null) { "-Dreplay.rollouts needs a prefs file" }
     val rollHeader = rollPilots?.let { (acting, opponents) ->
-        RollHeader(acting.first, opponents.map { it.first }, rollN, rollSeed, rollShuffle, rollMaxTurns, rollMaxCands)
+        RollHeader(
+            acting.first, opponents.map { it.first }, rollN, rollSeed, rollShuffle, rollMaxTurns, rollMaxCands,
+            oppoMode.name.lowercase(), donorFiles.map { File(it).name }, donors.size,
+        )
     }
     val prefWriters = ThreadLocal.withInitial {
         val roller = rollPilots?.let { (acting, opponents) ->
-            RolloutWriter(registry, acting, opponents, rollN, rollSeed, rollShuffle, rollMaxTurns)
+            RolloutWriter(
+                registry, acting, opponents, rollN, rollSeed, rollShuffle, rollMaxTurns,
+                OppoDeckSampler(registry, snapshotter, oppoMode, donors),
+            )
         }
         PreferenceWriter(registry, prefsBase, roller, rollMaxCands)
     }

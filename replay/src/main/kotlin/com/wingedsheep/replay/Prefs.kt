@@ -49,6 +49,11 @@ data class RollHeader(
     val maxTurnsPerSeat: Int,
     /** Candidates rolled out per choice at most; the rest are recorded without a label. */
     val maxCandidates: Int,
+    /** Where the opponent's unseen cards came from ([OppoDeckMode]), lower-case. */
+    val oppoDeck: String = "stub",
+    /** With the donor mode, the donor spec files and how many whole decks they held. */
+    val donors: List<String> = emptyList(),
+    val donorDecks: Int = 0,
 )
 
 /** One of the user's priority choices on a rebuilt line: the move they made and the alternatives. */
@@ -158,7 +163,7 @@ class PreferenceWriter(
         }
         val picked = rest.toSet() + 0
         return cands.mapIndexed { i, c ->
-            if (i !in picked) c.pref else c.pref.copy(roll = roller.play(c.quiet, user, decklists, choiceSeed))
+            if (i !in picked) c.pref else c.pref.copy(roll = roller.play(c.quiet, user, decklists, choiceSeed, spec))
         }
     }
 
