@@ -186,6 +186,26 @@ data class AiProfile(
      */
     val discountedRaceClock: Boolean = false,
     /**
+     * Let the opponent answer a candidate that is still on the stack, instead of scoring every
+     * candidate as if it always resolves.
+     *
+     * `GameSimulator.resolveToQuietState` passes priority for both players — it says so, and calls
+     * it "the most common outcome", which it is. What it is not is the outcome worth *scoring*: the
+     * AI cannot tell a threat that lands from one that eats an instant, and so it cannot value
+     * playing around anything. `mtg-draft-ai` `docs/27` §7.4 reached this from the other end — a
+     * static bonus for keeping mana up (`ManaReserve`) lost at every weight and lost worst on blue
+     * decks, because mana held against a response nobody plays is only tempo spent — and §7.4.1
+     * concluded that holding mana "has to be earned by a search that plays the opponent's turn".
+     *
+     * `mtg-draft-ai` `docs/33` §10 is the second, independent reason to expect this to matter more
+     * broadly: the leaf score is a ladder of bodies, so the decks it misplays are the ones that win
+     * by anything else. That is a case about the *horizon*, not about blue.
+     *
+     * One response, from [com.wingedsheep.ai.engine.rollout.PlayoutPolicy], gated on the opponent
+     * having untapped lands and a card in hand. See [OpponentResponsePolicy].
+     */
+    val opponentRespondsInSimulation: Boolean = false,
+    /**
      * Charge a removal spell for pointing at a creature that isn't worth a card yet — so the AI
      * stops spending its Pacifism on the first 1/1 across the table.
      *

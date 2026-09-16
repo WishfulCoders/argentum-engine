@@ -12,6 +12,7 @@ import com.wingedsheep.ai.engine.rollout.FastDecisionResponder
 import com.wingedsheep.ai.engine.rollout.PlayoutEngine
 import com.wingedsheep.ai.engine.rollout.PlayoutPolicy
 import com.wingedsheep.ai.engine.rollout.RolloutCandidateEvaluator
+import com.wingedsheep.ai.engine.rollout.RolloutSettings
 import com.wingedsheep.ai.engine.rollout.StaticCandidateEvaluator
 import com.wingedsheep.engine.core.*
 import com.wingedsheep.engine.legalactions.LegalAction
@@ -298,6 +299,24 @@ class AIPlayer(
             // NeedsDecision with an unresolved board state.
             simulator.decisionResolver = { state, decision ->
                 responder.respond(state, decision, decision.playerId)
+            }
+
+            // `AiProfile.opponentRespondsInSimulation`. Set here rather than passed to the
+            // constructor because the policy needs a `CombatAdvisor`, which needs the simulator —
+            // the same cycle `decisionResolver` above is broken for, broken the same way. The
+            // advisor is its own instance on its own simulator: a `PlayoutPolicy` may not simulate,
+            // and handing it the search's advisor would put a second consumer on the one the
+            // Strategist is mid-search with.
+            if (profile.opponentRespondsInSimulation) {
+                val responseCombat = CombatAdvisor(
+                    GameSimulator(cardRegistry), evaluator, cardRegistry, advisorRegistry
+                )
+                simulator.opponentResponse = PlayoutResponsePolicy(
+                    PlayoutPolicy(
+                        responseCombat, IntentCatalog.of(cardRegistry),
+                        profile.rollouts ?: RolloutSettings.DEFAULT, cardRegistry,
+                    )
+                )
             }
 
             return AIPlayer(

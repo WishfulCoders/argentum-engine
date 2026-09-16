@@ -160,6 +160,9 @@ private fun arenaProfile(name: String): AiProfile = when (name) {
     "current" -> AiProfile.CURRENT
     "intent" -> AiProfile.CURRENT.copy(id = "current-intent", useCardIntent = true)
     "timing" -> TIMING
+    // mtg-draft-ai `docs/27` §7.4's one-response lookahead, on the `timing` base §7.4.1 made the
+    // baseline for later work. The bar is `timing`, not `current`.
+    "lookahead" -> TIMING.copy(id = "timing-lookahead", opponentRespondsInSimulation = true)
     "reserve" -> {
         val weight = System.getProperty("arena.reserveWeight")?.toDouble() ?: 1.5
         val scaled = System.getProperty("arena.reserveScaled").toBoolean()
