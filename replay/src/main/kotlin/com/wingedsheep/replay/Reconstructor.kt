@@ -296,7 +296,7 @@ class Reconstructor(
             val patched = patcher.patch(end, seats, ht.eot)
             if (patched == null) {
                 resyncError = patcher.lastError
-                if (tracing) tracer!!.line("### resync refused: ${patcher.lastError}")
+                if (tracing) tracer!!.line("### resync refused: ${patcher.lastError}${patcher.lastDetail?.let { "\n###   $it" } ?: ""}")
                 continue
             }
             val next = nextTurn(patched, i + 1)

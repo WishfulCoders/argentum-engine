@@ -50,14 +50,33 @@ class SnapshotPatcher(
     var lastMade: List<String> = emptyList()
         private set
     private val made = mutableListOf<String>()
+    /** For the trace: the edits and the entities of each differing name, when the last [patch] still differed. */
+    var lastDetail: String? = null
+        private set
 
     fun patch(given: GameState, seats: Seats, eot: EotSpec): GameState? {
         lastError = null
+        lastDetail = null
         made.clear()
         val edits = mutableListOf<String>()
         var s = given
         fun fail(why: String): GameState? { lastError = why; return null }
 
+        // Permanents the record lacks go to the graveyard (the last of each name); Auras first, since
+        // an Aura that steals its host gives it back as it goes.
+        fun removeExtras(auras: Boolean): GameState? {
+            for (side in SIDES) {
+                for ((name, k) in extra(s, seats, eot, side)) {
+                    if (auras && !isAura(name)) continue
+                    for (id in named(s, s.controlledBattlefield(seats.of(side)), name).takeLast(k)) {
+                        s = move(s, id, Zone.GRAVEYARD) ?: return fail("resync: could not remove $side's $name")
+                        edits += "-$side:$name"
+                    }
+                }
+            }
+            return s
+        }
+        removeExtras(auras = true) ?: return null
         // 1. Control changes: a name one side has too many of and the other too few is a stolen permanent.
         for (side in SIDES) {
             val other = other(side)
@@ -71,16 +90,8 @@ class SnapshotPatcher(
                 }
             }
         }
-        // 2. Permanents the record lacks go to the graveyard (the last of each name).
-        for (side in SIDES) {
-            for ((name, k) in extra(s, seats, eot, side)) {
-                val ids = named(s, s.controlledBattlefield(seats.of(side)), name).takeLast(k)
-                for (id in ids) {
-                    s = move(s, id, Zone.GRAVEYARD) ?: return fail("resync: could not remove $side's $name")
-                    edits += "-$side:$name"
-                }
-            }
-        }
+        // 2. The other permanents the record lacks.
+        removeExtras(auras = false) ?: return null
         // 3. Permanents the record has that the engine lacks enter, non-Auras first so an Aura finds its host.
         for (side in SIDES) {
             val player = seats.of(side)
@@ -172,7 +183,16 @@ class SnapshotPatcher(
             edits += "oppo_hand ${oppoHand.size}->${eot.oppoHand}"
         }
         val diff = snapshotter.diff(snapshotter.take(s, seats), eot)
-        if (diff.isNotEmpty()) return fail("resync: still differs: ${diff.joinToString("; ")}")
+        if (diff.isNotEmpty()) {
+            val snap = snapshotter.take(s, seats)
+            val off = SIDES.flatMap { side ->
+                val recorded = Snapshotter.counts(eot.battlefield[side].orEmpty())
+                val now = snap.battlefield[side].orEmpty()
+                (recorded.keys + now.keys).filter { recorded[it] != now[it] }
+            }.distinct()
+            lastDetail = "edits ${edits.joinToString(", ")}; " + off.joinToString("; ") { n -> "$n: " + describe(s, seats, n) }
+            return fail("resync: still differs: ${diff.joinToString("; ")}")
+        }
         lastEdits = edits
         lastMade = made.toList()
         return s
@@ -263,6 +283,21 @@ class SnapshotPatcher(
         return placed to id
     }
 
+    /** Each entity called [name]: zone, owner, controller (component / projected), token, copy, face down. */
+    private fun describe(s: GameState, seats: Seats, name: String): String =
+        (s.zones.flatMap { (key, ids) -> ids.map { key to it } }).filter { snapshotter.name(s, it.second) == name }.joinToString(" | ") { (key, id) ->
+            val e = s.getEntity(id)
+            val base = e?.get<ControllerComponent>()?.playerId?.let(seats::sideOf)
+            val projected = s.projectedState.getController(id)?.let(seats::sideOf)
+            val control = s.floatingEffects.filter { it.effect.layer == Layer.CONTROL && id in it.effect.affectedEntities }
+            "${key.zoneType.name.lowercase()} owner=${seats.sideOf(key.ownerId)} ctl=$base/$projected" +
+                (if (e?.has<TokenComponent>() == true) " token" else "") +
+                (if (e?.has<com.wingedsheep.engine.state.components.identity.CopyOfComponent>() == true) " copy" else "") +
+                (if (isFaceDown(s, id)) " facedown" else "") +
+                (if (control.isNotEmpty()) " floating-control=${control.size}" else "") +
+                " card=${e?.get<com.wingedsheep.engine.state.components.identity.CardComponent>()?.name}"
+        }
+
     /** Where cards called [name] are, for [lastMade]: "user.graveyard stack …". */
     private fun locate(s: GameState, seats: Seats, name: String): String =
         (s.zones.flatMap { (key, ids) -> ids.filter { snapshotter.name(s, it) == name }.map { "${seats.sideOf(key.ownerId)}.${key.zoneType.name.lowercase()}" } } +
@@ -292,16 +327,20 @@ class SnapshotPatcher(
         s.getEntity(id)?.has<com.wingedsheep.engine.state.components.identity.FaceDownComponent>() == true
 
     /**
-     * Attaches the Aura [aura] to a creature: an opponent's when its text restrains or shrinks the
-     * enchanted creature, else one of [side]'s own; the other side's if that side has none.
+     * Attaches the Aura [aura] to a creature: for an Aura that steals its host, one [side] controls
+     * but the other player owns (the record already shows it on [side]); an opponent's when its text
+     * restrains or shrinks the enchanted creature; else one of [side]'s own; the other side's if that
+     * side has none.
      */
     private fun attach(s: GameState, seats: Seats, side: String, aura: EntityId): GameState? {
         val text = registry.getCard(snapshotter.name(s, aura)?.let(snapshotter::engineName) ?: return null)?.oracleText.orEmpty()
+        fun creatures(sd: String) = s.controlledBattlefield(seats.of(sd)).filter { it != aura && s.projectedState.hasType(it, "CREATURE") }
+        val stolen = if (STEALS.containsMatchIn(text)) {
+            creatures(side).firstOrNull { s.getEntity(it)?.get<OwnerComponent>()?.playerId == seats.of(other(side)) }
+        } else null
         val hostile = HOSTILE_AURA.containsMatchIn(text)
         val sides = if (hostile) listOf(other(side), side) else listOf(side, other(side))
-        val host = sides.firstNotNullOfOrNull { sd ->
-            s.controlledBattlefield(seats.of(sd)).firstOrNull { it != aura && s.projectedState.hasType(it, "CREATURE") }
-        } ?: return null
+        val host = stolen ?: sides.firstNotNullOfOrNull { sd -> creatures(sd).firstOrNull() } ?: return null
         return s.updateEntity(aura) { it.with(AttachedToComponent(host)) }
             .updateEntity(host) { c ->
                 c.with(AttachmentsComponent(c.get<AttachmentsComponent>()?.attachedIds.orEmpty() + aura))
@@ -328,6 +367,7 @@ class SnapshotPatcher(
 
     companion object {
         private val SIDES = listOf("user", "oppo")
+        private val STEALS = Regex("""(?i)\byou control enchanted (?:creature|permanent)""")
         private val HOSTILE_AURA = Regex("""(?i)enchanted (?:creature|permanent) (?:can't|doesn't|gets -|loses|has base power)""")
     }
 }
