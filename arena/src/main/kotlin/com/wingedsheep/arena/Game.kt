@@ -23,6 +23,7 @@ import com.wingedsheep.engine.state.components.battlefield.SummoningSicknessComp
 import com.wingedsheep.engine.state.components.battlefield.TappedComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
+import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
@@ -89,6 +90,13 @@ class GameRunner(
          * cards it is worst at (mtg-draft-ai `docs/33` §13). Null unless [measureCards].
          */
         val cards: List<Map<String, List<Int>>>? = null,
+        /**
+         * Per seat, the last sorcery-speed window ([AiProfile.spendIdleManaAtSorcerySpeed]), [LAST_WINDOW_FIELDS]:
+         * own turns with a main-phase priority, and with a postcombat-main one; postcombat-main windows (empty
+         * stack) with a sorcery-speed card castable from hand, and in those, passes, passes while an instant-speed
+         * card in hand was castable too, sorcery-speed casts, and anything else. With [measureCards].
+         */
+        val lastWindow: List<List<Int>>? = null,
     )
 
     /** [seatProfiles] overrides [profile] seat by seat (a one-sided A/B); null plays [profile] on both. */
@@ -136,6 +144,9 @@ class GameRunner(
         val castNow = HashSet<String>()
         var cardsTurn = -1
         var cardsSeat = -1
+        val lastWindow = if (measureCards) seatIds.map { IntArray(LAST_WINDOW_FIELDS.size) } else null
+        var sawMain = false
+        var sawPostcombat = false
         fun stat(seat: Int, name: String) = cards!![seat].getOrPut(name) { IntArray(CARD_FIELDS.size) }
         fun nameOf(s: GameState, id: EntityId) = s.getEntity(id)?.get<CardComponent>()?.name
         fun commitTurn() {
@@ -164,6 +175,11 @@ class GameRunner(
                 if (cards != null) {
                     if (state.turnNumber != cardsTurn) {
                         if (cardsTurn >= 0) commitTurn()
+                        if (cardsSeat >= 0) {
+                            if (sawMain) lastWindow!![cardsSeat][0]++
+                            if (sawPostcombat) lastWindow!![cardsSeat][1]++
+                        }
+                        sawMain = false; sawPostcombat = false
                         cardsTurn = state.turnNumber
                         cardsSeat = bySeat[state.activePlayerId] ?: -1
                     }
@@ -207,7 +223,22 @@ class GameRunner(
                 val instants = if (holding != null) affordableInstants(state, priorityPlayer) else emptySet()
                 val castable = if (cards != null) affordableCasts(state, priorityPlayer) else emptySet()
                 for (card in castable) if (card in state.getHand(priorityPlayer)) nameOf(state, card)?.let(castableNow::add)
+                val ownMain = cards != null && state.activePlayerId == priorityPlayer && state.step.isMainPhase
+                if (ownMain) sawMain = true
+                val sorcerySpeed = castable.filter { it in state.getHand(priorityPlayer) && !isInstantSpeed(state, it) }
+                val instantSpeed = castable.filter { it in state.getHand(priorityPlayer) && isInstantSpeed(state, it) }
+                val atLastWindow = ownMain && state.step == Step.POSTCOMBAT_MAIN
+                if (atLastWindow) sawPostcombat = true
                 val action = aiFor(priorityPlayer).chooseAction(state)
+                if (atLastWindow && sorcerySpeed.isNotEmpty()) {
+                    val w = lastWindow!![bySeat.getValue(priorityPlayer)]
+                    w[2]++
+                    when {
+                        action is PassPriority -> { w[3]++; if (instantSpeed.isNotEmpty()) w[4]++ }
+                        action is CastSpell && action.cardId in sorcerySpeed -> w[5]++
+                        else -> w[6]++
+                    }
+                }
                 if (cards != null && action is CastSpell) nameOf(state, action.cardId)?.let { name ->
                     val c = stat(bySeat.getValue(priorityPlayer), name)
                     if (state.activePlayerId == priorityPlayer) { c[CAST_OWN]++; castNow += name } else c[CAST_OPP]++
@@ -261,7 +292,11 @@ class GameRunner(
             reason = "exception(${e::class.simpleName}: ${e.message?.take(200)})"
         }
         if (cards != null) {
-            if (cardsSeat >= 0) commitTurn()
+            if (cardsSeat >= 0) {
+                commitTurn()
+                if (sawMain) lastWindow!![cardsSeat][0]++
+                if (sawPostcombat) lastWindow!![cardsSeat][1]++
+            }
             for ((seat, id) in seatIds.withIndex()) for (card in state.getHand(id)) {
                 nameOf(state, card)?.let { stat(seat, it)[END_IN_HAND]++ }
             }
@@ -272,6 +307,7 @@ class GameRunner(
             holding = holding?.map { it.toList() }, cycle = cycle?.map { it.toList() }, casts = casts,
             tappedOut = tappedOut?.map { it.toList() },
             cards = cards?.map { seat -> seat.mapValues { it.value.toList() } },
+            lastWindow = lastWindow?.map { it.toList() },
         )
     }
 
@@ -301,6 +337,12 @@ class GameRunner(
         affordableCasts(state, playerId).filterTo(HashSet()) {
             state.getEntity(it)?.get<CardComponent>()?.typeLine?.isInstant == true
         }
+
+    /** As `Strategist`'s rule reads it: an instant, or a nonland card with flash. */
+    private fun isInstantSpeed(state: GameState, id: EntityId): Boolean {
+        val card = state.getEntity(id)?.get<CardComponent>() ?: return false
+        return !card.typeLine.isLand && (card.typeLine.isInstant || Keyword.FLASH in card.baseKeywords)
+    }
 
     /** The cards [playerId] could cast now, when it is their own main phase with an empty stack; else none. */
     private fun affordableCasts(state: GameState, playerId: EntityId): Set<EntityId> {
@@ -342,6 +384,11 @@ class GameRunner(
         val CARD_FIELDS = listOf(
             "seen", "cast_own", "cast_opp", "castable_turns", "castable_not_cast", "end_in_hand", "x_sum",
             "target_self", "target_opponent",
+        )
+        /** [Outcome.lastWindow]'s fields, in order. */
+        val LAST_WINDOW_FIELDS = listOf(
+            "turns_with_main", "turns_with_postcombat_main", "windows_with_sorcery_castable", "passed",
+            "passed_with_instant_castable", "cast_sorcery_speed", "other",
         )
         private const val SEEN = 0
         private const val CAST_OWN = 1

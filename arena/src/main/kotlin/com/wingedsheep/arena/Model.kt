@@ -43,6 +43,8 @@ data class GameRecord(
     val tappedOut: List<List<Int>>? = null,
     /** [GameRunner.Outcome.cards], seat by seat, with `-Darena.cards=true`; fields [GameRunner.CARD_FIELDS]. */
     val cards: List<Map<String, List<Int>>>? = null,
+    /** [GameRunner.Outcome.lastWindow], with `-Darena.cards=true`; fields [GameRunner.LAST_WINDOW_FIELDS]. */
+    val lastWindow: List<List<Int>>? = null,
 ) {
     val key: String get() = "$target|$opponent|$game"
 }
