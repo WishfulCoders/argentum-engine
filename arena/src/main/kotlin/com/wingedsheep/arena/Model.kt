@@ -34,6 +34,16 @@ data class GameRecord(
     val life: List<Int> = emptyList(),
     /** Empty when the game ended by the rules; otherwise why the loop stopped. */
     val reason: String = "",
+    /**
+     * `GameRunner.StrandedProbe` at the target seat, all zero unless `-Darena.probeStranded=true`:
+     * priority windows examined, nonland cards in hand whose mana value the untapped lands cover,
+     * how many of those the enumerator offered no affordable cast for, and how many distinct cards
+     * were ever stranded. mtg-draft-ai `docs/33` §12.
+     */
+    val probeWindows: Int = 0,
+    val probeAffordable: Int = 0,
+    val probeStranded: Int = 0,
+    val probeStrandedCards: Int = 0,
     val millis: Long = 0,
 ) {
     val key: String get() = "$target|$opponent|$game"

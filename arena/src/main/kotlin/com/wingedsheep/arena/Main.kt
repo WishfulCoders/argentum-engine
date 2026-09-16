@@ -38,6 +38,9 @@ fun main(args: Array<String>) {
     val maxOpponents = args.getOrNull(4)?.toInt() ?: Int.MAX_VALUE
     val maxTargets = args.getOrNull(5)?.toInt() ?: Int.MAX_VALUE
     val runSeed = args.getOrNull(6)?.toLong() ?: 0L
+    // `-Darena.probeStranded=true`: is the target stranding cards it has the amount of mana for?
+    // Off by default and free when off — the probe enumerates once per own-main-phase window.
+    val probeStranded = System.getProperty("arena.probeStranded").toBoolean()
 
     val registry = eclRegistry()
     val profile = arenaProfile(System.getProperty("arena.profile") ?: "current")
@@ -89,12 +92,18 @@ fun main(args: Array<String>) {
             else listOf(job.opponent.cards, job.target.cards)
             val base = GameRecord(job.target.id, job.opponent.id, job.game, targetSeat, job.seed)
             try {
-                val o = local.get().play(seats, job.seed, if (targetSeat == 0) listOf(targetProfile, profile) else listOf(profile, targetProfile))
+                val o = local.get().play(
+                    seats, job.seed,
+                    if (targetSeat == 0) listOf(targetProfile, profile) else listOf(profile, targetProfile),
+                    probeSeat = if (probeStranded) targetSeat else null,
+                )
                 base.copy(
                     winnerSeat = o.winnerSeat,
                     targetWon = o.winnerSeat?.let { it == targetSeat },
                     turns = o.turns, actions = o.actions, illegal = o.illegal, life = o.life,
                     reason = o.reason, millis = System.currentTimeMillis() - t0,
+                    probeWindows = o.probe.windows, probeAffordable = o.probe.affordable,
+                    probeStranded = o.probe.stranded, probeStrandedCards = o.probe.strandedCards,
                 )
             } catch (e: Throwable) {
                 base.copy(reason = "init(${e::class.simpleName}: ${e.message?.take(200)})", millis = System.currentTimeMillis() - t0)

@@ -18,6 +18,11 @@ import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.combat.AttackersDeclaredThisCombatComponent
 import com.wingedsheep.engine.state.components.combat.BlockersDeclaredThisCombatComponent
+import com.wingedsheep.engine.state.components.battlefield.TappedComponent
+import com.wingedsheep.engine.state.components.identity.CardComponent
+import com.wingedsheep.engine.core.CastSpell
+import com.wingedsheep.sdk.core.Phase
+import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
@@ -50,10 +55,51 @@ class GameRunner(
         val illegal: Int,
         val life: List<Int>,
         val reason: String,
+        /** [StrandedProbe], zeroed unless a `probeSeat` was given. */
+        val probe: StrandedProbe = StrandedProbe(),
+    )
+
+    /**
+     * Is the engine stranding cards it has the *amount* of mana for?
+     *
+     * mtg-draft-ai `docs/33` §9 ruled out the mana base **as built** — the three-colour deficit is flat
+     * across the weight of the least-used colour and across how many sources that colour has — but that
+     * is a fact about the decklist, not about how the engine plays it. No profile the pilots use sets
+     * `AiProfile.sequenceLandsByUsableMana`, so these agents have no land-choice term at all beyond
+     * tapped 0.3 / untapped 0.6; and that term, where it is on, says in its own KDoc that "colours,
+     * alternative costs and timing are ignored". For a two-colour deck that barely matters. For a
+     * three-colour deck it is the decision.
+     *
+     * Measured only at the probed seat's **own main phase with an empty stack**, so sorcery timing is
+     * legal and an uncastable card is not merely a card being held for the right moment:
+     *
+     *  - [windows] — priority windows examined.
+     *  - [affordable] — summed over windows: nonland cards in hand whose mana value is covered by the
+     *    controller's untapped lands. Lands only, the same approximation `BoardPresence.landSequencing`
+     *    makes, and for its reason: this runs per window and may not call a solver.
+     *  - [stranded] — of those, the ones the enumerator offers **no affordable cast for**. The
+     *    enumerator is the real authority on castability, so this is "the amount is there and something
+     *    else blocks it". Colours are the dominant something in limited, but not the only one
+     *    (additional costs, cast restrictions), which is why the *comparison across colour counts* is
+     *    the test rather than the raw rate.
+     *  - [strandedCards] — distinct cards ever stranded, so one unplayable bomb held for ten turns
+     *    cannot look like ten problems.
+     */
+    data class StrandedProbe(
+        val windows: Int = 0,
+        val affordable: Int = 0,
+        val stranded: Int = 0,
+        val strandedCards: Int = 0,
     )
 
     /** [seatProfiles] overrides [profile] seat by seat (a one-sided A/B); null plays [profile] on both. */
-    fun play(decks: List<List<String>>, seed: Long, seatProfiles: List<AiProfile>? = null): Outcome {
+    fun play(
+        decks: List<List<String>>,
+        seed: Long,
+        seatProfiles: List<AiProfile>? = null,
+        /** Seat to run [StrandedProbe] for; null (the default) costs nothing at all. */
+        probeSeat: Int? = null,
+    ): Outcome {
         val init = initializer.initializeGame(
             GameConfig(
                 players = decks.mapIndexed { seat, deck -> PlayerConfig("Seat$seat", Deck(deck)) },
@@ -78,6 +124,11 @@ class GameRunner(
         var lastActivePlayer: EntityId? = null
         var lastProgressAction = 0
         var reason = ""
+        var probeWindows = 0
+        var probeAffordable = 0
+        var probeStranded = 0
+        val probeStrandedIds = mutableSetOf<EntityId>()
+        val probeId = probeSeat?.let { seatIds[it] }
         val maxPlayerTurns = maxTurnsPerSeat * decks.size
         try {
             while (!state.gameOver && state.turnNumber < maxPlayerTurns && actionCount < maxActions) {
@@ -106,6 +157,32 @@ class GameRunner(
                     reason = "noPriority(turn=${state.turnNumber})"
                     break
                 }
+                if (probeId != null && priorityPlayer == probeId &&
+                    state.activePlayerId == probeId && state.stack.isEmpty() &&
+                    state.phase in MAIN_PHASES
+                ) {
+                    val projected = state.projectedState
+                    val untappedLands = projected.getBattlefieldControlledBy(probeId).count {
+                        projected.hasType(it, "LAND") && state.getEntity(it)?.has<TappedComponent>() != true
+                    }
+                    val hand = state.getZone(probeId, Zone.HAND)
+                    val castable = enumerator.enumerate(state, probeId, EnumerationMode.ACTIONS_ONLY)
+                        .filter { it.affordable }
+                        .mapNotNull { (it.action as? CastSpell)?.cardId }
+                        .toSet()
+                    var windowCounted = false
+                    for (cardId in hand) {
+                        val card = state.getEntity(cardId)?.get<CardComponent>() ?: continue
+                        if (card.isLand || card.manaValue > untappedLands) continue
+                        probeAffordable++
+                        windowCounted = true
+                        if (cardId !in castable) {
+                            probeStranded++
+                            probeStrandedIds += cardId
+                        }
+                    }
+                    if (windowCounted) probeWindows++
+                }
                 actionCount++
                 val action = aiFor(priorityPlayer).chooseAction(state)
                 val r = processor.process(state, action).result
@@ -132,7 +209,10 @@ class GameRunner(
             reason = "exception(${e::class.simpleName}: ${e.message?.take(200)})"
         }
         val winnerSeat = if (state.gameOver) state.winnerId?.let { bySeat[it] } else null
-        return Outcome(winnerSeat, state.turnNumber, actionCount, illegal, seatIds.map { state.lifeTotal(it) }, reason)
+        return Outcome(
+            winnerSeat, state.turnNumber, actionCount, illegal, seatIds.map { state.lifeTotal(it) }, reason,
+            StrandedProbe(probeWindows, probeAffordable, probeStranded, probeStrandedIds.size),
+        )
     }
 
     /** Copy of the AI test support's fallback: pass, unless a combat declaration is owed. */
@@ -162,5 +242,6 @@ class GameRunner(
 
     companion object {
         const val STUCK_ACTIONS_PER_TURN = 300
+        private val MAIN_PHASES = setOf(Phase.PRECOMBAT_MAIN, Phase.POSTCOMBAT_MAIN)
     }
 }
