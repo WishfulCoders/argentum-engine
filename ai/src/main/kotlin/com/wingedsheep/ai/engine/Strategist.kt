@@ -105,6 +105,8 @@ class Strategist(
     private val cashCantripsInTheEndStep: Boolean = false,
     /** [AiProfile.spendIdleManaAtSorcerySpeed]; 0 is off. */
     private val idleManaAllowance: Double = 0.0,
+    /** [AiProfile.spendIdleManaInTheirEndStep]; 0 is off. */
+    private val endStepManaAllowance: Double = 0.0,
     /**
      * [AiProfile.holdFlashPermanentsForAmbush] — passed straight through to [HoldPolicy], which
      * hands it to [com.wingedsheep.ai.engine.knowledge.AmbushWindow].
@@ -296,9 +298,16 @@ class Strategist(
         // The last sorcery-speed window of our turn: a sorcery-speed cast that only ties passing still
         // beats letting the mana go at cleanup. See [AiProfile.spendIdleManaAtSorcerySpeed].
         val spare = if (idleManaAllowance > 0.0) spareManaInLastSorcerySpeedWindow(state, playerId) else null
+        // The same for instant-speed casts in the opponent's end step, the last window before our lands untap.
+        val theirEndStep = endStepManaAllowance > 0.0 && !state.isActiveTurnFor(playerId) &&
+            state.step == Step.END && state.stack.isEmpty()
         val scored = adjusted.map { (action, _, adjustment) ->
             val cost = spare?.let { sorcerySpeedCastCost(state, action) }
-            val bonus = if (cost != null && cost <= spare) idleManaAllowance else 0.0
+            val bonus = when {
+                cost != null && cost <= spare -> idleManaAllowance
+                theirEndStep && !adjustment.floored && isInstantSpeedCast(state, action) -> endStepManaAllowance
+                else -> 0.0
+            }
             action to adjustment.score + bonus
         }
 
@@ -648,6 +657,12 @@ class Strategist(
         return untapped - held
     }
 
+    private fun isInstantSpeedCast(state: GameState, action: LegalAction): Boolean {
+        val cast = action.action as? CastSpell ?: return false
+        val card = state.getEntity(cast.cardId)?.get<CardComponent>() ?: return false
+        return isInstantSpeed(card)
+    }
+
     /** The mana value of a sorcery-speed spell cast from hand, or null for anything else. */
     private fun sorcerySpeedCastCost(state: GameState, action: LegalAction): Int? {
         val cast = action.action as? CastSpell ?: return null
@@ -690,7 +705,7 @@ class Strategist(
         if (timing is TimingVerdict.NoWindow) {
             // The card does nothing here, so nothing the simulation reports should make it beat
             // passing. See [TimingVerdict.NoWindow] for why this is a floor and not a penalty.
-            return AdjustedScore(passScore - 1.0, "hold policy: wrong window — floored below passing")
+            return AdjustedScore(passScore - 1.0, "hold policy: wrong window — floored below passing", floored = true)
         }
         val timingDelta = (timing as? TimingVerdict.Adjust)?.delta ?: 0.0
         val timingReason = (timing as? TimingVerdict.Adjust)?.reason ?: "timing"
@@ -726,7 +741,7 @@ class Strategist(
      * The [note] exists for the local testing mode: a candidate the AI passed over despite a strong
      * board score is only explicable if the panel can say *which* policy floored it.
      */
-    private data class AdjustedScore(val score: Double, val note: String? = null)
+    private data class AdjustedScore(val score: Double, val note: String? = null, val floored: Boolean = false)
 
     /**
      * Pick the targets the AI actually commits to for a chosen targeted action, by simulation

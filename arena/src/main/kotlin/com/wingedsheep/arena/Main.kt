@@ -161,6 +161,9 @@ fun main(args: Array<String>) {
  * - `idle`: in the last sorcery-speed window of its turn, a sorcery-speed cast needs to beat passing only by
  *   `-Darena.idleAllowance` (default 1.0) ([AiProfile.spendIdleManaAtSorcerySpeed], `docs/33` §13).
  *
+ * - `eot`: the same for instant-speed casts in the opponent's end step, at `-Darena.eotAllowance` (default 3.0)
+ *   ([AiProfile.spendIdleManaInTheirEndStep], `docs/33` §13.6).
+ *
  * So `raceclock+timing+correction-actions` is the race clock, the hold rules and the correction together.
  * An apprentice or correction that did not load is an error, not a silent fallback to the default evaluator.
  */
@@ -195,6 +198,10 @@ private fun withToken(p: AiProfile, token: String): AiProfile {
         "idle" -> {
             val allowance = System.getProperty("arena.idleAllowance")?.toDouble() ?: 1.0
             p.copy(id = "$id-$allowance", spendIdleManaAtSorcerySpeed = allowance)
+        }
+        "eot" -> {
+            val allowance = System.getProperty("arena.eotAllowance")?.toDouble() ?: 3.0
+            p.copy(id = "$id-$allowance", spendIdleManaInTheirEndStep = allowance)
         }
         "rollout" -> p.copy(id = id, rollouts = RolloutSettings.DEFAULT, determinizeHiddenInformation = true)
         "holdup" -> {

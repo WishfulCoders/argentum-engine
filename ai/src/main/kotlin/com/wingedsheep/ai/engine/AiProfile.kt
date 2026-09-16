@@ -291,6 +291,16 @@ data class AiProfile(
      */
     val spendIdleManaAtSorcerySpeed: Double = 0.0,
     /**
+     * The instant-speed mirror of [spendIdleManaAtSorcerySpeed]: in the opponent's end step with an empty stack, an
+     * instant-speed cast (an instant, or a flash permanent) needs to beat passing only by
+     * `-spendIdleManaInTheirEndStep`, unless the hold policy floored it as the wrong window (a pump that expires at
+     * cleanup). Every untapped land is about to untap anyway. [cashCantripsInTheEndStep] does this for draw spells
+     * with a small bonus; on ECL the AI with the sorcery-speed allowance still cast its expensive instant-speed card
+     * flow far less often than 17Lands players (Rime Chill 30 % of copies drawn against 75 %, Unexpected Assistance
+     * 52 % against 77 %; mtg-draft-ai `docs/33` §13.6). 0 is off.
+     */
+    val spendIdleManaInTheirEndStep: Double = 0.0,
+    /**
      * Stop deploying a **flash creature on our own turn** when the ambush window is still ahead.
      *
      * The target is `instants-09`, taken from a real game: turn 7, our own precombat main, a
