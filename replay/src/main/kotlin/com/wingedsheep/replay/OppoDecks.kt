@@ -40,7 +40,11 @@ class OppoDeckSampler(
     donors: List<GameSpec> = emptyList(),
 ) {
     private val materializer = HiddenWorldMaterializer(registry)
-    private val decks: List<Donor> = donors.map { Donor(draftOf(it.gameId), colours(it.mainColors), it.userDeck) }
+    /** Donor decks the engine can build: one card it lacks would fail every rollout that drew that deck. */
+    private val decks: List<Donor> = donors
+        .filter { d -> d.userDeck.all { registry.getCard(snapshotter.engineName(it)) != null } }
+        .map { Donor(draftOf(it.gameId), colours(it.mainColors), it.userDeck) }
+    val donorDecks: Int get() = decks.size
     private val matches = HashMap<Pair<String, String>, List<Donor>>()
 
     init {

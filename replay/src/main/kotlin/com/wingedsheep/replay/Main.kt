@@ -64,13 +64,14 @@ fun main(args: Array<String>) {
     val oppoMode = OppoDeckMode.valueOf((System.getProperty("replay.rollOppoDeck") ?: "stub").uppercase())
     val donorFiles = System.getProperty("replay.rollDonors")?.split(',')?.filter { it.isNotBlank() }.orEmpty()
     val donors = OppoDeckSampler.load(donorFiles.map(::File))
-    require(oppoMode != OppoDeckMode.DONOR || donors.isNotEmpty()) { "-Dreplay.rollOppoDeck=donor needs -Dreplay.rollDonors" }
+    val usableDonors = OppoDeckSampler(registry, snapshotter, OppoDeckMode.STUB, donors).donorDecks
+    require(oppoMode != OppoDeckMode.DONOR || usableDonors > 0) { "-Dreplay.rollOppoDeck=donor needs -Dreplay.rollDonors" }
     require((rollN > 0) == (rollPilots != null)) { "-Dreplay.rollouts and -Dreplay.rollPilots go together" }
     require(rollN == 0 || prefsFile != null) { "-Dreplay.rollouts needs a prefs file" }
     val rollHeader = rollPilots?.let { (acting, opponents) ->
         RollHeader(
             acting.first, opponents.map { it.first }, rollN, rollSeed, rollShuffle, rollMaxTurns, rollMaxCands,
-            oppoMode.name.lowercase(), donorFiles.map { File(it).name }, donors.size,
+            oppoMode.name.lowercase(), donorFiles.map { File(it).name }, usableDonors,
         )
     }
     val prefWriters = ThreadLocal.withInitial {
