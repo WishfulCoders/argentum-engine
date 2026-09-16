@@ -3,6 +3,7 @@ package com.wingedsheep.replay
 import com.wingedsheep.engine.core.CardEntityFactory
 import com.wingedsheep.engine.handlers.effects.ZoneEntryOptions
 import com.wingedsheep.engine.handlers.effects.ZoneTransitionService
+import com.wingedsheep.engine.mechanics.layers.Layer
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.ZoneKey
@@ -21,14 +22,15 @@ import com.wingedsheep.sdk.model.EntityId
  * that a game whose half-turn could not be rebuilt carries on replaying from the next one.
  *
  * What the snapshot shows is made to match: each side's non-token permanents by name, the number of
- * tokens, life totals, the user's hand and the opponent's hand size. Cards move through
+ * tokens, life totals, the user's hand and the opponent's hand size. A control change
+ * drops any floating control effect on the permanent. Cards move through
  * [ZoneTransitionService] (no triggers fire: its events are dropped), from where a card of that name
  * most plausibly is. What the snapshot does not show is guessed and not searched over: permanents
  * enter untapped with no counters beyond their intrinsic ones, an Aura goes on the first creature of
  * the side it most likely enchants, a removed permanent goes to its owner's graveyard, a missing token
  * is a copy of one already on the battlefield (else a vanilla creature made a token). A card its owner
- * has nowhere (a copy, a card from outside the listed deck) is made: a token when a permanent of that
- * name is on the battlefield, else a new card ([lastMade]). [patch] returns null, with [lastError] set,
+ * has nowhere (a copy, a card from outside the listed deck) is made: a token when its side already
+ * controls one of that name, else a new card ([lastMade]). [patch] returns null, with [lastError] set,
  * when it cannot make the snapshot match.
  */
 class SnapshotPatcher(
@@ -62,7 +64,9 @@ class SnapshotPatcher(
             for (name in extra(s, seats, eot, side).keys.intersect(missing(s, seats, eot, other).keys)) {
                 val k = minOf(extra(s, seats, eot, side)[name] ?: 0, missing(s, seats, eot, other)[name] ?: 0)
                 for (id in named(s, s.controlledBattlefield(seats.of(side)), name).take(k)) {
-                    s = s.updateEntity(id) { it.with(ControllerComponent(seats.of(other))) }
+                    // a steal is a floating control effect, which would override the component
+                    s = s.copy(floatingEffects = s.floatingEffects.filterNot { it.effect.layer == Layer.CONTROL && id in it.effect.affectedEntities })
+                        .updateEntity(id) { it.with(ControllerComponent(seats.of(other))) }
                     edits += "control $name -> $other"
                 }
             }
@@ -98,7 +102,15 @@ class SnapshotPatcher(
             // a token named like a card counts among the named permanents ([Snapshotter.diff])
             val want = (eot.tokens[side] ?: 0) + namedTokens(s, seats, eot, side)
             if (tokens.size > want) {
-                for (id in tokens.takeLast(tokens.size - want)) {
+                // keep the tokens that stand for a named permanent of the record (a copy, possibly just made)
+                val stands = missingNamed(s, seats, eot, side).toMutableMap()
+                val keep = tokens.filter { id ->
+                    val n = snapshotter.name(s, id)
+                    val left = stands[n] ?: 0
+                    if (left > 0) stands[n!!] = left - 1
+                    left > 0
+                }.toSet()
+                for (id in (tokens.filterNot { it in keep } + tokens.filter { it in keep }).take(tokens.size - want)) {
                     s = s.removeEntity(id)
                     edits += "-$side:token"
                 }
@@ -182,11 +194,15 @@ class SnapshotPatcher(
 
     private fun namedTokens(s: GameState, seats: Seats, eot: EotSpec, side: String): Int {
         val snap = snapshotter.take(s, seats)
-        val recorded = Snapshotter.counts(eot.battlefield[side].orEmpty())
-        val named = snap.battlefield[side].orEmpty()
-        return snap.tokenNames[side].orEmpty().entries.sumOf { (name, k) ->
-            minOf(k, maxOf(0, (recorded[name] ?: 0) - (named[name] ?: 0)))
-        }
+        val short = missingNamed(s, seats, eot, side)
+        return snap.tokenNames[side].orEmpty().entries.sumOf { (name, k) -> minOf(k, short[name] ?: 0) }
+    }
+
+    /** Record names [side]'s non-token permanents fall short of, which a token of that name stands for. */
+    private fun missingNamed(s: GameState, seats: Seats, eot: EotSpec, side: String): Map<String, Int> {
+        val named = snapshotter.take(s, seats).battlefield[side].orEmpty()
+        return Snapshotter.counts(eot.battlefield[side].orEmpty())
+            .mapValues { (n, k) -> k - (named[n] ?: 0) }.filterValues { it > 0 }
     }
 
     private fun extra(s: GameState, seats: Seats, eot: EotSpec, side: String): Map<String, Int> {
@@ -229,13 +245,13 @@ class SnapshotPatcher(
 
     /**
      * A card called [name] that [side] has nowhere, made for a move to [zone]: for the battlefield, a
-     * token when a permanent of that name is already on it (a copy), else a new card in its owner's
+     * token when [side] already controls a permanent of that name (a copy), else a new card in its owner's
      * exile, to be moved from there. Null if the engine has no such card.
      */
     private fun makeCard(s: GameState, seats: Seats, side: String, name: String, zone: Zone): Pair<GameState, EntityId>? {
         val def = registry.getCard(snapshotter.engineName(name)) ?: return null
         val player = seats.of(side)
-        val token = zone == Zone.BATTLEFIELD && s.getBattlefield().any { snapshotter.name(s, it) == name }
+        val token = zone == Zone.BATTLEFIELD && s.controlledBattlefield(player).any { snapshotter.name(s, it) == name }
         val (id, next) = s.newEntity()
         var container = CardEntityFactory.create(def, player).with(OwnerComponent(player)).with(ControllerComponent(player))
         if (token) container = container.with(TokenComponent)
