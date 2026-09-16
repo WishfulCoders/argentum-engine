@@ -44,7 +44,7 @@ data class GameRecord(
     val probeAffordable: Int = 0,
     val probeStranded: Int = 0,
     val probeStrandedCards: Int = 0,
-    /** Windows where a land in hand would have cast something stranded, and where the AI played another. */
+    /** Turns where a land in hand would have cast something stranded, and those where the AI never played one. */
     val probeFixable: Int = 0,
     val probeFixMissed: Int = 0,
     val millis: Long = 0,

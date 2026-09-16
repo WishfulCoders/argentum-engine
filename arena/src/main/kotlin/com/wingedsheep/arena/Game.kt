@@ -91,11 +91,15 @@ class GameRunner(
      * pair that does attribute it. At a window where the land drop is still available, each land in
      * hand is played in a copy of the state and the casts are re-enumerated:
      *
-     *  - [fixable] — windows where some land in hand would have made a stranded card castable.
-     *  - [fixMissed] — of those, the ones where the AI then played a different land, or no land.
+     *  - [fixable] — **turns** in which, at some window, a land in hand would have made a stranded
+     *    card castable.
+     *  - [fixMissed] — of those turns, the ones in which the AI never played any of those lands.
      *
-     * [fixMissed] is an error the AI owns: it was holding both the answer and the question. It is a
-     * lower bound, because a window *after* a wrong land drop no longer has a drop to check.
+     * Counted per turn, not per window, on purpose: an AI that casts something first and plays the
+     * fixing land later the same turn is not making a mistake, and a per-window count would score every
+     * window before the land as a miss. [fixMissed] is an error the AI owns — it held both the answer
+     * and the question for a whole turn. It is still a lower bound: a turn whose *first* window came
+     * after a wrong land drop has no drop left to check.
      */
     data class StrandedProbe(
         val windows: Int = 0,
@@ -145,8 +149,18 @@ class GameRunner(
         var probeFixMissed = 0
         val probeStrandedIds = mutableSetOf<EntityId>()
         val probeId = probeSeat?.let { seatIds[it] }
-        /** Set for exactly one action: the land drops that would have cast something stranded. */
-        var probeFixingLands: Set<EntityId>? = null
+        // Per-turn accounting for fixable / fixMissed; see StrandedProbe.
+        var turnFixing = mutableSetOf<EntityId>()
+        var turnLandPlayed: EntityId? = null
+        var probeTurn = -1
+        fun flushProbeTurn() {
+            if (turnFixing.isNotEmpty()) {
+                probeFixable++
+                if (turnLandPlayed == null || turnLandPlayed !in turnFixing) probeFixMissed++
+            }
+            turnFixing = mutableSetOf()
+            turnLandPlayed = null
+        }
         val maxPlayerTurns = maxTurnsPerSeat * decks.size
         try {
             while (!state.gameOver && state.turnNumber < maxPlayerTurns && actionCount < maxActions) {
@@ -174,6 +188,10 @@ class GameRunner(
                 if (priorityPlayer == null) {
                     reason = "noPriority(turn=${state.turnNumber})"
                     break
+                }
+                if (probeId != null && state.turnNumber != probeTurn) {
+                    flushProbeTurn()
+                    probeTurn = state.turnNumber
                 }
                 if (probeId != null && priorityPlayer == probeId &&
                     state.activePlayerId == probeId && state.stack.isEmpty() &&
@@ -213,18 +231,13 @@ class GameRunner(
                                 .enumerate(after.state, probeId, EnumerationMode.ACTIONS_ONLY)
                                 .any { it.affordable && (it.action as? CastSpell)?.cardId in strandedHere }
                         }.mapNotNull { (it.action as? PlayLand)?.cardId }.toSet()
-                        if (fixing.isNotEmpty()) {
-                            probeFixable++
-                            probeFixingLands = fixing
-                        }
+                        turnFixing += fixing
                     }
                 }
                 actionCount++
                 val action = aiFor(priorityPlayer).chooseAction(state)
-                if (probeFixingLands != null) {
-                    val played = (action as? PlayLand)?.cardId
-                    if (played == null || played !in probeFixingLands!!) probeFixMissed++
-                    probeFixingLands = null
+                if (probeId != null && priorityPlayer == probeId && action is PlayLand && turnLandPlayed == null) {
+                    turnLandPlayed = action.cardId
                 }
                 val r = processor.process(state, action).result
                 val next = if (r.error != null) {
@@ -249,6 +262,7 @@ class GameRunner(
             if (printTraces) e.printStackTrace()
             reason = "exception(${e::class.simpleName}: ${e.message?.take(200)})"
         }
+        if (probeId != null) flushProbeTurn()
         val winnerSeat = if (state.gameOver) state.winnerId?.let { bySeat[it] } else null
         return Outcome(
             winnerSeat, state.turnNumber, actionCount, illegal, seatIds.map { state.lifeTotal(it) }, reason,
