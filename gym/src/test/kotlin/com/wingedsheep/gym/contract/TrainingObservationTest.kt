@@ -1,9 +1,11 @@
 package com.wingedsheep.gym.contract
 
 import com.wingedsheep.engine.core.GameConfig
+import com.wingedsheep.engine.core.CastSpell
 import com.wingedsheep.engine.core.PassPriority
 import com.wingedsheep.engine.core.PlayerConfig
 import com.wingedsheep.gym.GameEnvironment
+import com.wingedsheep.engine.legalactions.LegalAction
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.ComponentContainer
 import com.wingedsheep.engine.state.GameState
@@ -127,6 +129,22 @@ class TrainingObservationTest : FunSpec({
         val stepResult = env.step(legal.action)
         stepResult.state.shouldNotBeNull()
         env.stepCount shouldBeGreaterThan 0
+    }
+
+    test("a sourced action is grounded to its visible card entity") {
+        val env = newEnv()
+        val me = env.playerIds[0]
+        val cardId = env.state.getHand(me).first()
+        val legal = LegalAction(
+            action = CastSpell(me, cardId),
+            actionType = "CastSpell",
+            description = "Cast the visible card",
+        )
+
+        val action = (ObservationBuilder(env.cardRegistry).build(env.state, me, listOf(legal))
+            .observation as TrainingObservation).legalActions.single()
+
+        action.sourceEntityId shouldBe cardId
     }
 
     test("opponent hand is hidden by default, visible when revealAll=true") {

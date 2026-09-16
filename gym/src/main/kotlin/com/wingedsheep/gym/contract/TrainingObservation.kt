@@ -318,6 +318,11 @@ data class LegalActionView(
      */
     val validBlockers: List<EntityId> = emptyList(),
     /**
+     * Pairwise-legal attackers for each [validBlockers] entry. Whole-declaration constraints such
+     * as menace and global blocker caps still apply and are enforced when stepping.
+     */
+    val validBlockerAssignments: Map<EntityId, List<EntityId>> = emptyMap(),
+    /**
      * How many attackers each blocker may block at once — absent means the default one (CR 509.1a).
      * A declaration exceeding a blocker's limit is rejected, so a caller building
      * `ActionParams.blockers` has to respect it.
