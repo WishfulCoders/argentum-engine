@@ -158,6 +158,9 @@ fun main(args: Array<String>) {
  *   `-Darena.holdupStaticWeight` (default upstream's 0.75). Both sample the opponent's hidden cards
  *   ([AiProfile.determinizeHiddenInformation]), so a playout never plays their real hand.
  *
+ * - `idle`: in the last sorcery-speed window of its turn, a sorcery-speed cast needs to beat passing only by
+ *   `-Darena.idleAllowance` (default 1.0) ([AiProfile.spendIdleManaAtSorcerySpeed], `docs/33` §13).
+ *
  * So `raceclock+timing+correction-actions` is the race clock, the hold rules and the correction together.
  * An apprentice or correction that did not load is an error, not a silent fallback to the default evaluator.
  */
@@ -188,6 +191,10 @@ private fun withToken(p: AiProfile, token: String): AiProfile {
                 id = "${id}-$weight" + if (scaled) "-scaled" else "",
                 manaReserveWeight = weight, manaReserveScalesWithDeck = scaled,
             )
+        }
+        "idle" -> {
+            val allowance = System.getProperty("arena.idleAllowance")?.toDouble() ?: 1.0
+            p.copy(id = "$id-$allowance", spendIdleManaAtSorcerySpeed = allowance)
         }
         "rollout" -> p.copy(id = id, rollouts = RolloutSettings.DEFAULT, determinizeHiddenInformation = true)
         "holdup" -> {

@@ -30,9 +30,11 @@ import com.wingedsheep.engine.core.GameAction
 import com.wingedsheep.engine.legalactions.LegalAction
 import com.wingedsheep.engine.legalactions.MeaningfulActionFilter
 import com.wingedsheep.engine.state.GameState
+import com.wingedsheep.engine.state.components.battlefield.TappedComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
 import com.wingedsheep.sdk.core.Format
+import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.ManaSymbol
 import com.wingedsheep.sdk.core.Step
@@ -101,6 +103,8 @@ class Strategist(
     private val holdCountersForBetterSpells: Boolean = false,
     /** [AiProfile.cashCantripsInTheEndStep] — passed straight through to [HoldPolicy]. */
     private val cashCantripsInTheEndStep: Boolean = false,
+    /** [AiProfile.spendIdleManaAtSorcerySpeed]; 0 is off. */
+    private val idleManaAllowance: Double = 0.0,
     /**
      * [AiProfile.holdFlashPermanentsForAmbush] — passed straight through to [HoldPolicy], which
      * hands it to [com.wingedsheep.ai.engine.knowledge.AmbushWindow].
@@ -289,7 +293,13 @@ class Strategist(
         val adjusted = (firstCandidate until leaves.size).map { i ->
             Triple(leaves[i], leafScores[i], adjustScore(evaluationState, leaves[i], playerId, leafScores[i], passScore))
         }
-        val scored = adjusted.map { (action, _, adjustment) -> action to adjustment.score }
+        // The last sorcery-speed window of our turn: a sorcery-speed cast that only ties passing still
+        // beats letting the mana go at cleanup. See [AiProfile.spendIdleManaAtSorcerySpeed].
+        val idleWindow = idleManaAllowance > 0.0 && lastSorcerySpeedWindow(state, playerId)
+        val scored = adjusted.map { (action, _, adjustment) ->
+            val bonus = if (idleWindow && isSorcerySpeedCast(state, action)) idleManaAllowance else 0.0
+            action to adjustment.score + bonus
+        }
 
         // On the opponent's end step, unspent mana is about to be wasted. Reduce the pass threshold
         // so the AI is more willing to use instants rather than letting mana evaporate.
@@ -618,6 +628,32 @@ class Strategist(
             ),
         )
     }
+
+    /**
+     * Our own postcombat main phase with an empty stack, and nothing in hand we could cast at instant
+     * speed with the lands still untapped — so mana left now is mana wasted.
+     */
+    private fun lastSorcerySpeedWindow(state: GameState, playerId: EntityId): Boolean {
+        if (!state.isActiveTurnFor(playerId) || state.step != Step.POSTCOMBAT_MAIN || state.stack.isNotEmpty()) {
+            return false
+        }
+        val untapped = state.projectedState.getBattlefieldControlledBy(playerId).count { id ->
+            state.projectedState.hasType(id, "LAND") && state.getEntity(id)?.has<TappedComponent>() != true
+        }
+        return state.getHand(playerId).none { id ->
+            val card = state.getEntity(id)?.get<CardComponent>() ?: return@none false
+            isInstantSpeed(card) && card.manaValue <= untapped
+        }
+    }
+
+    private fun isSorcerySpeedCast(state: GameState, action: LegalAction): Boolean {
+        val cast = action.action as? CastSpell ?: return false
+        val card = state.getEntity(cast.cardId)?.get<CardComponent>() ?: return false
+        return !isInstantSpeed(card)
+    }
+
+    private fun isInstantSpeed(card: CardComponent): Boolean =
+        !card.typeLine.isLand && (card.typeLine.isInstant || Keyword.FLASH in card.baseKeywords)
 
     /**
      * Apply the two per-card adjustments to a leaf score, in raw evaluator units.

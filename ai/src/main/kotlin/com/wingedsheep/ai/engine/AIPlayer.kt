@@ -316,6 +316,7 @@ class AIPlayer(
                     holdRemovalForBetterTargets = profile.holdRemovalForBetterTargets,
                     holdCountersForBetterSpells = profile.holdCountersForBetterSpells,
                     cashCantripsInTheEndStep = profile.cashCantripsInTheEndStep,
+                    idleManaAllowance = profile.spendIdleManaAtSorcerySpeed,
                     holdFlashPermanentsForAmbush = profile.holdFlashPermanentsForAmbush,
                     holdExpiringGrantsForCombat = profile.holdExpiringGrantsForCombat,
                     // Same seam as `CombatAdvisor`'s `lifeWeight`: a raw Phase 9 profile resolves
