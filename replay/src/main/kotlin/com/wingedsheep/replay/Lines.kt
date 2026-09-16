@@ -52,6 +52,8 @@ data class GameLine(
     val user: EntityId,
     val oppo: EntityId,
     val steps: List<LineStep>,
+    /** Half-turns before [through] with no steps: skipped by a resync (C2), the state rewritten to their snapshot. */
+    val gaps: List<Int> = emptyList(),
 )
 
 @Serializable
@@ -83,9 +85,9 @@ class LineWriter(registry: CardRegistry) {
     private val enumerator = LegalActionEnumerator.create(registry)
     private val observations = ObservationBuilder(registry)
 
-    fun line(spec: GameSpec, result: GameResult, seats: Seats, steps: List<Move>, through: Int): GameLine =
+    fun line(spec: GameSpec, result: GameResult, seats: Seats, steps: List<Move>, through: Int, gaps: List<Int> = emptyList()): GameLine =
         GameLine(spec.gameId, spec.set, result.status, spec.halfTurns.size, through, seats.user, seats.oppo,
-            steps.map { step(it, seats) })
+            steps.map { step(it, seats) }, gaps)
 
     private fun step(step: Move, seats: Seats): LineStep {
         val s = step.before

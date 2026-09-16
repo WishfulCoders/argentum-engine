@@ -1,5 +1,6 @@
 package com.wingedsheep.replay
 
+import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -82,6 +83,7 @@ data class EotSpec(
 )
 
 /** One line of the harness output. */
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 data class GameResult(
     val gameId: String,
@@ -97,6 +99,15 @@ data class GameResult(
     /** Search nodes expanded for each half-turn. */
     val nodes: List<Int> = emptyList(),
     val millis: Long = 0,
+    /** C2 (`-Dreplay.resync=true`): half-turns skipped by a resync to their snapshot. */
+    @EncodeDefault(EncodeDefault.Mode.NEVER) val gaps: List<Int> = emptyList(),
+    /** Half-turns rebuilt, in order or after a resync. */
+    @EncodeDefault(EncodeDefault.Mode.NEVER) val matched: Int? = null,
+    /** Edits each resync's state needed ([SnapshotPatcher.lastEdits]), one per gap. */
+    @EncodeDefault(EncodeDefault.Mode.NEVER) val resyncEdits: List<Int> = emptyList(),
+    /** Where a game with gaps stopped (the last half-turn, or a failed resync); null if it ran to the end. */
+    @EncodeDefault(EncodeDefault.Mode.NEVER) val stoppedAt: Int? = null,
+    @EncodeDefault(EncodeDefault.Mode.NEVER) val stopReason: String? = null,
 )
 
 @OptIn(ExperimentalSerializationApi::class)
