@@ -163,6 +163,7 @@ class Reconstructor(
         val nodeCounts = mutableListOf<Int>()
         val gapList = mutableListOf<Int>()
         val editCounts = mutableListOf<Int>()
+        val madeCards = mutableListOf<String>()
         var firstFail: Int? = null
         var firstReason: String? = null
         var matched = 0
@@ -173,7 +174,7 @@ class Reconstructor(
         // with gaps, the game counts as failed at its first break; the rest says how far resyncs took it
         fun resynced(stoppedAt: Int?, why: String?) = result("failed", firstFail!!, firstFail, firstReason).copy(
             gaps = gapList.toList(), matched = matched, resyncEdits = editCounts.toList(),
-            stoppedAt = stoppedAt, stopReason = why,
+            resyncMade = madeCards.toList(), stoppedAt = stoppedAt, stopReason = why,
         )
 
         acceptedLine = null
@@ -238,6 +239,7 @@ class Reconstructor(
                 gapList += i
                 gaps = gapList.toList()
                 editCounts += resyncEditCount
+                madeCards += resyncMade.map { "$i:$it" }
                 beam = restarts
                 beamSizes += beam.size
                 acceptedLine = beam.first().line
@@ -265,6 +267,8 @@ class Reconstructor(
     private var resyncError: String? = null
     /** Edits the last successful [resyncStep]'s first state needed. */
     private var resyncEditCount = 0
+    /** Cards the last successful [resyncStep]'s first state made ([SnapshotPatcher.lastMade]). */
+    private var resyncMade: List<String> = emptyList()
 
     /**
      * The states to replay half-turn [i] + 1 from, when half-turn [i] could not be rebuilt: from each
@@ -308,8 +312,11 @@ class Reconstructor(
                 continue
             }
             if (!seen.add(StateProgress.digest(next))) continue
-            if (out.isEmpty()) resyncEditCount = patcher.lastEdits.size
-            if (tracing) tracer!!.line("### resync: ${patcher.lastEdits.joinToString(", ")}")
+            if (out.isEmpty()) {
+                resyncEditCount = patcher.lastEdits.size
+                resyncMade = patcher.lastMade
+            }
+            if (tracing) tracer!!.line("### resync: ${patcher.lastEdits.joinToString(", ")}${patcher.lastMade.joinToString("") { "; made $it" }}")
             out += Kept(next, k.line)
         }
         return out.take(beamWidth)

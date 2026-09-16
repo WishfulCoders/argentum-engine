@@ -105,6 +105,8 @@ data class GameResult(
     @EncodeDefault(EncodeDefault.Mode.NEVER) val matched: Int? = null,
     /** Edits each resync's state needed ([SnapshotPatcher.lastEdits]), one per gap. */
     @EncodeDefault(EncodeDefault.Mode.NEVER) val resyncEdits: List<Int> = emptyList(),
+    /** Cards a resync made because their owner had none, "<half-turn>:<side>:<zone>:<name>" ([SnapshotPatcher.lastMade]). */
+    @EncodeDefault(EncodeDefault.Mode.NEVER) val resyncMade: List<String> = emptyList(),
     /** Where a game with gaps stopped (the last half-turn, or a failed resync); null if it ran to the end. */
     @EncodeDefault(EncodeDefault.Mode.NEVER) val stoppedAt: Int? = null,
     @EncodeDefault(EncodeDefault.Mode.NEVER) val stopReason: String? = null,

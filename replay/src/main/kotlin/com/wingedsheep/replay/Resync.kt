@@ -26,8 +26,10 @@ import com.wingedsheep.sdk.model.EntityId
  * most plausibly is. What the snapshot does not show is guessed and not searched over: permanents
  * enter untapped with no counters beyond their intrinsic ones, an Aura goes on the first creature of
  * the side it most likely enchants, a removed permanent goes to its owner's graveyard, a missing token
- * is a copy of one already on the battlefield (else a vanilla creature made a token). [patch] returns null, with [lastError] set, when it
- * cannot make the snapshot match.
+ * is a copy of one already on the battlefield (else a vanilla creature made a token). A card its owner
+ * has nowhere (a copy, a card from outside the listed deck) is made: a token when a permanent of that
+ * name is on the battlefield, else a new card ([lastMade]). [patch] returns null, with [lastError] set,
+ * when it cannot make the snapshot match.
  */
 class SnapshotPatcher(
     private val registry: CardRegistry,
@@ -42,9 +44,14 @@ class SnapshotPatcher(
     /** What the last successful [patch] changed, for the trace and the result. */
     var lastEdits: List<String> = emptyList()
         private set
+    /** Cards the last successful [patch] made because their owner had none ("user:battlefield:Name token", with where else the name was). */
+    var lastMade: List<String> = emptyList()
+        private set
+    private val made = mutableListOf<String>()
 
     fun patch(given: GameState, seats: Seats, eot: EotSpec): GameState? {
         lastError = null
+        made.clear()
         val edits = mutableListOf<String>()
         var s = given
         fun fail(why: String): GameState? { lastError = why; return null }
@@ -76,8 +83,10 @@ class SnapshotPatcher(
             val wanted = missing(s, seats, eot, side).flatMap { (n, k) -> List(k) { n } }
                 .sortedBy { if (isAura(it)) 1 else 0 }
             for (name in wanted) {
-                val (found, card) = findCard(s, seats, side, name, eot) ?: return fail("resync: no $name for $side's battlefield")
-                s = move(found, card, Zone.BATTLEFIELD, player) ?: return fail("resync: could not put $side's $name onto the battlefield")
+                val (found, card) = findCard(s, seats, side, name, eot) ?: makeCard(s, seats, side, name, Zone.BATTLEFIELD)
+                    ?: return fail("resync: no $name for $side's battlefield")
+                // a made token is on the battlefield already
+                s = if (card in found.getBattlefield()) found else move(found, card, Zone.BATTLEFIELD, player) ?: return fail("resync: could not put $side's $name onto the battlefield")
                 if (isAura(name)) s = attach(s, seats, side, card) ?: return fail("resync: no host for $side's $name")
                 edits += "+$side:$name"
             }
@@ -126,10 +135,11 @@ class SnapshotPatcher(
         for ((name, k) in handWant) {
             val short = k - (handNow[name] ?: 0)
             repeat(short) {
-                val id = (named(s, s.getGraveyard(seats.user), name) + named(s, s.getExile(seats.user), name) +
-                    named(s, s.getLibrary(seats.user), name).asReversed()).firstOrNull()
+                val (found, id) = (named(s, s.getGraveyard(seats.user), name) + named(s, s.getExile(seats.user), name) +
+                    named(s, s.getLibrary(seats.user), name).asReversed()).firstOrNull()?.let { s to it }
+                    ?: makeCard(s, seats, "user", name, Zone.HAND)
                     ?: return fail("resync: no $name for the user's hand")
-                s = move(s, id, Zone.HAND) ?: return fail("resync: could not return $name to hand")
+                s = move(found, id, Zone.HAND) ?: return fail("resync: could not return $name to hand")
                 edits += "+hand:$name"
             }
         }
@@ -152,6 +162,7 @@ class SnapshotPatcher(
         val diff = snapshotter.diff(snapshotter.take(s, seats), eot)
         if (diff.isNotEmpty()) return fail("resync: still differs: ${diff.joinToString("; ")}")
         lastEdits = edits
+        lastMade = made.toList()
         return s
     }
 
@@ -207,11 +218,40 @@ class SnapshotPatcher(
             named(s, s.getGraveyard(player), name) + named(s, s.getExile(player), name) +
             named(s, s.getLibrary(player), name).asReversed() + inHand
         order.firstOrNull()?.let { return s to it }
+        // the other player's card: stolen, or reanimated or played from their graveyard or exile
+        val theirs = seats.of(other(side))
+        (named(s, s.getGraveyard(theirs), name) + named(s, s.getExile(theirs), name)).firstOrNull()?.let { return s to it }
         if (side != "oppo") return null
         val slot = s.getLibrary(player).lastOrNull { s.getEntity(it)?.has<RevealedToComponent>() != true } ?: return null
         val written = materialize(s, mapOf(slot to name)) ?: return null
         return written to slot
     }
+
+    /**
+     * A card called [name] that [side] has nowhere, made for a move to [zone]: for the battlefield, a
+     * token when a permanent of that name is already on it (a copy), else a new card in its owner's
+     * exile, to be moved from there. Null if the engine has no such card.
+     */
+    private fun makeCard(s: GameState, seats: Seats, side: String, name: String, zone: Zone): Pair<GameState, EntityId>? {
+        val def = registry.getCard(snapshotter.engineName(name)) ?: return null
+        val player = seats.of(side)
+        val token = zone == Zone.BATTLEFIELD && s.getBattlefield().any { snapshotter.name(s, it) == name }
+        val (id, next) = s.newEntity()
+        var container = CardEntityFactory.create(def, player).with(OwnerComponent(player)).with(ControllerComponent(player))
+        if (token) container = container.with(TokenComponent)
+        val where = locate(s, seats, name)
+        made += "$side:${zone.name.lowercase()}:$name${if (token) " token" else ""}${if (where.isEmpty()) "" else " (elsewhere: $where)"}"
+        // a token is created where it is wanted; a card waits in exile for [move]
+        val home = if (token) ZoneKey(player, Zone.BATTLEFIELD) else ZoneKey(player, Zone.EXILE)
+        val placed = next.withEntity(id, container).addToZone(home, id)
+        return placed to id
+    }
+
+    /** Where cards called [name] are, for [lastMade]: "user.graveyard stack …". */
+    private fun locate(s: GameState, seats: Seats, name: String): String =
+        (s.zones.flatMap { (key, ids) -> ids.filter { snapshotter.name(s, it) == name }.map { "${seats.sideOf(key.ownerId)}.${key.zoneType.name.lowercase()}" } } +
+            s.stack.filter { snapshotter.name(s, it) == name }.map { "stack" })
+            .groupingBy { it }.eachCount().entries.joinToString(" ") { (k, n) -> if (n > 1) "$k×$n" else k }
 
     private fun move(s: GameState, id: EntityId, zone: Zone, controller: EntityId? = null, placeBottom: Boolean = false): GameState? {
         val options = ZoneEntryOptions(
