@@ -1,6 +1,7 @@
 package com.wingedsheep.arena
 
 import com.wingedsheep.ai.engine.AiProfile
+import com.wingedsheep.ai.engine.ResponseLookaheadStats
 import com.wingedsheep.ai.engine.evaluation.EvalWeights
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.mtg.sets.MtgSetCatalog
@@ -128,6 +129,9 @@ fun main(args: Array<String>) {
         }
     }
     pool.shutdown()
+    // Only ever non-zero for an arm that switched the hook on, and the one number that separates
+    // "the lookahead is wrong" from "the lookahead never ran" (mtg-draft-ai `docs/27` §7.4).
+    if (ResponseLookaheadStats.windows.get() > 0) println("  lookahead: $ResponseLookaheadStats")
 }
 
 /**

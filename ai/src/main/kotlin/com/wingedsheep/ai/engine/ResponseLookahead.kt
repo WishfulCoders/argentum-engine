@@ -9,6 +9,7 @@ import com.wingedsheep.engine.state.components.battlefield.TappedComponent
 import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.model.GameRng
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * What the opponent does when a candidate of ours is on the stack and priority reaches them.
@@ -95,5 +96,31 @@ internal fun couldRespond(state: GameState, opponentId: EntityId): Boolean {
     return state.projectedState.getBattlefieldControlledBy(opponentId).any { entityId ->
         state.projectedState.hasType(entityId, "LAND") &&
             state.getEntity(entityId)?.has<TappedComponent>() != true
+    }
+}
+
+/**
+ * How often the hook is reached, survives the gate, and actually takes an action.
+ *
+ * Process-wide and free when unread — three [AtomicLong] increments on a path that already
+ * enumerates actions. It exists because the first arena smoke changed 13 of 1,000 games where the
+ * `timing` arm changed ~97, and "the mechanism is wrong" and "the mechanism never runs" are very
+ * different findings that a win rate cannot tell apart.
+ */
+object ResponseLookaheadStats {
+    val windows = AtomicLong()
+    val gatePassed = AtomicLong()
+    val responded = AtomicLong()
+
+    fun reset() {
+        windows.set(0); gatePassed.set(0); responded.set(0)
+    }
+
+    override fun toString(): String {
+        val w = windows.get()
+        val g = gatePassed.get()
+        val r = responded.get()
+        fun pct(part: Long, whole: Long) = if (whole == 0L) "-" else "%.1f%%".format(100.0 * part / whole)
+        return "opponent-priority windows $w, gate passed $g (${pct(g, w)}), responded $r (${pct(r, g)} of those)"
     }
 }

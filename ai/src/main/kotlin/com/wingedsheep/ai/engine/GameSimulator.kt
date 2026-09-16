@@ -320,12 +320,13 @@ class GameSimulator(
                 // Only for someone else's priority — our own windows are the Strategist's to search,
                 // and answering them here would be a second, hidden search inside its leaf.
                 val policy = opponentResponse
-                if (policy != null && !isResponding &&
+                val theirWindow = policy != null && !isResponding &&
                     responses < maxOpponentResponses &&
                     actingPlayer != null && priorityPlayerId != actingPlayer &&
-                    priorityPlayerId !in state.teamOf(actingPlayer) &&
-                    couldRespond(state, priorityPlayerId)
-                ) {
+                    priorityPlayerId !in state.teamOf(actingPlayer)
+                if (theirWindow) ResponseLookaheadStats.windows.incrementAndGet()
+                if (policy != null && theirWindow && couldRespond(state, priorityPlayerId)) {
+                    ResponseLookaheadStats.gatePassed.incrementAndGet()
                     val response = try {
                         isResponding = true
                         policy.respond(state, priorityPlayerId) {
@@ -339,6 +340,7 @@ class GameSimulator(
                         // An illegal response is the policy's mistake, not the candidate's: fall
                         // through to the pass below rather than reporting the candidate illegal.
                         if (attempt.error == null) {
+                            ResponseLookaheadStats.responded.incrementAndGet()
                             current = attempt
                             allEvents = allEvents + current.events
                             iterations++
