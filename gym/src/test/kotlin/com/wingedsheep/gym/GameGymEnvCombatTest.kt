@@ -271,6 +271,56 @@ class GameGymEnvCombatTest : FunSpec({
 
     context("blockers — the DeclareBlockers branch") {
 
+        test("a blocker action exposes the attacker choices for every eligible blocker") {
+            val (env, _) = newEnv()
+            val start = env.observe().observation as TrainingObservation
+
+            val found = env.driveUntil(start) { obs ->
+                val attack = obs.actionOf("DeclareAttackers") ?: return@driveUntil null
+                val battlefield = obs.zones
+                    .filter { it.zoneType == Zone.BATTLEFIELD }
+                    .flatMap { it.cards }
+                val defender = attack.validAttackTargets.firstOrNull { target ->
+                    obs.players.any { it.id == target } && battlefield.any {
+                        it.controllerId == target && !it.tapped
+                    }
+                }
+                attack.takeIf { it.validAttackers.isNotEmpty() && defender != null }
+            }
+            withClue("never reached combat with creatures on both sides") {
+                (found != null).shouldBeTrue()
+            }
+            val (beforeAttack, attack) = found!!
+            val defender = attack.validAttackTargets.first { target ->
+                beforeAttack.players.any { it.id == target } && beforeAttack.zones
+                    .filter { it.zoneType == Zone.BATTLEFIELD }
+                    .flatMap { it.cards }
+                    .any { it.controllerId == target && !it.tapped }
+            }
+            val attacker = attack.validAttackers.first()
+
+            var afterAttack = env.step(
+                attack.actionId,
+                ActionParams(attackers = mapOf(attacker to defender)),
+            ).observation as TrainingObservation
+            var block = afterAttack.actionOf("DeclareBlockers")
+            var passes = 0
+            while (block == null && passes < 20) {
+                val pass = afterAttack.actionOf("PassPriority") ?: break
+                afterAttack = env.step(pass.actionId).observation as TrainingObservation
+                block = afterAttack.actionOf("DeclareBlockers")
+                passes++
+            }
+
+            withClue("the defender should receive a block declaration") {
+                (block != null).shouldBeTrue()
+            }
+            block!!.validBlockerAssignments.keys shouldBe block.validBlockers.toSet()
+            block.validBlockerAssignments.values.forEach { attackers ->
+                attackers shouldBe listOf(attacker)
+            }
+        }
+
         test("blockers params complete the template the enumerator could only offer empty") {
             val (_, environment) = newEnv()
             val blocker = EntityId("blocker")

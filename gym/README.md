@@ -33,6 +33,11 @@ doesn't have to:
   and libraries masked by default), a schema hash for fail-fast contract
   checks, and a state digest usable as an MCTS transposition key.
 
+Legal-action views ground casts, activations and card special actions through
+`sourceEntityId`. Combat templates expose attacker/defender candidates and a
+pairwise `validBlockerAssignments` map; declaration-wide requirements remain
+server-authoritative and are validated when the completed `ActionParams` is stepped.
+
 ## The two entry points
 
 **Direct — `GameEnvironment`.** One env, single-threaded, cheap to fork.

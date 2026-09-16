@@ -267,6 +267,29 @@ internal class BlockPhaseManager(
     }
 
     /**
+     * Pairwise-legal blocker → attacker choices for an action UI or policy mask.
+     *
+     * This deliberately goes through [validateBlocker] rather than only the evasion rules: in a
+     * multiplayer game an otherwise compatible creature cannot block an attacker aimed at a
+     * different defending player. Declaration-wide requirements (menace, can't-block-alone,
+     * global caps and taxes) are validated after the pairs are combined and are not represented by
+     * this map.
+     */
+    fun getValidBlockerAssignments(
+        state: GameState,
+        blockingPlayer: EntityId
+    ): Map<EntityId, List<EntityId>> {
+        val attackers = state.findEntitiesWith<AttackingComponent>().map { it.first }
+        return findPotentialBlockers(state, blockingPlayer)
+            .associateWith { blockerId ->
+                attackers.filter { attackerId ->
+                    validateBlocker(state, blockingPlayer, blockerId, listOf(attackerId)) == null
+                }
+            }
+            .filterValues { it.isNotEmpty() }
+    }
+
+    /**
      * Compute mandatory blocker assignments from floating effects.
      * Returns a map of blocker → list of attackers it must block.
      */

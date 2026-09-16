@@ -1120,29 +1120,14 @@ class TurnManager(
     }
 
     fun getValidBlockers(state: GameState, playerId: EntityId): List<EntityId> {
-        val battlefield = state.getBattlefield()
-        val projected = state.projectedState
+        return getValidBlockerAssignments(state, playerId).keys.toList()
+    }
 
-        return battlefield.filter { entityId ->
-            val container = state.getEntity(entityId) ?: return@filter false
-            container.get<CardComponent>() ?: return@filter false
-            val controller = projected.getController(entityId)
-            val projectedTypes = projected.getProjectedValues(entityId)?.types ?: emptySet()
-
-            if ("CREATURE" !in projectedTypes || controller != playerId) {
-                return@filter false
-            }
-
-            if (container.has<TappedComponent>()) {
-                return@filter false
-            }
-
-            if (!combatManager.canCreatureBlockAnyAttacker(state, entityId, playerId)) {
-                return@filter false
-            }
-
-            true
-        }
+    fun getValidBlockerAssignments(
+        state: GameState,
+        playerId: EntityId
+    ): Map<EntityId, List<EntityId>> {
+        return combatManager.getValidBlockerAssignments(state, playerId)
     }
 
     fun getMandatoryAttackers(state: GameState, playerId: EntityId): List<EntityId> {

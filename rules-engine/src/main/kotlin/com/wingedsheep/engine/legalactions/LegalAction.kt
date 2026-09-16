@@ -81,6 +81,11 @@ data class LegalAction(
     val mandatoryAttackers: List<EntityId>? = null,
     val validAttackTargets: List<EntityId>? = null,
     override val validBlockers: List<EntityId>? = null,
+    /**
+     * Pairwise-legal attackers for each eligible blocker. Whole-declaration requirements such as
+     * menace and global blocker caps still apply when the final map is submitted.
+     */
+    val validBlockerAssignments: Map<EntityId, List<EntityId>>? = null,
     val blockerMaxBlockCounts: Map<EntityId, Int>? = null,
     val mandatoryBlockerAssignments: Map<EntityId, List<EntityId>>? = null,
 

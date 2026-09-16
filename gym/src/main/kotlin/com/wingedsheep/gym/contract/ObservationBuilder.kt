@@ -1,12 +1,16 @@
 package com.wingedsheep.gym.contract
 
 import com.wingedsheep.engine.core.AssignDamageDecision
+import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.core.BatchYesNoDecision
 import com.wingedsheep.engine.core.BatchYesNoResponse
+import com.wingedsheep.engine.core.BottomCards
 import com.wingedsheep.engine.core.BudgetModalDecision
 import com.wingedsheep.engine.core.BudgetModalResponse
 import com.wingedsheep.engine.core.CardsSelectedResponse
+import com.wingedsheep.engine.core.CastSpell
 import com.wingedsheep.engine.core.ChooseColorDecision
+import com.wingedsheep.engine.core.ChooseManaColor
 import com.wingedsheep.engine.core.ChooseModeDecision
 import com.wingedsheep.engine.core.ChooseNumberDecision
 import com.wingedsheep.engine.core.ChooseOptionDecision
@@ -14,18 +18,37 @@ import com.wingedsheep.engine.core.ChooseReplacementDecision
 import com.wingedsheep.engine.core.ChooseTargetsDecision
 import com.wingedsheep.engine.core.ColorChosenResponse
 import com.wingedsheep.engine.core.CombatResolutionDecision
+import com.wingedsheep.engine.core.Concede
+import com.wingedsheep.engine.core.CrewVehicle
+import com.wingedsheep.engine.core.CycleCard
+import com.wingedsheep.engine.core.DeclareAttackers
+import com.wingedsheep.engine.core.DeclareBlockers
 import com.wingedsheep.engine.core.DecisionResponse
 import com.wingedsheep.engine.core.DistributeDecision
+import com.wingedsheep.engine.core.ForetellCard
+import com.wingedsheep.engine.core.GameAction
+import com.wingedsheep.engine.core.KeepHand
 import com.wingedsheep.engine.core.ModesChosenResponse
 import com.wingedsheep.engine.core.NumberChosenResponse
 import com.wingedsheep.engine.core.OptionChosenResponse
 import com.wingedsheep.engine.core.OrderObjectsDecision
+import com.wingedsheep.engine.core.OrderBlockers
+import com.wingedsheep.engine.core.PassPriority
 import com.wingedsheep.engine.core.PendingDecision
 import com.wingedsheep.engine.core.ReorderLibraryDecision
+import com.wingedsheep.engine.core.PlayLand
+import com.wingedsheep.engine.core.PlotCard
+import com.wingedsheep.engine.core.SaddleMount
 import com.wingedsheep.engine.core.SearchLibraryDecision
 import com.wingedsheep.engine.core.SelectCardsDecision
 import com.wingedsheep.engine.core.SelectManaSourcesDecision
 import com.wingedsheep.engine.core.SplitPilesDecision
+import com.wingedsheep.engine.core.SubmitDecision
+import com.wingedsheep.engine.core.SuspendCardFromHand
+import com.wingedsheep.engine.core.TakeMulligan
+import com.wingedsheep.engine.core.TurnFaceUp
+import com.wingedsheep.engine.core.TypecycleCard
+import com.wingedsheep.engine.core.UnlockRoomDoor
 import com.wingedsheep.engine.core.YesNoDecision
 import com.wingedsheep.engine.core.YesNoResponse
 import com.wingedsheep.engine.legalactions.LegalAction
@@ -403,7 +426,7 @@ class ObservationBuilder(
             kind = la.actionType,
             description = la.description,
             affordable = la.affordable,
-            sourceEntityId = null,
+            sourceEntityId = sourceEntityId(la.action),
             targetEntityIds = la.validTargets ?: emptyList(),
             manaCost = la.manaCostString,
             hasXCost = la.hasXCost,
@@ -422,10 +445,37 @@ class ObservationBuilder(
             mandatoryAttackers = la.mandatoryAttackers.orEmpty(),
             validAttackTargets = la.validAttackTargets.orEmpty(),
             validBlockers = la.validBlockers.orEmpty(),
+            validBlockerAssignments = la.validBlockerAssignments.orEmpty(),
             blockerMaxBlockCounts = la.blockerMaxBlockCounts.orEmpty(),
             mandatoryBlockerAssignments = la.mandatoryBlockerAssignments.orEmpty(),
             isDecisionOption = false
         )
+    }
+
+    /** The card or permanent whose visible representation generated this action. */
+    private fun sourceEntityId(action: GameAction): EntityId? = when (action) {
+        is CastSpell -> action.cardId
+        is ActivateAbility -> action.sourceId
+        is CycleCard -> action.cardId
+        is PlotCard -> action.cardId
+        is ForetellCard -> action.cardId
+        is SuspendCardFromHand -> action.cardId
+        is TypecycleCard -> action.cardId
+        is PlayLand -> action.cardId
+        is CrewVehicle -> action.vehicleId
+        is SaddleMount -> action.mountId
+        is TurnFaceUp -> action.sourceId
+        is UnlockRoomDoor -> action.roomId
+        is PassPriority,
+        is DeclareAttackers,
+        is DeclareBlockers,
+        is OrderBlockers,
+        is ChooseManaColor,
+        is SubmitDecision,
+        is TakeMulligan,
+        is KeepHand,
+        is BottomCards,
+        is Concede -> null
     }
 
     // =========================================================================
