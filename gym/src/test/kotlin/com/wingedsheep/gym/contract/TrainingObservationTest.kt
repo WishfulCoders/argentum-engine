@@ -6,6 +6,7 @@ import com.wingedsheep.engine.core.PassPriority
 import com.wingedsheep.engine.core.PlayerConfig
 import com.wingedsheep.gym.GameEnvironment
 import com.wingedsheep.engine.legalactions.LegalAction
+import com.wingedsheep.engine.legalactions.TargetInfo
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.ComponentContainer
 import com.wingedsheep.engine.state.GameState
@@ -145,6 +146,81 @@ class TrainingObservationTest : FunSpec({
             .observation as TrainingObservation).legalActions.single()
 
         action.sourceEntityId shouldBe cardId
+    }
+
+    test("an action exposes complete target, X, and damage-allocation metadata") {
+        val env = newEnv()
+        val me = env.playerIds[0]
+        val cardId = env.state.getHand(me).first()
+        val firstTarget = env.playerIds[1]
+        val secondTarget = env.state.getHand(me).drop(1).first()
+        val legal = LegalAction(
+            action = CastSpell(me, cardId),
+            actionType = "CastSpell",
+            description = "Cast a parameterized spell",
+            validTargets = listOf(firstTarget),
+            targetCount = 2,
+            minTargets = 1,
+            targetRequirements = listOf(
+                TargetInfo(
+                    index = 0,
+                    description = "target player",
+                    minTargets = 1,
+                    maxTargets = 1,
+                    validTargets = listOf(firstTarget),
+                    xConstrainsManaValue = true,
+                ),
+                TargetInfo(
+                    index = 1,
+                    description = "up to one target card",
+                    minTargets = 0,
+                    maxTargets = 1,
+                    validTargets = listOf(secondTarget),
+                    targetZone = "Hand",
+                    mustDifferFromEarlier = true,
+                    xConstrainsCount = true,
+                ),
+            ),
+            manaCostString = "{X}{R}",
+            manaCostPerExtraTarget = "{1}",
+            hasXCost = true,
+            minX = 1,
+            maxAffordableX = 4,
+            xConstrainsTargetManaValue = true,
+            requiresDamageDistribution = true,
+            totalDamageToDistribute = 4,
+            minDamagePerTarget = 1,
+        )
+
+        val action = (ObservationBuilder(env.cardRegistry).build(env.state, me, listOf(legal))
+            .observation as TrainingObservation).legalActions.single()
+
+        action.manaCostPerExtraTarget shouldBe "{1}"
+        action.minX shouldBe 1
+        action.maxAffordableX shouldBe 4
+        action.xConstrainsTargetManaValue.shouldBeTrue()
+        action.targetRequirements shouldBe listOf(
+            TargetRequirementView(
+                index = 0,
+                description = "target player",
+                minTargets = 1,
+                maxTargets = 1,
+                targetEntityIds = listOf(firstTarget),
+                xConstrainsManaValue = true,
+            ),
+            TargetRequirementView(
+                index = 1,
+                description = "up to one target card",
+                minTargets = 0,
+                maxTargets = 1,
+                targetEntityIds = listOf(secondTarget),
+                targetZone = "Hand",
+                mustDifferFromEarlier = true,
+                xConstrainsCount = true,
+            ),
+        )
+        action.totalDamageToDistribute shouldBe 4
+        action.minDamagePerTarget shouldBe 1
     }
 
     test("opponent hand is hidden by default, visible when revealAll=true") {

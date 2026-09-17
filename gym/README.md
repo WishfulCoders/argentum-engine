@@ -37,6 +37,9 @@ Legal-action views ground casts, activations and card special actions through
 `sourceEntityId`. Combat templates expose attacker/defender candidates and a
 pairwise `validBlockerAssignments` map; declaration-wide requirements remain
 server-authoritative and are validated when the completed `ActionParams` is stepped.
+Schema v1.7 also exposes ordered target requirements, X-dependent target constraints,
+per-extra-target costs, and divided-damage bounds. `ActionParams.damageDistribution`
+completes divided-damage spell and activated-ability templates.
 
 ## The two entry points
 

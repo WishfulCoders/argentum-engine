@@ -429,11 +429,34 @@ class ObservationBuilder(
             sourceEntityId = sourceEntityId(la.action),
             targetEntityIds = la.validTargets ?: emptyList(),
             manaCost = la.manaCostString,
+            manaCostPerExtraTarget = la.manaCostPerExtraTarget,
             hasXCost = la.hasXCost,
             maxAffordableX = la.maxAffordableX,
+            minX = la.minX,
             minTargets = la.minTargets,
             maxTargets = la.targetCount,
+            targetRequirements = la.targetRequirements.orEmpty().map {
+                TargetRequirementView(
+                    index = it.index,
+                    description = it.description,
+                    minTargets = it.minTargets,
+                    maxTargets = it.maxTargets,
+                    targetEntityIds = it.validTargets,
+                    targetZone = it.targetZone,
+                    mustDifferFromEarlier = it.mustDifferFromEarlier,
+                    xConstrainsManaValue = it.xConstrainsManaValue,
+                    xConstrainsManaValueExactly = it.xConstrainsManaValueExactly,
+                    xConstrainsPower = it.xConstrainsPower,
+                    xConstrainsCount = it.xConstrainsCount
+                )
+            },
+            xConstrainsTargetManaValue = la.xConstrainsTargetManaValue,
+            xConstrainsTargetManaValueExactly = la.xConstrainsTargetManaValueExactly,
+            xConstrainsTargetPower = la.xConstrainsTargetPower,
+            xConstrainsTargetCount = la.xConstrainsTargetCount,
             requiresDamageDistribution = la.requiresDamageDistribution,
+            totalDamageToDistribute = la.totalDamageToDistribute,
+            minDamagePerTarget = la.minDamagePerTarget,
             isManaAbility = la.isManaAbility,
             // Combat candidates. The enumerator offers one DeclareAttackers / DeclareBlockers action
             // carrying an empty map, so without these the caller has the action but no way to know
