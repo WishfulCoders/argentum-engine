@@ -47,6 +47,11 @@ class GameRunner(
     private val profile: AiProfile,
     private val maxTurnsPerSeat: Int = 50,
     private val maxActions: Int = 20_000,
+    /**
+     * A game whose battlefield holds more permanents than this stops undecided (`board(n)`). Off by default; a
+     * guard the replay's rollouts can opt into (`-Dreplay.rollMaxPermanents`) against a token or copy loop.
+     */
+    private val maxPermanents: Int = Int.MAX_VALUE,
     /** Print the stack trace of an exception that ends a game (the `one` mode). */
     private val printTraces: Boolean = false,
     /** Count [Outcome.holding] (mtg-draft-ai `docs/28` §8); off, a game is not enumerated twice. */
@@ -251,6 +256,13 @@ class GameRunner(
         val maxPlayerTurns = maxTurnsPerSeat * seatIds.size
         try {
             while (!state.gameOver && state.turnNumber < maxPlayerTurns && actionCount < maxActions) {
+                if (maxPermanents < Int.MAX_VALUE) {
+                    val permanents = state.allBattlefieldEntities().size
+                    if (permanents > maxPermanents) {
+                        reason = "board($permanents)"
+                        break
+                    }
+                }
                 if (actionCount - lastProgressAction > STUCK_ACTIONS_PER_TURN) {
                     reason = "stuck(turn=${state.turnNumber},step=${state.step.name})"
                     break

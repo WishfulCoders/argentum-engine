@@ -28,7 +28,35 @@ import kotlinx.serialization.json.jsonObject
 
 /** The feature order of [PrefCandidate.f], and the profile [PrefCandidate.base] scores with: the first line of a prefs file. */
 @Serializable
-data class PrefHeader(val features: List<String>, val baseProfile: String = AiProfile.CURRENT.id)
+data class PrefHeader(
+    val features: List<String>,
+    val baseProfile: String = AiProfile.CURRENT.id,
+    /** Set when the candidates carry rollout labels ([PrefCandidate.roll], mtg-draft-ai `docs/36`). */
+    val roll: RollHeader? = null,
+)
+
+/** How a rollout-labelled prefs file was produced; everything `docs/36` §2 pre-registers. */
+@Serializable
+data class RollHeader(
+    /** The pilot in the user's seat, whose evaluator the targets are for. */
+    val acting: String,
+    /** Opponent pilots, cycled by rollout index; `winsByOpponent` follows this order. */
+    val opponents: List<String>,
+    val rollouts: Int,
+    val seed: Long,
+    /** Whether both libraries were reshuffled per rollout (the no-lookahead discipline). */
+    val shuffle: Boolean,
+    val maxTurnsPerSeat: Int,
+    /** Candidates rolled out per choice at most; the rest are recorded without a label. */
+    val maxCandidates: Int,
+    /** Where the opponent's unseen cards came from ([OppoDeckMode]), lower-case. */
+    val oppoDeck: String = "stub",
+    /** With the donor mode, the donor spec files and how many whole decks they held. */
+    val donors: List<String> = emptyList(),
+    val donorDecks: Int = 0,
+    /** Permanents on the battlefield past which a rollout stops undecided; null = no cap. */
+    val maxPermanents: Int? = null,
+)
 
 /** One of the user's priority choices on a rebuilt line: the move they made and the alternatives. */
 @Serializable
@@ -57,6 +85,8 @@ data class PrefCandidate(
     val base: Double,
     /** Set when the candidate ends the game: whether the user won. */
     val won: Boolean? = null,
+    /** Rollout label ([RolloutWriter]): null when rollouts are off, or this candidate was not sampled. */
+    val roll: RollResult? = null,
 )
 
 /**
@@ -67,7 +97,14 @@ data class PrefCandidate(
  * [TargetSelection.fillHeuristically]'s targets and [base]'s decision responder — and read as
  * [RawBoardFeatures]. One per thread, like [LineWriter].
  */
-class PreferenceWriter(registry: CardRegistry, base: AiProfile = AiProfile.CURRENT) {
+class PreferenceWriter(
+    registry: CardRegistry,
+    base: AiProfile = AiProfile.CURRENT,
+    /** Set to label each candidate by rollout as well as by the human's choice (mtg-draft-ai `docs/36`). */
+    private val rollouts: RolloutWriter? = null,
+    /** With [rollouts], how many of a choice's candidates to roll out — the human's move plus a random sample. */
+    private val maxCandidates: Int = Int.MAX_VALUE,
+) {
     private val enumerator = LegalActionEnumerator.create(registry)
     private val simulator = GameSimulator(registry)
     private val intents = IntentCatalog.of(registry)
@@ -106,10 +143,36 @@ class PreferenceWriter(registry: CardRegistry, base: AiProfile = AiProfile.CURRE
             if (c == null) dropped++ else cands += c
         }
         if (cands.size < 2) return null
-        return PrefRoot(spec.gameId, spec.set, move.halfTurn, index, move.how, dropped, cands)
+        val labelled = rollouts?.let { label(it, spec, state, user, index, cands) } ?: cands.map { it.pref }
+        return PrefRoot(spec.gameId, spec.set, move.halfTurn, index, move.how, dropped, labelled)
     }
 
-    private fun candidate(state: GameState, action: GameAction, type: String, user: EntityId): PrefCandidate? {
+    /**
+     * Rolls [cands] out and returns them with their labels. The human's move (first) is always rolled out;
+     * with a [maxCandidates] cap the rest are a uniform sample, so a capped choice is still an unbiased
+     * comparison — taking the best-scoring alternatives instead would label exactly the candidates the
+     * current evaluator already likes. Every candidate of the choice shares one seed (common random numbers).
+     */
+    private fun label(
+        roller: RolloutWriter, spec: GameSpec, state: GameState, user: EntityId, index: Int, cands: List<Cand>,
+    ): List<PrefCandidate> {
+        val choiceSeed = RolloutWriter.choiceSeed(roller.seed, spec.gameId, index)
+        val decklists = roller.decklists(state)
+        val rest = (1 until cands.size).toMutableList()
+        if (cands.size > maxCandidates) {
+            val rng = java.util.Random(choiceSeed)
+            while (rest.size > maxCandidates - 1) rest.removeAt(rng.nextInt(rest.size))
+        }
+        val picked = rest.toSet() + 0
+        return cands.mapIndexed { i, c ->
+            if (i !in picked) c.pref else c.pref.copy(roll = roller.play(c.quiet, user, decklists, choiceSeed, spec))
+        }
+    }
+
+    /** One candidate: the record, and the quiet state a rollout would continue from. */
+    private data class Cand(val pref: PrefCandidate, val quiet: GameState)
+
+    private fun candidate(state: GameState, action: GameAction, type: String, user: EntityId): Cand? {
         val result = runCatching { simulator.simulate(state, action) }.getOrNull() ?: return null
         val (quiet, code) = when (result) {
             is SimulationResult.Terminal -> result.state to "T"
@@ -120,10 +183,13 @@ class PreferenceWriter(registry: CardRegistry, base: AiProfile = AiProfile.CURRE
         val features = lineJson.encodeToJsonElement(
             RawBoardFeatures.serializer(), RawBoardFeatures.extract(quiet, projected, user, intents),
         ).jsonObject
-        return PrefCandidate(
-            type, code, FEATURES.map { (features[it] as JsonPrimitive).int },
-            baseline.evaluate(quiet, projected, user).coerceIn(-1e9, 1e9),
-            won = if (quiet.gameOver) quiet.winnerId == user else null,
+        return Cand(
+            PrefCandidate(
+                type, code, FEATURES.map { (features[it] as JsonPrimitive).int },
+                baseline.evaluate(quiet, projected, user).coerceIn(-1e9, 1e9),
+                won = if (quiet.gameOver) quiet.winnerId == user else null,
+            ),
+            quiet,
         )
     }
 
