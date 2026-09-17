@@ -11,5 +11,5 @@ package com.wingedsheep.gym.contract
  * what matters.
  */
 object SchemaHash {
-    const val CURRENT: String = "argentum-gym-contract@v1.6-policy-grounding"
+    const val CURRENT: String = "argentum-gym-contract@v1.7-action-parameters"
 }

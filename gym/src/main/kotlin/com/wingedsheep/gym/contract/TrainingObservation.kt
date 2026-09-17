@@ -296,11 +296,21 @@ data class LegalActionView(
     val sourceEntityId: EntityId? = null,
     val targetEntityIds: List<EntityId> = emptyList(),
     val manaCost: String? = null,
+    val manaCostPerExtraTarget: String? = null,
     val hasXCost: Boolean = false,
     val maxAffordableX: Int? = null,
+    val minX: Int = 0,
     val minTargets: Int = 0,
     val maxTargets: Int = 0,
+    /** Every independently constrained target slot, in engine selection order. */
+    val targetRequirements: List<TargetRequirementView> = emptyList(),
+    val xConstrainsTargetManaValue: Boolean = false,
+    val xConstrainsTargetManaValueExactly: Boolean = false,
+    val xConstrainsTargetPower: Boolean = false,
+    val xConstrainsTargetCount: Boolean = false,
     val requiresDamageDistribution: Boolean = false,
+    val totalDamageToDistribute: Int? = null,
+    val minDamagePerTarget: Int? = null,
     val isManaAbility: Boolean = false,
     /**
      * Creatures that may be declared as attackers (`kind == "DeclareAttackers"`), empty otherwise.
@@ -336,6 +346,22 @@ data class LegalActionView(
     val mandatoryBlockerAssignments: Map<EntityId, List<EntityId>> = emptyMap(),
     /** True when this entry was generated from [PendingDecisionView], not a GameAction. */
     val isDecisionOption: Boolean = false
+)
+
+/** Policy-facing form of one independently constrained target requirement. */
+@Serializable
+data class TargetRequirementView(
+    val index: Int,
+    val description: String,
+    val minTargets: Int,
+    val maxTargets: Int,
+    val targetEntityIds: List<EntityId>,
+    val targetZone: String? = null,
+    val mustDifferFromEarlier: Boolean = false,
+    val xConstrainsManaValue: Boolean = false,
+    val xConstrainsManaValueExactly: Boolean = false,
+    val xConstrainsPower: Boolean = false,
+    val xConstrainsCount: Boolean = false
 )
 
 /**

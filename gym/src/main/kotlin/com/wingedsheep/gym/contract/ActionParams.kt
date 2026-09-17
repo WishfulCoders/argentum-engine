@@ -39,13 +39,16 @@ import kotlinx.serialization.Serializable
  *   against the current state: a player id becomes a player target, an object on the stack a spell
  *   target, a battlefield permanent a permanent target, and a card in any other zone a card target.
  * @property xValue The value chosen for X.
+ * @property damageDistribution Target entity id → damage assigned to it for a spell or activated
+ *   ability whose legal-action view has `requiresDamageDistribution = true`.
  */
 @Serializable
 data class ActionParams(
     val attackers: Map<EntityId, EntityId> = emptyMap(),
     val blockers: Map<EntityId, List<EntityId>> = emptyMap(),
     val targets: List<EntityId> = emptyList(),
-    val xValue: Int? = null
+    val xValue: Int? = null,
+    val damageDistribution: Map<EntityId, Int> = emptyMap()
 ) {
     val isEmpty: Boolean
         get() = populatedFields.isEmpty()
@@ -57,6 +60,7 @@ data class ActionParams(
             if (blockers.isNotEmpty()) add("blockers")
             if (targets.isNotEmpty()) add("targets")
             if (xValue != null) add("xValue")
+            if (damageDistribution.isNotEmpty()) add("damageDistribution")
         }
 
     companion object {
@@ -88,20 +92,24 @@ object ActionParameterizer {
             }
 
             is CastSpell -> {
-                params.allowOnly(action, "targets", "xValue")
+                params.allowOnly(action, "targets", "xValue", "damageDistribution")
                 action.copy(
                     targets = params.targets.map { resolveTarget(it, state) }
                         .ifEmpty { action.targets },
-                    xValue = params.xValue ?: action.xValue
+                    xValue = params.xValue ?: action.xValue,
+                    damageDistribution = params.damageDistribution.takeIf { it.isNotEmpty() }
+                        ?: action.damageDistribution
                 )
             }
 
             is ActivateAbility -> {
-                params.allowOnly(action, "targets", "xValue")
+                params.allowOnly(action, "targets", "xValue", "damageDistribution")
                 action.copy(
                     targets = params.targets.map { resolveTarget(it, state) }
                         .ifEmpty { action.targets },
-                    xValue = params.xValue ?: action.xValue
+                    xValue = params.xValue ?: action.xValue,
+                    damageDistribution = params.damageDistribution.takeIf { it.isNotEmpty() }
+                        ?: action.damageDistribution
                 )
             }
 

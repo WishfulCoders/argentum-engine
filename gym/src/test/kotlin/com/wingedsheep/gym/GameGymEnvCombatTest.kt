@@ -1,6 +1,7 @@
 package com.wingedsheep.gym
 
 import com.wingedsheep.engine.core.DeclareBlockers
+import com.wingedsheep.engine.core.CastSpell
 import com.wingedsheep.engine.core.GameConfig
 import com.wingedsheep.engine.core.PlayerConfig
 import com.wingedsheep.engine.registry.CardRegistry
@@ -210,6 +211,22 @@ class GameGymEnvCombatTest : FunSpec({
 
     context("targets and X — the CastSpell / ActivateAbility branch") {
 
+        test("damage-distribution params complete the cast template") {
+            val (_, environment) = newEnv(blazeDeck())
+            val player = environment.state.turnOrder.first()
+            val card = environment.state.getHand(player).first()
+            val target = environment.state.turnOrder.last()
+            val template = CastSpell(player, card)
+
+            val completed = ActionParameterizer.apply(
+                template,
+                ActionParams(damageDistribution = mapOf(target to 3)),
+                environment.state,
+            ) as CastSpell
+
+            completed.damageDistribution shouldBe mapOf(target to 3)
+        }
+
         test("a targeted X spell resolves for the X and at the target the params name") {
             val (env, _) = newEnv(blazeDeck())
             val start = env.observe().observation as TrainingObservation
@@ -344,7 +361,8 @@ class GameGymEnvCombatTest : FunSpec({
             val rejected = listOf(
                 ActionParams(attackers = mapOf(EntityId("a") to EntityId("b"))),
                 ActionParams(targets = listOf(EntityId("a"))),
-                ActionParams(xValue = 1)
+                ActionParams(xValue = 1),
+                ActionParams(damageDistribution = mapOf(EntityId("a") to 1)),
             )
 
             for (params in rejected) {
