@@ -34,9 +34,12 @@ doesn't have to:
   checks, and a state digest usable as an MCTS transposition key.
 
 Legal-action views ground casts, activations and card special actions through
-`sourceEntityId`. Combat templates expose attacker/defender candidates and a
-pairwise `validBlockerAssignments` map; declaration-wide requirements remain
-server-authoritative and are validated when the completed `ActionParams` is stepped.
+`sourceEntityId`. Schema v1.9 exposes live combat state on battlefield entities:
+`attacking` and `attackTargetId` for attackers, plus `blockingEntityIds` and
+`blockedByEntityIds` in both directions. Combat templates expose attacker/defender candidates, a
+pairwise `validBlockerAssignments` map, and `blockDeclarationConstraints` for declaration-wide
+minimum/maximum blocker counts, global blocker caps, co-blocker requirements, and blocker taxes.
+The engine remains authoritative and validates the completed `ActionParams` when it is stepped.
 Schema v1.7 also exposes ordered target requirements, X-dependent target constraints,
 per-extra-target costs, and divided-damage bounds. `ActionParams.damageDistribution`
 completes divided-damage spell and activated-ability templates. Schema v1.8 adds a typed
