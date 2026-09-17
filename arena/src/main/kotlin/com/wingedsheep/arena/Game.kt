@@ -42,9 +42,8 @@ class GameRunner(
     private val maxTurnsPerSeat: Int = 50,
     private val maxActions: Int = 20_000,
     /**
-     * A game whose battlefield holds more permanents than this stops undecided (`board(n)`). Off by default. A
-     * runaway board (a token or copy loop the AI keeps feeding) slows every action until a 20,000-action game
-     * takes hours; the replay's rollouts cap it (mtg-draft-ai `docs/36` §9).
+     * A game whose battlefield holds more permanents than this stops undecided (`board(n)`). Off by default; a
+     * guard the replay's rollouts can opt into (`-Dreplay.rollMaxPermanents`) against a token or copy loop.
      */
     private val maxPermanents: Int = Int.MAX_VALUE,
     /** Print the stack trace of an exception that ends a game (the `one` mode). */
