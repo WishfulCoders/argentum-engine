@@ -54,6 +54,8 @@ data class RollHeader(
     /** With the donor mode, the donor spec files and how many whole decks they held. */
     val donors: List<String> = emptyList(),
     val donorDecks: Int = 0,
+    /** Permanents on the battlefield past which a rollout stops undecided; null = no cap. */
+    val maxPermanents: Int? = null,
 )
 
 /** One of the user's priority choices on a rebuilt line: the move they made and the alternatives. */

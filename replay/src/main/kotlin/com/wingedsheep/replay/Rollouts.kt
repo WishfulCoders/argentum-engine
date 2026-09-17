@@ -46,8 +46,10 @@ class RolloutWriter(
     maxTurnsPerSeat: Int = 50,
     /** Where the opponent's unseen cards come from; [OppoDeckMode.STUB] keeps the rebuilt state's. */
     val oppoDecks: OppoDeckSampler? = null,
+    /** A rollout whose battlefield passes this many permanents stops undecided ([GameRunner]'s `maxPermanents`). */
+    maxPermanents: Int = Int.MAX_VALUE,
 ) {
-    private val runner = GameRunner(registry, acting.second, maxTurnsPerSeat = maxTurnsPerSeat)
+    private val runner = GameRunner(registry, acting.second, maxTurnsPerSeat = maxTurnsPerSeat, maxPermanents = maxPermanents)
 
     /** Every card each player owns, by name: the deck their opponent's model may assume ([PlayOn] does the same). */
     fun decklists(state: GameState): Map<EntityId, OpponentModel> =
@@ -68,6 +70,7 @@ class RolloutWriter(
         var illegal = 0
         var turns = 0
         var stubbed = 0
+        var capped = 0
         val winsByOpponent = IntArray(opponents.size)
         val playedByOpponent = IntArray(opponents.size)
         val outcomes = StringBuilder(n)
@@ -88,6 +91,7 @@ class RolloutWriter(
                 outcomes.append('U')
                 continue
             }
+            if (outcome.reason.startsWith("board(")) capped++
             illegal += outcome.illegal
             turns += outcome.turns
             when (outcome.winnerSeat?.let { seats[it] }) {
@@ -98,7 +102,7 @@ class RolloutWriter(
         }
         return RollResult(
             n, wins, undecided, illegal, turns, winsByOpponent.toList(), playedByOpponent.toList(), outcomes.toString(),
-            stubbed,
+            stubbed, capped,
         )
     }
 
@@ -163,4 +167,6 @@ data class RollResult(
     val outcomes: String,
     /** Rollouts that kept the stub opponent deck because resampling it was refused (`OppoDeckSampler`). */
     val stubbed: Int = 0,
+    /** Rollouts stopped undecided by the permanent cap (`-Dreplay.rollMaxPermanents`, `docs/36` §9). */
+    val capped: Int = 0,
 )
