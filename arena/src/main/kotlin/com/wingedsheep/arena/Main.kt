@@ -1,6 +1,7 @@
 package com.wingedsheep.arena
 
 import com.wingedsheep.ai.engine.AiProfile
+import com.wingedsheep.ai.engine.ResponseLookaheadStats
 import com.wingedsheep.ai.engine.evaluation.EvalWeights
 import com.wingedsheep.ai.engine.rollout.HoldingGatedEvaluator
 import com.wingedsheep.ai.engine.rollout.RolloutSettings
@@ -39,6 +40,8 @@ fun main(args: Array<String>) {
     val maxOpponents = args.getOrNull(4)?.toInt() ?: Int.MAX_VALUE
     val maxTargets = args.getOrNull(5)?.toInt() ?: Int.MAX_VALUE
     val runSeed = args.getOrNull(6)?.toLong() ?: 0L
+    // `-Darena.probeStranded=true`: is the target stranding cards it has the amount of mana for? (`docs/33` §12)
+    val probeStranded = System.getProperty("arena.probeStranded").toBoolean()
 
     val registry = eclRegistry()
     val profile = arenaProfile(System.getProperty("arena.profile") ?: "current")
@@ -94,13 +97,20 @@ fun main(args: Array<String>) {
             else listOf(job.opponent.cards, job.target.cards)
             val base = GameRecord(job.target.id, job.opponent.id, job.game, targetSeat, job.seed)
             try {
-                val o = local.get().play(seats, job.seed, if (targetSeat == 0) listOf(targetProfile, profile) else listOf(profile, targetProfile))
+                val o = local.get().play(
+                    seats, job.seed,
+                    if (targetSeat == 0) listOf(targetProfile, profile) else listOf(profile, targetProfile),
+                    probeSeat = if (probeStranded) targetSeat else null,
+                )
                 base.copy(
                     winnerSeat = o.winnerSeat,
                     targetWon = o.winnerSeat?.let { it == targetSeat },
                     turns = o.turns, actions = o.actions, illegal = o.illegal, life = o.life,
                     reason = o.reason, millis = System.currentTimeMillis() - t0, holding = o.holding,
                     cycle = o.cycle, casts = o.casts, tappedOut = o.tappedOut, cards = o.cards, lastWindow = o.lastWindow, gaps = o.gaps,
+                    probeWindows = o.probe.windows, probeAffordable = o.probe.affordable,
+                    probeStranded = o.probe.stranded, probeStrandedCards = o.probe.strandedCards,
+                    probeFixable = o.probe.fixable, probeFixMissed = o.probe.fixMissed,
                 )
             } catch (e: Throwable) {
                 base.copy(reason = "init(${e::class.simpleName}: ${e.message?.take(200)})", millis = System.currentTimeMillis() - t0)
@@ -136,6 +146,8 @@ fun main(args: Array<String>) {
     }
     pool.shutdown()
     if (profile.rolloutsOnlyWhenHolding || targetProfile.rolloutsOnlyWhenHolding) println(HoldingGatedEvaluator.summary())
+    // Only ever non-zero for an arm that switched the hook on (mtg-draft-ai `docs/27` §7.4).
+    if (ResponseLookaheadStats.windows.get() > 0) println("  lookahead: $ResponseLookaheadStats")
 }
 
 /**
@@ -158,6 +170,8 @@ fun main(args: Array<String>) {
  *   `-Darena.holdupStaticWeight` (default upstream's 0.75). Both sample the opponent's hidden cards
  *   ([AiProfile.determinizeHiddenInformation]), so a playout never plays their real hand.
  *
+ * - `lookahead`: the one-response lookahead ([AiProfile.opponentRespondsInSimulation], `docs/27` §7.6). The
+ *   measured arm was `timing+lookahead`, against `timing`.
  * - `idle`: in the last sorcery-speed window of its turn, a sorcery-speed cast needs to beat passing only by
  *   `-Darena.idleAllowance` (default 1.0) ([AiProfile.spendIdleManaAtSorcerySpeed], `docs/33` §13).
  *
@@ -195,6 +209,7 @@ private fun withToken(p: AiProfile, token: String): AiProfile {
                 manaReserveWeight = weight, manaReserveScalesWithDeck = scaled,
             )
         }
+        "lookahead" -> p.copy(id = id, opponentRespondsInSimulation = true)
         "idle" -> {
             val allowance = System.getProperty("arena.idleAllowance")?.toDouble() ?: 1.0
             p.copy(id = "$id-$allowance", spendIdleManaAtSorcerySpeed = allowance)

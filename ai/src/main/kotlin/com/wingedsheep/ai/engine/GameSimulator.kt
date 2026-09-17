@@ -52,6 +52,16 @@ class GameSimulator(
      * so a test can reach the guard deterministically instead of building a board that loops.
      */
     private val maxAutomaticTransitions: Int = DEFAULT_MAX_AUTOMATIC_TRANSITIONS,
+    /**
+     * How many times [opponentResponse] may act inside one `simulate` call.
+     *
+     * One is the whole proposal in `docs/27` §7.4 — "let their own AI choose a response or none
+     * with the candidate on the stack" — and one is also what keeps the cost bounded: a response
+     * can be responded to, and an unbounded exchange inside a leaf score is a search, not a leaf.
+     * The AI's own answer back is deliberately not simulated; the question this closes is whether
+     * the candidate survives, not who wins the war.
+     */
+    private val maxOpponentResponses: Int = 1,
 ) {
     init {
         require(maxAutomaticTransitions > 0) { "maxAutomaticTransitions must be positive" }
@@ -68,9 +78,28 @@ class GameSimulator(
      */
     var decisionResolver: ((GameState, PendingDecision) -> DecisionResponse)? = null
 
+    /**
+     * Optional stand-in for the opponent at a priority window with something on the stack.
+     *
+     * Null — the default — is the historical horizon: [resolveToQuietState] passes for both
+     * players and every candidate is scored as if it always resolves. See [OpponentResponsePolicy].
+     * Set after construction for [decisionResolver]'s reason: the policy is built from a
+     * `CombatAdvisor`, which is built from this simulator.
+     */
+    var opponentResponse: OpponentResponsePolicy? = null
+
     /** Guard against recursive resolution — inner simulations (from DecisionResponder
      *  evaluating alternatives) should NOT re-enter the resolver. */
     private var isResolving = false
+
+    /**
+     * Guard against a response being scored by a simulation that offers another response.
+     *
+     * [opponentResponse] itself never simulates, but resolving the response it picks runs the full
+     * [decisionResolver] path, and that one does. Without this flag a single candidate could open
+     * an alternating exchange whose depth is bounded only by the transition limit.
+     */
+    private var isResponding = false
 
     /**
      * The constant-time policy used while [isResolving] blocks the strategic resolver.
@@ -90,11 +119,14 @@ class GameSimulator(
      * [SimulationResult.StoppedAtLimit], never as successful completion.
      */
     fun simulate(state: GameState, action: GameAction): SimulationResult {
+        // Whose decision this is, read before the action moves priority. The opponent-response hook
+        // needs it to tell "they are answering our candidate" from "it is simply their turn".
+        val actingPlayer = state.priorityPlayerId
         val result = processor.process(state, action).result
         if (result.error != null) {
-            floatSacrificeMana(state, action, result)?.let { return resolveToQuietState(it.result) }
+            floatSacrificeMana(state, action, result)?.let { return resolveToQuietState(it.result, actingPlayer) }
         }
-        return resolveToQuietState(result)
+        return resolveToQuietState(result, actingPlayer)
     }
 
     /** True when the processor takes [action] in [state] as it is, without an error. */
@@ -176,7 +208,7 @@ class GameSimulator(
             ?: return SimulationResult.Illegal(state, emptyList(), "No pending decision")
         val action = SubmitDecision(pending.playerId, response)
         val result = processor.process(state, action).result
-        return resolveToQuietState(result)
+        return resolveToQuietState(result, pending.playerId)
     }
 
     /**
@@ -209,10 +241,14 @@ class GameSimulator(
      * (lands tapped, creature not yet on battlefield), making every spell
      * look worse than passing.
      */
-    private fun resolveToQuietState(result: ExecutionResult): SimulationResult {
+    private fun resolveToQuietState(
+        result: ExecutionResult,
+        actingPlayer: EntityId? = null,
+    ): SimulationResult {
         var current = result
         var allEvents = result.events
         var iterations = 0
+        var responses = 0
 
         while (true) {
             val error = current.error
@@ -279,6 +315,39 @@ class GameSimulator(
             if (state.stack.isNotEmpty() && priorityPlayerId != null && !state.gameOver) {
                 if (iterations >= maxAutomaticTransitions) {
                     return stoppedAtLimit(current, allEvents, iterations)
+                }
+                // ── The one-response lookahead (`docs/27` §7.4) ──
+                // Only for someone else's priority — our own windows are the Strategist's to search,
+                // and answering them here would be a second, hidden search inside its leaf.
+                val policy = opponentResponse
+                val theirWindow = policy != null && !isResponding &&
+                    responses < maxOpponentResponses &&
+                    actingPlayer != null && priorityPlayerId != actingPlayer &&
+                    priorityPlayerId !in state.teamOf(actingPlayer)
+                if (theirWindow) ResponseLookaheadStats.windows.incrementAndGet()
+                if (policy != null && theirWindow && couldRespond(state, priorityPlayerId)) {
+                    ResponseLookaheadStats.gatePassed.incrementAndGet()
+                    val response = try {
+                        isResponding = true
+                        policy.respond(state, priorityPlayerId) {
+                            enumerator.enumerate(state, priorityPlayerId, EnumerationMode.ACTIONS_ONLY)
+                        }
+                    } finally {
+                        isResponding = false
+                    }
+                    if (response != null) {
+                        val attempt = processor.process(state, response).result
+                        // An illegal response is the policy's mistake, not the candidate's: fall
+                        // through to the pass below rather than reporting the candidate illegal.
+                        if (attempt.error == null) {
+                            ResponseLookaheadStats.responded.incrementAndGet()
+                            current = attempt
+                            allEvents = allEvents + current.events
+                            iterations++
+                            responses++
+                            continue
+                        }
+                    }
                 }
                 val passAction = PassPriority(priorityPlayerId)
                 current = processor.process(state, passAction).result

@@ -12,6 +12,7 @@ import com.wingedsheep.engine.core.GameAction
 import com.wingedsheep.engine.core.GameConfig
 import com.wingedsheep.engine.core.GameInitializer
 import com.wingedsheep.engine.core.PassPriority
+import com.wingedsheep.engine.core.PlayLand
 import com.wingedsheep.engine.core.PlayerConfig
 import com.wingedsheep.engine.core.SubmitDecision
 import com.wingedsheep.engine.legalactions.EnumerationMode
@@ -25,7 +26,9 @@ import com.wingedsheep.engine.state.components.battlefield.TappedComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
 import com.wingedsheep.sdk.core.Keyword
+import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.AbilityCost
@@ -105,10 +108,44 @@ class GameRunner(
          * before any idle allowance; `dropped` = never scored).
          */
         val gaps: List<Map<String, List<Int>>>? = null,
+        /** [StrandedProbe], zeroed unless a `probeSeat` was given. */
+        val probe: StrandedProbe = StrandedProbe(),
+    )
+
+    /**
+     * Is the engine stranding cards it has the *amount* of mana for? (mtg-draft-ai `docs/33` §12.)
+     *
+     * Measured only at the probed seat's **own main phase with an empty stack**:
+     *
+     *  - [windows] — priority windows examined.
+     *  - [affordable] — summed over windows: nonland cards in hand whose mana value the untapped lands cover.
+     *  - [stranded] — of those, the ones the enumerator offers **no affordable cast for**.
+     *  - [strandedCards] — distinct cards ever stranded.
+     *  - [fixable] — **turns** in which, at some window with the land drop still available, a land in hand
+     *    would have made a stranded card castable (each land is played in a copy of the state).
+     *  - [fixMissed] — of those turns, the ones in which the AI never played any of those lands.
+     *
+     * Counted per turn, not per window: casting first and playing the fixing land later is not a mistake.
+     * [fixMissed] is still a lower bound, since a turn whose first window came after a wrong land drop has no
+     * drop left to check.
+     */
+    data class StrandedProbe(
+        val windows: Int = 0,
+        val affordable: Int = 0,
+        val stranded: Int = 0,
+        val strandedCards: Int = 0,
+        val fixable: Int = 0,
+        val fixMissed: Int = 0,
     )
 
     /** [seatProfiles] overrides [profile] seat by seat (a one-sided A/B); null plays [profile] on both. */
-    fun play(decks: List<List<String>>, seed: Long, seatProfiles: List<AiProfile>? = null): Outcome {
+    fun play(
+        decks: List<List<String>>,
+        seed: Long,
+        seatProfiles: List<AiProfile>? = null,
+        /** Seat to run [StrandedProbe] for; null (the default) costs nothing at all. */
+        probeSeat: Int? = null,
+    ): Outcome {
         val init = initializer.initializeGame(
             GameConfig(
                 players = decks.mapIndexed { seat, deck -> PlayerConfig("Seat$seat", Deck(deck)) },
@@ -121,7 +158,7 @@ class GameRunner(
         val decklists = seatIds.mapIndexed { seat, id ->
             id to OpponentModel.KnownDecklist(decks[seat].groupingBy { it }.eachCount())
         }.toMap()
-        return playFrom(init.state, seatIds.indices.map { seatProfiles?.get(it) ?: profile }, decklists)
+        return playFrom(init.state, seatIds.indices.map { seatProfiles?.get(it) ?: profile }, decklists, probeSeat)
     }
 
     /**
@@ -129,7 +166,12 @@ class GameRunner(
      * AI's opponent model may assume. What [play] does after dealing, and what the replay module plays on from a
      * rebuilt game's break with (mtg-draft-ai `docs/27` §5, C1). Seats in the [Outcome] are `turnOrder` indices.
      */
-    fun playFrom(start: GameState, seatProfiles: List<AiProfile>, decklists: Map<EntityId, OpponentModel>): Outcome {
+    fun playFrom(
+        start: GameState,
+        seatProfiles: List<AiProfile>,
+        decklists: Map<EntityId, OpponentModel>,
+        probeSeat: Int? = null,
+    ): Outcome {
         val seatIds = start.turnOrder
         val bySeat = seatIds.withIndex().associate { (seat, id) -> id to seat }
         val gaps = if (measureCards && System.getProperty("arena.gaps").toBoolean()) {
@@ -187,6 +229,25 @@ class GameRunner(
         val lastLands = IntArray(seatIds.size)
         val lastUntapped = IntArray(seatIds.size)
         var cycleActive: EntityId? = null
+        var probeWindows = 0
+        var probeAffordable = 0
+        var probeStranded = 0
+        var probeFixable = 0
+        var probeFixMissed = 0
+        val probeStrandedIds = mutableSetOf<EntityId>()
+        val probeId = probeSeat?.let { seatIds[it] }
+        // Per-turn accounting for fixable / fixMissed; see StrandedProbe.
+        var turnFixing = mutableSetOf<EntityId>()
+        var turnLandPlayed: EntityId? = null
+        var probeTurn = -1
+        fun flushProbeTurn() {
+            if (turnFixing.isNotEmpty()) {
+                probeFixable++
+                if (turnLandPlayed == null || turnLandPlayed !in turnFixing) probeFixMissed++
+            }
+            turnFixing = mutableSetOf()
+            turnLandPlayed = null
+        }
         val maxPlayerTurns = maxTurnsPerSeat * seatIds.size
         try {
             while (!state.gameOver && state.turnNumber < maxPlayerTurns && actionCount < maxActions) {
@@ -245,6 +306,50 @@ class GameRunner(
                     reason = "noPriority(turn=${state.turnNumber})"
                     break
                 }
+                if (probeId != null && state.turnNumber != probeTurn) {
+                    flushProbeTurn()
+                    probeTurn = state.turnNumber
+                }
+                if (probeId != null && priorityPlayer == probeId &&
+                    state.activePlayerId == probeId && state.stack.isEmpty() &&
+                    state.phase in MAIN_PHASES
+                ) {
+                    val projected = state.projectedState
+                    val untappedLands = projected.getBattlefieldControlledBy(probeId).count {
+                        projected.hasType(it, "LAND") && state.getEntity(it)?.has<TappedComponent>() != true
+                    }
+                    val hand = state.getZone(probeId, Zone.HAND)
+                    val castableIds = enumerator.enumerate(state, probeId, EnumerationMode.ACTIONS_ONLY)
+                        .filter { it.affordable }
+                        .mapNotNull { (it.action as? CastSpell)?.cardId }
+                        .toSet()
+                    var windowCounted = false
+                    val strandedHere = mutableSetOf<EntityId>()
+                    for (cardId in hand) {
+                        val card = state.getEntity(cardId)?.get<CardComponent>() ?: continue
+                        if (card.isLand || card.manaValue > untappedLands) continue
+                        probeAffordable++
+                        windowCounted = true
+                        if (cardId !in castableIds) {
+                            probeStranded++
+                            probeStrandedIds += cardId
+                            strandedHere += cardId
+                        }
+                    }
+                    if (windowCounted) probeWindows++
+                    // Could a land in hand have cast one of them? Only asked when something is stranded.
+                    if (strandedHere.isNotEmpty()) {
+                        val landDrops = enumerator.enumerate(state, probeId, EnumerationMode.ACTIONS_ONLY)
+                            .filter { it.actionType == "PlayLand" }
+                        val fixing = landDrops.filter { drop ->
+                            val after = processor.process(state, drop.action).result
+                            after.error == null && enumerator
+                                .enumerate(after.state, probeId, EnumerationMode.ACTIONS_ONLY)
+                                .any { it.affordable && (it.action as? CastSpell)?.cardId in strandedHere }
+                        }.mapNotNull { (it.action as? PlayLand)?.cardId }.toSet()
+                        turnFixing += fixing
+                    }
+                }
                 actionCount++
                 val instants = if (holding != null) affordableInstants(state, priorityPlayer) else emptySet()
                 val castable = if (cards != null) affordableCasts(state, priorityPlayer) else emptySet()
@@ -255,6 +360,9 @@ class GameRunner(
                 val atLastWindow = ownMain && state.step == Step.POSTCOMBAT_MAIN
                 if (atLastWindow) sawPostcombat = true
                 val action = aiFor(priorityPlayer).chooseAction(state)
+                if (probeId != null && priorityPlayer == probeId && action is PlayLand && turnLandPlayed == null) {
+                    turnLandPlayed = action.cardId
+                }
                 if (atLastWindow && sorcerySpeed.isNotEmpty()) {
                     val w = lastWindow!![bySeat.getValue(priorityPlayer)]
                     w[2]++
@@ -319,6 +427,7 @@ class GameRunner(
             if (printTraces) e.printStackTrace()
             reason = "exception(${e::class.simpleName}: ${e.message?.take(200)})"
         }
+        if (probeId != null) flushProbeTurn()
         if (cards != null) {
             if (cardsSeat >= 0) {
                 commitTurn()
@@ -337,6 +446,9 @@ class GameRunner(
             cards = cards?.map { seat -> seat.mapValues { it.value.toList() } },
             lastWindow = lastWindow?.map { it.toList() },
             gaps = gaps?.map { seat -> seat.mapValues { it.value.toList() } },
+            probe = StrandedProbe(
+                probeWindows, probeAffordable, probeStranded, probeStrandedIds.size, probeFixable, probeFixMissed,
+            ),
         )
     }
 
@@ -420,6 +532,7 @@ class GameRunner(
 
     companion object {
         const val STUCK_ACTIONS_PER_TURN = 300
+        private val MAIN_PHASES = setOf(Phase.PRECOMBAT_MAIN, Phase.POSTCOMBAT_MAIN)
 
         /** [Outcome.cards]' fields, in order. */
         val CARD_FIELDS = listOf(
