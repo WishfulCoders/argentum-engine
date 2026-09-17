@@ -10,6 +10,7 @@ import com.wingedsheep.engine.core.PaymentStrategy
 import com.wingedsheep.engine.core.SaddleMount
 import com.wingedsheep.engine.core.SubmitDecision
 import com.wingedsheep.engine.legalactions.EnumerationMode
+import com.wingedsheep.engine.legalactions.LegalAction
 import com.wingedsheep.engine.legalactions.LegalActionEnumerator
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
@@ -76,7 +77,10 @@ data class LineStep(
     val exact: Boolean = false,
     /** The engine's [GameAction]. */
     val engine: JsonElement,
-    /** The acting player's observation; only where [choices] > 1. */
+    /**
+     * The acting player's observation, wherever the player chose something: more than one option,
+     * a declaration with candidates, a template's targets or X, or a structured decision.
+     */
     val obs: TrainingObservation? = null,
 )
 
@@ -98,19 +102,28 @@ class LineWriter(registry: CardRegistry) {
             val built = observations.build(s, actor, emptyList())
             val options = built.registry.decisionResponses
             val id = options.firstOrNull { it.second == action.response }?.first
+            val observation = built.observation as TrainingObservation
+            val structured = observation.pendingDecision?.requiresStructuredResponse == true
             return LineStep(step.halfTurn, seats.sideOf(actor), step.how, "decision", options.size,
                 actionId = id, exact = id != null, engine = engine,
-                obs = (built.observation as TrainingObservation).takeIf { options.size > 1 })
+                obs = observation.takeIf { options.size > 1 || structured })
         }
         val legal = enumerator.enumerate(s, actor, EnumerationMode.ACTIONS_ONLY)
         val choices = legal.count { !it.isManaAbility }
         val id = legal.indices.maxByOrNull { match(legal[it].action, action) }?.takeIf { match(legal[it].action, action) > 0 }
         val params = params(action)
         val exact = id != null && runCatching { ActionParameterizer.apply(legal[id].action, params, s) == action }.getOrDefault(false)
-        val obs = if (choices > 1) observations.build(s, actor, legal).observation as TrainingObservation else null
+        val chose = choices > 1 || id != null && hasChoices(legal[id])
+        val obs = if (chose) observations.build(s, actor, legal).observation as TrainingObservation else null
         return LineStep(step.halfTurn, seats.sideOf(actor), step.how, "action", choices,
             actionId = id, params = params.takeUnless { it.isEmpty }, exact = exact, engine = engine, obs = obs)
     }
+
+    /** A single enumerated template can still leave a choice: who attacks or blocks, targets, X. */
+    private fun hasChoices(template: LegalAction): Boolean =
+        !template.validAttackers.isNullOrEmpty() || !template.validBlockers.isNullOrEmpty() ||
+            !template.validTargets.isNullOrEmpty() || !template.targetRequirements.isNullOrEmpty() ||
+            template.hasXCost
 
     /** 2 when [template] is [chosen], 1 when it is [chosen] before its choices were made, else 0. */
     private fun match(template: GameAction, chosen: GameAction): Int = when {
