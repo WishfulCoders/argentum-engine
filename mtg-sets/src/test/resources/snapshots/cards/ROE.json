@@ -2266,6 +2266,62 @@
     ]
 }
 
+// Raid Bombardment
+{
+    "name": "Raid Bombardment",
+    "manaCost": "{2}{R}",
+    "typeLine": "Enchantment",
+    "oracleText": "Whenever a creature you control with power 2 or less attacks, this enchantment deals 1 damage to the player or planeswalker that creature is attacking.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "ability_1",
+                "trigger": {
+                    "type": "AttackEvent",
+                    "filter": "creature pow<=2 ctrl:you"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "DealDamage",
+                    "amount": {
+                        "type": "Fixed",
+                        "amount": 1
+                    },
+                    "target": "AttackedBy"
+                },
+                "descriptionOverride": "Whenever a creature you control with power 2 or less attacks, this enchantment deals 1 damage to the player or planeswalker that creature is attacking."
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "161",
+        "artist": "Matt Cavotta",
+        "flavorText": "Goblins in the first wave of a fire raid always bemoan the aim of everyone else.",
+        "imageUri": "https://cards.scryfall.io/normal/front/9/c/9c2d1a48-efde-4134-95f0-b23f6cf85259.jpg?1783941971",
+        "rulings": [
+            {
+                "date": "2023-09-01",
+                "text": "Raid Bombardment's ability won't do anything when a creature you control with power 2 or less attacks a battle."
+            },
+            {
+                "date": "2018-12-07",
+                "text": "The power of the attacking creature is checked only when the ability triggers. Once it triggers, Raid Bombardment will deal 1 damage to the appropriate player or planeswalker even if the creature's power changes before the ability resolves."
+            },
+            {
+                "date": "2018-12-07",
+                "text": "If you attack with multiple creatures with power 2 or less, Raid Bombardment's ability triggers for each of them separately."
+            },
+            {
+                "date": "2018-12-07",
+                "text": "If the attacking creature leaves the battlefield before Raid Bombardment's triggered ability resolves, Raid Bombardment deals 1 damage to the player or planeswalker that creature was attacking before it left the battlefield."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
 // Reinforced Bulwark
 {
     "name": "Reinforced Bulwark",

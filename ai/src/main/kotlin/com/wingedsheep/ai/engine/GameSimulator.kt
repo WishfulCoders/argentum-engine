@@ -8,8 +8,11 @@ import com.wingedsheep.engine.legalactions.LegalActionEnumerator
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.combat.AttackingComponent
+import com.wingedsheep.engine.state.components.identity.CardComponent
+import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.model.EntityId
+import com.wingedsheep.sdk.scripting.AbilityCost
 
 /**
  * Wraps the ActionProcessor to let the AI ask "what happens if I do X?"
@@ -88,7 +91,81 @@ class GameSimulator(
      */
     fun simulate(state: GameState, action: GameAction): SimulationResult {
         val result = processor.process(state, action).result
+        if (result.error != null) {
+            floatSacrificeMana(state, action, result)?.let { return resolveToQuietState(it.result) }
+        }
         return resolveToQuietState(result)
+    }
+
+    /** True when the processor takes [action] in [state] as it is, without an error. */
+    fun accepts(state: GameState, action: GameAction): Boolean = processor.process(state, action).result.error == null
+
+    /** The mana abilities to activate before an action, and the action's result after them. */
+    class ManaFloat(val activations: List<ActivateAbility>, val result: ExecutionResult)
+
+    /**
+     * The fewest Treasure-style mana abilities ("{T}, Sacrifice this artifact: Add one mana of any
+     * color") to activate before [action] so that auto-pay can pay for it, with the action's result
+     * after them; null when [action] goes through as it is, or no such activations make it payable.
+     *
+     * The engine's auto-pay solver never sacrifices a source — a player has to opt in by activating
+     * it — while the legal-action enumerator counts one towards what is affordable. So a spell only
+     * a Treasure pays for is offered, then refused at the mana step. A player floats the Treasure's
+     * mana first and casts from the pool (auto-pay spends floating mana first); each activation here
+     * makes one of the cost's colours.
+     */
+    fun floatSacrificeMana(
+        state: GameState,
+        action: GameAction,
+        /** [action]'s result as it is, when the caller already has it. */
+        direct: ExecutionResult? = null,
+    ): ManaFloat? {
+        val (playerId, colours) = when (action) {
+            is CastSpell -> if (action.paymentStrategy != PaymentStrategy.AutoPay) return null
+                else action.playerId to state.getEntity(action.cardId)?.get<CardComponent>()?.manaCost?.colors.orEmpty()
+            is ActivateAbility -> if (action.paymentStrategy != PaymentStrategy.AutoPay) return null
+                else action.playerId to emptySet()
+            else -> return null
+        }
+        if ((direct ?: processor.process(state, action).result).error == null) return null
+        val sources = enumerator.enumerate(state, playerId, EnumerationMode.ACTIONS_ONLY)
+            .filter { it.isManaAbility && it.affordable }
+            .mapNotNull { la -> (la.action as? ActivateAbility)?.let { it to la } }
+            .filter { (activation, _) -> activation.sourceId != (action as? ActivateAbility)?.sourceId && sacrificesItself(state, activation) }
+            .distinctBy { (activation, _) -> activation.sourceId }
+        if (sources.isEmpty()) return null
+        for (k in 1..minOf(sources.size, MAX_FLOATED_SOURCES)) {
+            val used = sources.take(k)
+            var picks: List<List<Color?>> = listOf(emptyList())
+            for ((_, la) in used) {
+                val options: List<Color?> = if (!la.requiresManaColorChoice) listOf(null) else {
+                    val makeable = la.availableManaColors ?: Color.entries
+                    colours.filter { it in makeable }.ifEmpty { makeable.take(1) }
+                }
+                picks = picks.flatMap { p -> options.map { p + it } }.take(MAX_COLOUR_PICKS)
+            }
+            for (pick in picks) {
+                var current = state
+                val activations = used.zip(pick).map { (source, colour) -> source.first.copy(manaColorChoice = colour) }
+                val floated = activations.all { activation ->
+                    val r = processor.process(current, activation).result
+                    if (r.error != null || r.isPaused) false else { current = r.state; true }
+                }
+                if (!floated) continue
+                val result = processor.process(current, action).result
+                if (result.error == null) return ManaFloat(activations, result)
+            }
+        }
+        return null
+    }
+
+    /** True when [activation] is a printed mana ability whose cost taps and sacrifices its source. */
+    private fun sacrificesItself(state: GameState, activation: ActivateAbility): Boolean {
+        val card = state.getEntity(activation.sourceId)?.get<CardComponent>() ?: return false
+        val ability = cardRegistry.getCard(card.cardDefinitionId)?.script?.activatedAbilities
+            ?.firstOrNull { it.id == activation.abilityId } ?: return false
+        val cost = ability.cost as? AbilityCost.Composite ?: return false
+        return cost.costs.any { it is AbilityCost.SacrificeSelf }
     }
 
     /**
@@ -278,6 +355,10 @@ class GameSimulator(
          * real resolution reaches, so only a genuinely stuck automatic resolution ever meets it.
          */
         const val DEFAULT_MAX_AUTOMATIC_TRANSITIONS = 100
+
+        /** Bounds on [floatSacrificeMana]'s search: Treasures floated for one cast, colour choices tried per count. */
+        private const val MAX_FLOATED_SOURCES = 6
+        private const val MAX_COLOUR_PICKS = 16
     }
 }
 

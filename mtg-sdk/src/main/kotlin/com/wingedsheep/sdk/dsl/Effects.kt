@@ -2332,13 +2332,17 @@ object Effects {
      * [riders] attaches side-effects that fire on whatever spell this mana ends up paying for
      * (Pyromancer's Goggles: "When that mana is spent to cast a red instant or sorcery spell, copy
      * that spell"). See [com.wingedsheep.sdk.scripting.effects.ManaSpellRider].
+     *
+     * [expiry] [com.wingedsheep.sdk.scripting.effects.ManaExpiry.UNTIL_END_OF_TURN] is "Until end of
+     * turn, you don't lose this mana as steps and phases end" (Brazen Collector).
      */
     fun AddMana(
         color: Color,
         amount: Int = 1,
         restriction: ManaRestriction? = null,
-        riders: Set<com.wingedsheep.sdk.scripting.effects.ManaSpellRider> = emptySet()
-    ): Effect = AddManaEffect(color, DynamicAmount.Fixed(amount), restriction, riders = riders)
+        riders: Set<com.wingedsheep.sdk.scripting.effects.ManaSpellRider> = emptySet(),
+        expiry: com.wingedsheep.sdk.scripting.effects.ManaExpiry = com.wingedsheep.sdk.scripting.effects.ManaExpiry.END_OF_TURN,
+    ): Effect = AddManaEffect(color, DynamicAmount.Fixed(amount), restriction, expiry = expiry, riders = riders)
 
     /**
      * Add a dynamic amount of mana of a specific color.
@@ -2348,8 +2352,9 @@ object Effects {
         color: Color,
         amount: DynamicAmount,
         restriction: ManaRestriction? = null,
-        riders: Set<com.wingedsheep.sdk.scripting.effects.ManaSpellRider> = emptySet()
-    ): Effect = AddManaEffect(color, amount, restriction, riders = riders)
+        riders: Set<com.wingedsheep.sdk.scripting.effects.ManaSpellRider> = emptySet(),
+        expiry: com.wingedsheep.sdk.scripting.effects.ManaExpiry = com.wingedsheep.sdk.scripting.effects.ManaExpiry.END_OF_TURN,
+    ): Effect = AddManaEffect(color, amount, restriction, expiry = expiry, riders = riders)
 
     /**
      * Add colorless mana.

@@ -337,6 +337,43 @@
     ]
 }
 
+// Hatching Plans
+{
+    "name": "Hatching Plans",
+    "manaCost": "{1}{U}",
+    "typeLine": "Enchantment",
+    "oracleText": "When this enchantment is put into a graveyard from the battlefield, draw three cards.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "ability_1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "from": "Battlefield",
+                    "to": "Graveyard"
+                },
+                "effect": {
+                    "type": "DrawCards",
+                    "count": {
+                        "type": "Fixed",
+                        "amount": 3
+                    }
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "27",
+        "rarity": "RARE",
+        "artist": "Heather Hudson",
+        "flavorText": "So wondrous to behold, so delicate and finely crafted—and yet, such a pleasure to smash.",
+        "imageUri": "https://cards.scryfall.io/normal/front/e/f/ef327629-9831-4a0c-bd61-7542b0713ea8.jpg?1783943522"
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
 // Izzet Boilerworks
 {
     "name": "Izzet Boilerworks",

@@ -1133,6 +1133,15 @@ data class GameObjectFilter(
     )
 
     /**
+     * Must NOT be the entity that fired the resolving trigger — "each **other** attacking creature
+     * that shares a creature type with it" around a triggering attacker that isn't the ability's
+     * source (Shared Animosity). The trigger-relative sibling of [notSourceItself].
+     */
+    fun notTriggeringEntity() = copy(
+        statePredicates = statePredicates + StatePredicate.Not(StatePredicate.IsTriggeringEntity)
+    )
+
+    /**
      * Must be attached to a permanent matching [hostFilter] (general form of attachment matching —
      * the host filter may carry a controller predicate, e.g. "a creature you control"). Used by
      * Stolen Uniform's reflexive "if it's attached to a creature you control" guard.

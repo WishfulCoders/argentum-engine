@@ -11,6 +11,7 @@ import com.wingedsheep.ai.engine.rollout.CandidateEvaluator
 import com.wingedsheep.ai.engine.rollout.FastDecisionResponder
 import com.wingedsheep.ai.engine.rollout.PlayoutEngine
 import com.wingedsheep.ai.engine.rollout.PlayoutPolicy
+import com.wingedsheep.ai.engine.rollout.HoldingGatedEvaluator
 import com.wingedsheep.ai.engine.rollout.RolloutCandidateEvaluator
 import com.wingedsheep.ai.engine.rollout.StaticCandidateEvaluator
 import com.wingedsheep.engine.core.*
@@ -62,12 +63,30 @@ class AIPlayer(
      * ~20-30 windows it crosses.
      */
     fun chooseAction(state: GameState): GameAction {
+        pendingAfterFloat?.let { (activations, action) ->
+            pendingAfterFloat = null
+            val next = activations.firstOrNull() ?: action
+            // Still the plan only if the state is the one the last activation left us in.
+            if (state.priorityPlayerId == playerId && state.pendingDecision == null &&
+                simulator.accepts(state, next)
+            ) {
+                if (activations.isNotEmpty()) pendingAfterFloat = activations.drop(1) to action
+                return next
+            }
+        }
         if (useMeaningfulFilter && MeaningfulActionFilter.canAutoPassWithoutEnumerating(state, playerId)) {
             return PassPriority(playerId)
         }
         val legalActions = simulator.getLegalActions(state, playerId)
-        return chooseFrom(state, legalActions).action
+        val chosen = chooseFrom(state, legalActions).action
+        // A cast only a Treasure pays for: activate the Treasures first, then cast from the pool.
+        val float = simulator.floatSacrificeMana(state, chosen) ?: return chosen
+        pendingAfterFloat = float.activations.drop(1) to chosen
+        return float.activations.first()
     }
+
+    /** Mana abilities still to activate, then the action they pay for (see [GameSimulator.floatSacrificeMana]). */
+    private var pendingAfterFloat: Pair<List<GameAction>, GameAction>? = null
 
     /**
      * Choose the best [LegalAction] from the given list.
@@ -249,6 +268,20 @@ class AIPlayer(
                 creatureValuation = profile.creatureValuation,
                 priceLandsInHandAsMana = profile.priceLandsInHandAsMana,
             )
+            // Its features read the full catalog, as they did where it was fit (replay's PreferenceWriter).
+            val correction = profile.priorityCorrectionId?.let(EvalWeights::correction)
+                ?.toCorrection(IntentCatalog.of(cardRegistry))
+            val uncorrected = profile.priorityEvalWeightsId
+                ?.let { EvalWeights.resolveEvaluator(it, IntentCatalog.of(cardRegistry)) }
+                ?: correction?.takeUnless { profile.priorityCorrectionChoosesActionOnly }?.let { term ->
+                    BoardEvaluator { state, projected, id -> evaluator.evaluate(state, projected, id) + term.evaluate(state, projected, id) }
+                }
+                ?: evaluator
+            val reserve = profile.manaReserveWeight.takeIf { it != 0.0 }
+                ?.let { ManaReserve(IntentCatalog.of(cardRegistry), it, profile.manaReserveScalesWithDeck) }
+            val priorityEvaluator = reserve?.let { term ->
+                BoardEvaluator { state, projected, id -> uncorrected.evaluate(state, projected, id) + term.evaluate(state, projected, id) }
+            } ?: uncorrected
             val combatAdvisor = CombatAdvisor(
                 simulator, evaluator, cardRegistry, advisorRegistry,
                 priceCrackBackAsLife = profile.priceCrackBackAsLife,
@@ -273,7 +306,7 @@ class AIPlayer(
                 simulator = simulator,
                 evaluator = evaluator,
                 strategist = Strategist(
-                    simulator, evaluator,
+                    simulator, priorityEvaluator,
                     combatAdvisor = combatAdvisor,
                     advisorRegistry = advisorRegistry,
                     useMeaningfulFilter = profile.useMeaningfulFilter,
@@ -283,6 +316,8 @@ class AIPlayer(
                     holdRemovalForBetterTargets = profile.holdRemovalForBetterTargets,
                     holdCountersForBetterSpells = profile.holdCountersForBetterSpells,
                     cashCantripsInTheEndStep = profile.cashCantripsInTheEndStep,
+                    idleManaAllowance = profile.spendIdleManaAtSorcerySpeed,
+                    endStepManaAllowance = profile.spendIdleManaInTheirEndStep,
                     holdFlashPermanentsForAmbush = profile.holdFlashPermanentsForAmbush,
                     holdExpiringGrantsForCombat = profile.holdExpiringGrantsForCombat,
                     // Same seam as `CombatAdvisor`'s `lifeWeight`: a raw Phase 9 profile resolves
@@ -290,7 +325,7 @@ class AIPlayer(
                     // only needs to know what a point of board value trades against.
                     boardPresenceWeight = EvalWeights.resolve(profile.evalWeightsId).boardPresence,
                     candidateEvaluator = candidateEvaluatorFor(
-                        cardRegistry, profile, evaluator, advisorRegistry, intents,
+                        cardRegistry, profile, priorityEvaluator, advisorRegistry, intents,
                         EvalWeights.winProbabilityScale(profile.evalWeightsId),
                     ),
                     stateSampler = if (profile.determinizeHiddenInformation) {
@@ -303,6 +338,7 @@ class AIPlayer(
                         null
                     },
                     insightSink = insightSink,
+                    actionCorrection = correction?.takeIf { profile.priorityCorrectionChoosesActionOnly },
                 ),
                 responder = responder,
                 useMeaningfulFilter = profile.useMeaningfulFilter,
@@ -341,12 +377,14 @@ class AIPlayer(
                 settings = settings,
                 winProbabilityScale = winProbabilityScale,
             )
-            return RolloutCandidateEvaluator(
+            val rollout = RolloutCandidateEvaluator(
                 playouts = engine,
                 staticEvaluator = evaluator,
                 settings = settings,
                 winProbabilityScale = winProbabilityScale,
             )
+            if (!profile.rolloutsOnlyWhenHolding) return rollout
+            return HoldingGatedEvaluator(IntentCatalog.of(cardRegistry), rollout, StaticCandidateEvaluator(evaluator))
         }
 
         /**

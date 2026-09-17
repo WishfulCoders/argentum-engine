@@ -1719,8 +1719,11 @@ Atomic effect factories. For library/zone manipulation, prefer the pipelines in 
 ### Mana
 
 - `AddMana(color, amount, restriction?, expiry?, riders?)` — add N of one color. `expiry` is a
-  `ManaExpiry` (default `END_OF_TURN`); set `END_OF_COMBAT` for firebending-style combat-duration mana
-  that the pool keeps through combat and discards when combat ends. Combat-duration mana is stored as
+  `ManaExpiry` (default `END_OF_TURN`, ordinary mana, lost as each step and phase ends); set
+  `UNTIL_END_OF_TURN` for "Until end of turn, you don't lose this mana as steps and phases end"
+  (Brazen Collector, Savage Ventmaw), kept until the turn's cleanup step ends; set `END_OF_COMBAT`
+  for firebending-style combat-duration mana that the pool keeps through combat and discards when
+  combat ends. Turn- and combat-duration mana are stored as `AnySpend` restricted entries. Combat-duration mana is stored as
   an `AnySpend` restricted entry (so it spends like any other mana) and cleared by
   `CombatManager.endCombat`. See [ManaExpiry](#manaexpiry). `riders` is a `Set<ManaSpellRider>`
   applied to whatever spell this mana ends up paying for (Pyromancer's Goggles tags its {R} with
@@ -3645,6 +3648,16 @@ A resolving nonpermanent spell retains its stack instance through serialized eff
   ability whose source already *is* the granter (Territory Forge / Sharkey-style gains), it resolves
   to the same entity as `Self`.
 - `EffectTarget.TriggeringEntity` — the entity that caused the trigger to fire.
+- `EffectTarget.AttackedBy(attacker = TriggeringEntity)` — the **player or planeswalker** `attacker`
+  is attacking: "deals 1 damage to the player or planeswalker that creature is attacking" (**Raid
+  Bombardment**, Hellrider — `AttackedBy(TriggeringEntity)` inside an ANY-bound `Triggers.attacks`),
+  "… it's attacking" (`AttackedBy(Self)`), Mage Slayer (`AttackedBy(EquippedCreature)`). Names the
+  planeswalker itself, unlike `Player.DefendingPlayer`, which maps it to its controller. Read at
+  resolution (CR 608.2h): the attacker's current attack while it is on the battlefield, else the
+  defender it had when it left — so the damage still lands after the attacker has died. An attacker
+  removed from combat but still on the battlefield is attacking nothing, and a battle or a
+  planeswalker that has left is neither, so those resolve to nothing and the effect does nothing. A
+  token attacker that has ceased to exist has no last-known defender to read.
 - `EffectTarget.TargetController` — the controller of the spell/ability's first chosen target
   ("its controller creates two Map tokens", "its controller gains 4 life"). Control-change effects
   are honored (projected controller first), and a target that has already left the battlefield —
@@ -4946,6 +4959,13 @@ work for abilities-on-stack (which carry no `CardComponent`).
   (Ronin, Shadow Stalker), "{1}, Sacrifice an Aura attached to this creature" (Faunsbane Troll) — because
   the sacrifice enumeration (`CostEnumerationUtils.findAbilitySacrificeTargets`) and payment
   (`CostHandler.paySacrificeList`) both put the ability's source into the `PredicateContext`.
+- `IsTriggeringEntity` (negated builder `notTriggeringEntity()`) — matches the entity that fired the resolving
+  triggered ability (`PredicateContext.triggeringEntityId`); false with no trigger context, and false in untap,
+  trigger-gating and projection filters. The trigger-relative sibling of `IsSource`, for "each **other** …"
+  counts around a triggering creature that is not the ability's source: **Shared Animosity**'s "it gets +1/+0
+  for each other attacking creature that shares a creature type with it" counts
+  `Creature.attacking().sharingCreatureTypeWith(EntityReference.Triggering).notTriggeringEntity()` —
+  `excludeSelf` there would exclude the enchantment, not the attacker.
 - `IsGrantingPermanent` (negated builder `notGrantingPermanent()`) — matches the *granting permanent* of the
   resolving ability: the Equipment/Aura/permanent whose `GrantActivatedAbility`/`GrantTriggeredAbility` static
   granted the ability, read from the evaluation context's `granterId`. For a granted triggered ability the
@@ -5370,6 +5390,13 @@ for any other (filter, binding, to/excludeTo) combination.
   (`ZoneTransitionService.trackPermanentSacrifice` → `pendingSacrificeIds`) stamps on every
   sacrifice — cost payment and the sacrifice effect executors alike — so ordinary destruction /
   lethal-damage / SBA deaths leave it `false`.
+- `EventPattern.ZoneChangeEvent(..., excludeFrom = zone)` — the origin that does **not** match, the
+  mirror of `excludeTo`. "A creature card is put into a graveyard from anywhere other than the
+  battlefield" is `ZoneChangeEvent(filter = Creature, to = GRAVEYARD, excludeFrom = BATTLEFIELD)` with
+  ANY binding — a discard, a mill, a countered creature spell, never a death (**Syr Konrad, the
+  Grim**, whose "another creature dies" clause is a separate OTHER-bound `leavesBattlefield` trigger
+  so it keeps the leaves-the-battlefield look-back). Honored by the trigger matcher, delayed
+  zone-change triggers and the attachment detectors.
 
 **Token creation**
 
@@ -11529,9 +11556,16 @@ the rider twice (Pyromancer's Goggles: "That many copies will be created").
 
 The *duration* axis of mana — when it leaves the pool — orthogonal to `ManaRestriction` (where it
 may be spent) and `ManaSpellRider` (what happens to the spell). Passed via the `expiry` parameter
-of `AddMana`. The engine empties pools at end of turn, so:
+of `AddMana`. Every player's unspent mana empties as each step and phase ends (CR 500.5,
+`CleanupPhaseManager.emptyManaPools`), so:
 
-- `ManaExpiry.END_OF_TURN` — the default; ordinary mana cleared by the end-of-turn pool emptying.
+- `ManaExpiry.END_OF_TURN` — the default, despite its name: ordinary mana, lost as the current step
+  or phase ends.
+- `ManaExpiry.UNTIL_END_OF_TURN` — "Until end of turn, you don't lose this mana as steps and phases
+  end" (Brazen Collector, Savage Ventmaw): kept at every boundary except the cleanup step's end.
+  Stored as an `AnySpend` restricted-pool entry like combat-duration mana. Only `AddMana` takes an
+  `expiry`; `AddManaOfChoice` / `AddDynamicMana` cards with this clause (Branch of Vitu-Ghazi, Grand
+  Warlord Radha) do not model it yet.
 - `ManaExpiry.END_OF_COMBAT` — firebending-style mana (CR 702.189): kept through combat, discarded
   by `CombatManager.endCombat` when the combat phase ends ("Any of this mana you still have as combat
   ends will be lost"). Stored as an `AnySpend` restricted-pool entry tagged with the expiry, so it

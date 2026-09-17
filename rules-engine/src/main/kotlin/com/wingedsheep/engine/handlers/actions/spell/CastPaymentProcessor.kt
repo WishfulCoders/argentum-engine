@@ -99,7 +99,9 @@ class CastPaymentProcessor(
         val bySubtype = mutableMapOf<com.wingedsheep.sdk.core.Subtype, Int>()
         val sourceIds = mutableSetOf<EntityId>()
         for ((sourceId, production) in manaProduced) {
-            val amount = production.amount + production.colorless
+            // `amount` counts coloured mana and defaults to 1, so a colorless production
+            // (`ManaProduction(colorless = n)`) carries only its `colorless`
+            val amount = if (production.color != null) production.amount else production.colorless
             if (amount <= 0) continue
             sourceIds.add(sourceId)
             val subtypes = state.getEntity(sourceId)

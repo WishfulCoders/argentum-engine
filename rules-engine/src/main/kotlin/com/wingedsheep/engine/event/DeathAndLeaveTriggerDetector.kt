@@ -224,6 +224,7 @@ class DeathAndLeaveTriggerDetector(
             val trigger = ability.trigger
             if (trigger !is EventPattern.ZoneChangeEvent) continue
             if (trigger.from != null && trigger.from != Zone.BATTLEFIELD) continue
+            if (trigger.excludeFrom == Zone.BATTLEFIELD) continue
             if (trigger.to != null) {
                 // "Dies" trigger: verify creature is actually in graveyard (not exiled or bounced)
                 val inTargetZone = state.turnOrder.any { attachedEntityId in state.getGraveyard(it) }

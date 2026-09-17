@@ -30,9 +30,11 @@ import com.wingedsheep.engine.core.GameAction
 import com.wingedsheep.engine.legalactions.LegalAction
 import com.wingedsheep.engine.legalactions.MeaningfulActionFilter
 import com.wingedsheep.engine.state.GameState
+import com.wingedsheep.engine.state.components.battlefield.TappedComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
 import com.wingedsheep.sdk.core.Format
+import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.ManaSymbol
 import com.wingedsheep.sdk.core.Step
@@ -101,6 +103,10 @@ class Strategist(
     private val holdCountersForBetterSpells: Boolean = false,
     /** [AiProfile.cashCantripsInTheEndStep] — passed straight through to [HoldPolicy]. */
     private val cashCantripsInTheEndStep: Boolean = false,
+    /** [AiProfile.spendIdleManaAtSorcerySpeed]; 0 is off. */
+    private val idleManaAllowance: Double = 0.0,
+    /** [AiProfile.spendIdleManaInTheirEndStep]; 0 is off. */
+    private val endStepManaAllowance: Double = 0.0,
     /**
      * [AiProfile.holdFlashPermanentsForAmbush] — passed straight through to [HoldPolicy], which
      * hands it to [com.wingedsheep.ai.engine.knowledge.AmbushWindow].
@@ -129,6 +135,12 @@ class Strategist(
      * null check — the numbers are already being computed either way, so recording adds no search.
      */
     private val insightSink: AiInsightSink? = null,
+    /**
+     * [AiProfile.priorityCorrectionChoosesActionOnly]: a term added to each action's score to pick
+     * *which* action to take, once the uncorrected scores have said to act at all. Null: the best
+     * uncorrected action, as always.
+     */
+    private val actionCorrection: BoardEvaluator? = null,
 ) {
     private val holdPolicy = HoldPolicy(
         intents,
@@ -283,7 +295,21 @@ class Strategist(
         val adjusted = (firstCandidate until leaves.size).map { i ->
             Triple(leaves[i], leafScores[i], adjustScore(evaluationState, leaves[i], playerId, leafScores[i], passScore))
         }
-        val scored = adjusted.map { (action, _, adjustment) -> action to adjustment.score }
+        // The last sorcery-speed window of our turn: a sorcery-speed cast that only ties passing still
+        // beats letting the mana go at cleanup. See [AiProfile.spendIdleManaAtSorcerySpeed].
+        val spare = if (idleManaAllowance > 0.0) spareManaInLastSorcerySpeedWindow(state, playerId) else null
+        // The same for instant-speed casts in the opponent's end step, the last window before our lands untap.
+        val theirEndStep = endStepManaAllowance > 0.0 && !state.isActiveTurnFor(playerId) &&
+            state.step == Step.END && state.stack.isEmpty()
+        val scored = adjusted.map { (action, _, adjustment) ->
+            val cost = spare?.let { sorcerySpeedCastCost(state, action) }
+            val bonus = when {
+                cost != null && cost <= spare -> idleManaAllowance
+                theirEndStep && !adjustment.floored && isInstantSpeedCast(state, action) -> endStepManaAllowance
+                else -> 0.0
+            }
+            action to adjustment.score + bonus
+        }
 
         // On the opponent's end step, unspent mana is about to be wasted. Reduce the pass threshold
         // so the AI is more willing to use instants rather than letting mana evaporate.
@@ -301,12 +327,21 @@ class Strategist(
 
         val best = scored.maxByOrNull { it.second }
         val takeAction = best != null && best.second > adjustedPassScore
+        // Whether to act is the uncorrected scores' call; which action, the correction's.
+        val action = if (takeAction && actionCorrection != null) {
+            scored.indices.maxBy { j ->
+                val leaf = leafStates[firstCandidate + j]
+                scored[j].second + actionCorrection.evaluate(leaf, leaf.projectedState, playerId)
+            }.let { scored[it].first }
+        } else {
+            best?.first
+        }
         val chosen = if (takeAction) {
             remember(here)
             // Fill in targets on the returned action so the processor can execute it.
             // The committed target is chosen by simulation (not just the heuristic) so the
             // AI sees the real resolved board, including effects already on the stack.
-            best.first
+            action!!
         } else {
             pass ?: legalActions.first()
         }
@@ -316,7 +351,7 @@ class Strategist(
                 state, evaluationState, playerId, startNanos,
                 pass = pass, passScore = passScore, adjustedPassScore = adjustedPassScore,
                 adjusted = adjusted, dropped = dropped.orEmpty(),
-                chosenAction = if (takeAction) best.first else null,
+                chosenAction = if (takeAction) action else null,
             )
         }
         return chosen
@@ -605,6 +640,41 @@ class Strategist(
     }
 
     /**
+     * In our own postcombat main phase with an empty stack, the untapped lands a sorcery-speed spell may
+     * spend without giving up the cheapest instant-speed card in hand we could otherwise still cast on the
+     * opponent's turn — mana beyond that is wasted at cleanup. Null anywhere else.
+     */
+    private fun spareManaInLastSorcerySpeedWindow(state: GameState, playerId: EntityId): Int? {
+        if (!state.isActiveTurnFor(playerId) || state.step != Step.POSTCOMBAT_MAIN || state.stack.isNotEmpty()) {
+            return null
+        }
+        val untapped = state.projectedState.getBattlefieldControlledBy(playerId).count { id ->
+            state.projectedState.hasType(id, "LAND") && state.getEntity(id)?.has<TappedComponent>() != true
+        }
+        val held = state.getHand(playerId).mapNotNull { id ->
+            state.getEntity(id)?.get<CardComponent>()?.takeIf(::isInstantSpeed)?.manaValue
+        }.filter { it <= untapped }.minOrNull() ?: 0
+        return untapped - held
+    }
+
+    private fun isInstantSpeedCast(state: GameState, action: LegalAction): Boolean {
+        val cast = action.action as? CastSpell ?: return false
+        val card = state.getEntity(cast.cardId)?.get<CardComponent>() ?: return false
+        return isInstantSpeed(card)
+    }
+
+    /** The mana value of a sorcery-speed spell cast from hand, or null for anything else. */
+    private fun sorcerySpeedCastCost(state: GameState, action: LegalAction): Int? {
+        val cast = action.action as? CastSpell ?: return null
+        if (cast.cardId !in state.getHand(action.action.playerId)) return null
+        val card = state.getEntity(cast.cardId)?.get<CardComponent>() ?: return null
+        return if (isInstantSpeed(card)) null else card.manaValue + (cast.xValue ?: 0) * card.manaCost.xCount
+    }
+
+    private fun isInstantSpeed(card: CardComponent): Boolean =
+        !card.typeLine.isLand && (card.typeLine.isInstant || Keyword.FLASH in card.baseKeywords)
+
+    /**
      * Apply the two per-card adjustments to a leaf score, in raw evaluator units.
      *
      * Both are deltas on top of whatever the leaf said, which is what lets the rollout evaluator
@@ -635,7 +705,7 @@ class Strategist(
         if (timing is TimingVerdict.NoWindow) {
             // The card does nothing here, so nothing the simulation reports should make it beat
             // passing. See [TimingVerdict.NoWindow] for why this is a floor and not a penalty.
-            return AdjustedScore(passScore - 1.0, "hold policy: wrong window — floored below passing")
+            return AdjustedScore(passScore - 1.0, "hold policy: wrong window — floored below passing", floored = true)
         }
         val timingDelta = (timing as? TimingVerdict.Adjust)?.delta ?: 0.0
         val timingReason = (timing as? TimingVerdict.Adjust)?.reason ?: "timing"
@@ -671,7 +741,7 @@ class Strategist(
      * The [note] exists for the local testing mode: a candidate the AI passed over despite a strong
      * board score is only explicable if the panel can say *which* policy floored it.
      */
-    private data class AdjustedScore(val score: Double, val note: String? = null)
+    private data class AdjustedScore(val score: Double, val note: String? = null, val floored: Boolean = false)
 
     /**
      * Pick the targets the AI actually commits to for a chosen targeted action, by simulation
@@ -927,8 +997,8 @@ class Strategist(
 
     /**
      * Turn the Convoke candidates advertised by the legal-action enumerator into the payment the
-     * cast handler consumes. Colored pips are satisfied first; remaining creatures pay only the
-     * generic part of the cost, so the AI never submits an invalid overpayment.
+     * cast handler consumes. Colored pips are satisfied first, then hybrid ones; remaining creatures
+     * pay only the generic part of the cost, so the AI never submits an invalid overpayment.
      */
     private fun withAutomaticConvoke(action: LegalAction): GameAction {
         val cast = action.action as? CastSpell ?: return action.action
@@ -953,6 +1023,16 @@ class Strategist(
                     val creature = unused.removeAt(index)
                     payments[creature.entityId] = ConvokePayment(color)
                 }
+            }
+        }
+        // Hybrid pips next, by a creature of either colour: Merrow Skyswimmer's {3}{W/U}{W/U} with
+        // two white creatures and one Plains is castable only if the creatures take the hybrids.
+        for (hybrid in cost.symbols.filterIsInstance<ManaSymbol.Hybrid>()) {
+            val index = unused.indexOfFirst { hybrid.color1 in it.colors || hybrid.color2 in it.colors }
+            if (index >= 0) {
+                val creature = unused.removeAt(index)
+                val color = if (hybrid.color1 in creature.colors) hybrid.color1 else hybrid.color2
+                payments[creature.entityId] = ConvokePayment(color)
             }
         }
         while (genericNeeded > 0 && unused.isNotEmpty()) {

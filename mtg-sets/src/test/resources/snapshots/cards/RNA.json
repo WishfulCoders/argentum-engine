@@ -357,6 +357,45 @@
     ]
 }
 
+// Bedevil
+{
+    "name": "Bedevil",
+    "manaCost": "{B}{B}{R}",
+    "typeLine": "Instant",
+    "oracleText": "Destroy target artifact, creature, or planeswalker.",
+    "script": {
+        "spellEffect": {
+            "type": "MoveToZone",
+            "target": {
+                "type": "BoundVariable",
+                "name": "target artifact, creature, or planeswalker"
+            },
+            "destination": "Graveyard",
+            "byDestruction": true
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": "artifact|creature|planeswalker"
+                },
+                "id": "target artifact, creature, or planeswalker"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "157",
+        "rarity": "RARE",
+        "artist": "Seb McKinnon",
+        "flavorText": "\"It's easy to get taken in by the spectacle, to enjoy a bit of naughty amusement. But make no mistake: the Cult of Rakdos is a danger.\"\n—Tajic",
+        "imageUri": "https://cards.scryfall.io/normal/front/8/1/81e2b96b-ecf2-4dd9-bc9d-3c46ee8c59e6.jpg?1783933657"
+    },
+    "colorIdentityOverride": [
+        "BLACK",
+        "RED"
+    ]
+}
+
 // Biogenic Upgrade
 {
     "name": "Biogenic Upgrade",
@@ -1012,6 +1051,102 @@
         "imageUri": "https://cards.scryfall.io/normal/front/0/a/0a962509-2e77-4655-b397-9625b2f3407a.jpg"
     },
     "colorIdentityOverride": []
+}
+
+// Electrodominance
+{
+    "name": "Electrodominance",
+    "manaCost": "{X}{R}{R}",
+    "typeLine": "Instant",
+    "oracleText": "Electrodominance deals X damage to any target. You may cast a spell with mana value X or less from your hand without paying its mana cost.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "DealDamage",
+                    "amount": "XValue",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "any target"
+                    }
+                },
+                {
+                    "type": "GatherCards",
+                    "source": {
+                        "type": "FromZone",
+                        "zone": "Hand",
+                        "filter": "nonland"
+                    },
+                    "storeAs": "hand"
+                },
+                {
+                    "type": "FilterCollection",
+                    "from": "hand",
+                    "filter": {
+                        "type": "ManaValueAtMost",
+                        "max": "XValue"
+                    },
+                    "storeMatching": "castable"
+                },
+                {
+                    "type": "SelectFromCollection",
+                    "from": "castable",
+                    "selection": "ChooseSpell",
+                    "storeSelected": "spellToCast",
+                    "prompt": "You may cast a spell with mana value X or less without paying its mana cost",
+                    "selectedLabel": "Cast for free",
+                    "showAllCards": true
+                },
+                {
+                    "type": "CastFromCollectionWithoutPayingCost",
+                    "from": "spellToCast"
+                }
+            ]
+        },
+        "targetRequirements": [
+            {
+                "type": "AnyTarget",
+                "id": "any target"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "99",
+        "rarity": "RARE",
+        "artist": "Dmitry Burmak",
+        "flavorText": "\"Basically, we turn a bunch of little lightnings into one big lightning.\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/5/c/5c63877b-cdab-4ce4-a1c0-c088eb62a57a.jpg?1783933682",
+        "rulings": [
+            {
+                "date": "2024-04-12",
+                "text": "If the target is illegal as Electrodominance tries to resolve, it won't resolve and none of its effects will happen. You won't get to cast a spell from your hand."
+            },
+            {
+                "date": "2024-04-12",
+                "text": "Effects that allow you to cast a spell don't allow you to play a land."
+            },
+            {
+                "date": "2024-04-12",
+                "text": "If the target is dealt lethal damage this way, it will still be on the battlefield while you cast a spell from your hand. It won't die until after Electrodominance is finished resolving. If any of its abilities trigger while you cast that spell, those abilities will trigger but won't resolve until after the target has died."
+            },
+            {
+                "date": "2024-04-12",
+                "text": "You cast the spell during the resolution of Electrodominance. Ignore timing restrictions based on the spell's type."
+            },
+            {
+                "date": "2024-04-12",
+                "text": "If you cast a spell \"without paying its mana cost,\" you can't choose to cast it for any alternative costs. You can, however, pay additional costs, such as kicker costs. If the spell has any mandatory additional costs, such as that of Bankrupt in Blood, those must be paid to cast the card."
+            },
+            {
+                "date": "2024-04-12",
+                "text": "If a spell has {X} in its mana cost, you must choose 0 as the value of X when casting it without paying its mana cost."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
 }
 
 // Elite Arrester
@@ -2349,6 +2484,93 @@
     ]
 }
 
+// Light Up the Stage
+{
+    "name": "Light Up the Stage",
+    "manaCost": "{2}{R}",
+    "typeLine": "Sorcery",
+    "oracleText": "Spectacle {R} (You may cast this spell for its spectacle cost rather than its mana cost if an opponent lost life this turn.)\nExile the top two cards of your library. Until the end of your next turn, you may play those cards.",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "GatherCards",
+                    "source": {
+                        "type": "TopOfLibrary",
+                        "count": {
+                            "type": "Fixed",
+                            "amount": 2
+                        }
+                    },
+                    "storeAs": "impulseExiled"
+                },
+                {
+                    "type": "MoveCollection",
+                    "from": "impulseExiled",
+                    "destination": {
+                        "type": "ToZone",
+                        "zone": "Exile"
+                    }
+                },
+                {
+                    "type": "GrantMayPlayFromExile",
+                    "from": "impulseExiled",
+                    "expiry": {
+                        "type": "UntilControllerStep",
+                        "step": "CLEANUP",
+                        "includeCurrentTurn": false
+                    }
+                }
+            ]
+        },
+        "selfAlternativeCost": {
+            "manaCost": "{R}",
+            "condition": {
+                "type": "Compare",
+                "left": {
+                    "type": "TurnTracking",
+                    "player": "EachOpponent",
+                    "tracker": "LIFE_LOST"
+                },
+                "operator": "GTE",
+                "right": {
+                    "type": "Fixed",
+                    "amount": 1
+                }
+            }
+        }
+    },
+    "metadata": {
+        "collectorNumber": "107",
+        "rarity": "UNCOMMON",
+        "artist": "Dmitry Burmak",
+        "flavorText": "\"Places, everyone!\"\n—Judith",
+        "imageUri": "https://cards.scryfall.io/normal/front/9/2/9287b848-2aeb-4c70-ac4a-acafb871b7a4.jpg?1783933679",
+        "rulings": [
+            {
+                "date": "2024-01-12",
+                "text": "Spectacle cares only that an opponent lost life during the turn, not that the opponent's life total is currently lower than it was. For example, if an opponent loses 1 life and then gains 2 life in the same turn, you can cast a spell for its spectacle cost that turn."
+            },
+            {
+                "date": "2024-01-12",
+                "text": "Spectacle doesn't change when you can cast the spell. For example, you can't cast a sorcery with spectacle during an opponent's turn unless another effect allows you to do so, even if that player has lost life this turn."
+            },
+            {
+                "date": "2019-01-25",
+                "text": "If you don't play a card exiled this way, it remains in exile."
+            },
+            {
+                "date": "2019-01-25",
+                "text": "Light Up the Stage doesn't change when you can play the exiled cards. For example, if you exile a sorcery card, you can cast it only during your main phase when the stack is empty. If you exile a land card, you can play it only during your main phase and only if you have an available land play remaining."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED"
+    ]
+}
+
 // Noxious Groodion
 {
     "name": "Noxious Groodion",
@@ -3033,6 +3255,87 @@
     ]
 }
 
+// Savage Smash
+{
+    "name": "Savage Smash",
+    "manaCost": "{1}{R}{G}",
+    "typeLine": "Sorcery",
+    "oracleText": "Target creature you control gets +2/+2 until end of turn. It fights target creature you don't control. (Each deals damage equal to its power to the other.)",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "ModifyStats",
+                    "powerModifier": {
+                        "type": "Fixed",
+                        "amount": 2
+                    },
+                    "toughnessModifier": {
+                        "type": "Fixed",
+                        "amount": 2
+                    },
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "target creature you control"
+                    }
+                },
+                {
+                    "type": "Fight",
+                    "target1": {
+                        "type": "BoundVariable",
+                        "name": "target creature you control"
+                    },
+                    "target2": {
+                        "type": "BoundVariable",
+                        "name": "target creature you don't control"
+                    }
+                }
+            ]
+        },
+        "targetRequirements": [
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": "creature ctrl:you"
+                },
+                "id": "target creature you control"
+            },
+            {
+                "type": "TargetObject",
+                "filter": {
+                    "baseFilter": "creature ctrl:opponent"
+                },
+                "id": "target creature you don't control"
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "203",
+        "artist": "Zoltan Boros",
+        "flavorText": "A Gruul berserker is never unarmed.",
+        "imageUri": "https://cards.scryfall.io/normal/front/4/c/4ca942d7-a3a3-429f-a159-fc2363d9bca6.jpg?1783933639",
+        "rulings": [
+            {
+                "date": "2019-01-25",
+                "text": "You can't cast Savage Smash unless you choose both a creature you control and a creature you don't control as targets."
+            },
+            {
+                "date": "2019-01-25",
+                "text": "If either target is an illegal target as Savage Smash resolves, neither creature will deal or be dealt damage."
+            },
+            {
+                "date": "2019-01-25",
+                "text": "If the creature you control is an illegal target as Savage Smash tries to resolve, it won't get +2/+2. If that creature is a legal target but the other creature isn't, the creature you control still gets +2/+2."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED",
+        "GREEN"
+    ]
+}
+
 // Senate Courier
 {
     "name": "Senate Courier",
@@ -3360,6 +3663,76 @@
     "colorIdentityOverride": [
         "GREEN",
         "BLUE"
+    ]
+}
+
+// Skewer the Critics
+{
+    "name": "Skewer the Critics",
+    "manaCost": "{2}{R}",
+    "typeLine": "Sorcery",
+    "oracleText": "Spectacle {R} (You may cast this spell for its spectacle cost rather than its mana cost if an opponent lost life this turn.)\nSkewer the Critics deals 3 damage to any target.",
+    "script": {
+        "spellEffect": {
+            "type": "DealDamage",
+            "amount": {
+                "type": "Fixed",
+                "amount": 3
+            },
+            "target": {
+                "type": "BoundVariable",
+                "name": "any target"
+            }
+        },
+        "targetRequirements": [
+            {
+                "type": "AnyTarget",
+                "id": "any target"
+            }
+        ],
+        "selfAlternativeCost": {
+            "manaCost": "{R}",
+            "condition": {
+                "type": "Compare",
+                "left": {
+                    "type": "TurnTracking",
+                    "player": "EachOpponent",
+                    "tracker": "LIFE_LOST"
+                },
+                "operator": "GTE",
+                "right": {
+                    "type": "Fixed",
+                    "amount": 1
+                }
+            }
+        }
+    },
+    "metadata": {
+        "collectorNumber": "115",
+        "artist": "Heonhwa",
+        "flavorText": "Going to a Rakdos show is dangerous. Trying to leave early can be fatal.",
+        "imageUri": "https://cards.scryfall.io/normal/front/9/7/97295660-6bea-46ae-9a3b-0fc6abba407f.jpg?1783933675",
+        "rulings": [
+            {
+                "date": "2024-01-12",
+                "text": "Spectacle cares only that an opponent lost life during the turn, not that the opponent's life total is currently lower than it was. For example, if an opponent loses 1 life and then gains 2 life in the same turn, you can cast a spell for its spectacle cost that turn."
+            },
+            {
+                "date": "2024-01-12",
+                "text": "Spectacle doesn't change when you can cast the spell. For example, you can't cast a sorcery with spectacle during an opponent's turn unless another effect allows you to do so, even if that player has lost life this turn."
+            },
+            {
+                "date": "2024-01-12",
+                "text": "To determine the total cost of a spell, start with the mana cost or alternative cost you're paying (such as a spectacle cost), add any cost increases, then apply any cost reductions. The mana value of the spell remains unchanged, no matter what the total cost to cast it was."
+            },
+            {
+                "date": "2024-01-12",
+                "text": "In a multiplayer game, if an opponent loses life and later that turn leaves the game, you can cast a spell for its spectacle cost. (If a player leaves the game during their turn, that turn continues without an active player.)"
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "RED"
     ]
 }
 

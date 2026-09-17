@@ -74,6 +74,64 @@
     ]
 }
 
+// Grasp of Fate
+{
+    "name": "Grasp of Fate",
+    "manaCost": "{1}{W}{W}",
+    "typeLine": "Enchantment",
+    "oracleText": "When this enchantment enters, for each opponent, exile up to one target nonland permanent that player controls until this enchantment leaves the battlefield. (Those permanents return under their owners' control.)",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "ability_1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "to": "Battlefield"
+                },
+                "effect": {
+                    "type": "MoveUntilSourceLeaves",
+                    "target": {
+                        "type": "BoundVariable",
+                        "name": "up to one target nonland permanent that player controls"
+                    },
+                    "destination": "Exile"
+                },
+                "targetRequirement": {
+                    "type": "TargetObject",
+                    "optional": true,
+                    "filter": {
+                        "baseFilter": "nonland permanent ctrl:opponent"
+                    },
+                    "id": "up to one target nonland permanent that player controls"
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "3",
+        "rarity": "RARE",
+        "artist": "Tomasz Jedruszek",
+        "imageUri": "https://cards.scryfall.io/normal/front/4/2/42e1e595-4000-4c89-a2cd-dbaec25baa71.jpg?1783938117",
+        "rulings": [
+            {
+                "date": "2015-11-04",
+                "text": "If Grasp of Fate leaves the battlefield before its triggered ability resolves, no nonland permanents will be exiled."
+            },
+            {
+                "date": "2015-11-04",
+                "text": "If a token is exiled, it ceases to exist. It won't be returned to the battlefield."
+            },
+            {
+                "date": "2015-11-04",
+                "text": "The exiled cards return to the battlefield immediately after Grasp of Fate leaves the battlefield. Nothing happens between the two events, including state-based actions."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "WHITE"
+    ]
+}
+
 // Oreskos Explorer
 {
     "name": "Oreskos Explorer",

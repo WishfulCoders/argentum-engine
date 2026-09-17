@@ -1096,6 +1096,22 @@ sealed interface StatePredicate {
     }
 
     /**
+     * The candidate permanent is the entity that fired the resolving triggered ability (read from
+     * the evaluation context's `triggeringEntityId`). Trigger-relative, the way [IsSource] is
+     * source-relative; false with no trigger context.
+     *
+     * Negate with [Not] for "each **other** …" counts around the triggering creature — Shared
+     * Animosity's "it gets +1/+0 for each other attacking creature that shares a creature type
+     * with it", where the triggering attacker is not the ability's source and `excludeSelf` would
+     * exclude the enchantment instead.
+     */
+    @SerialName("IsTriggeringEntity")
+    @Serializable
+    data object IsTriggeringEntity : Entity {
+        override val description: String = "it"
+    }
+
+    /**
      * The candidate permanent is the permanent the effect's source is attached to — i.e. the
      * creature/permanent enchanted or equipped by the source (read from the source's
      * `AttachedToComponent`). Source-relative: resolves against the source supplied in the

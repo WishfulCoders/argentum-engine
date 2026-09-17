@@ -22,6 +22,15 @@ data class RawEvaluationWeights(
     fun evaluate(features: RawBoardFeatures): Double = intercept + features.weightedSum(weights)
 
     fun toEvaluator(intents: IntentCatalog): BoardEvaluator = RawBoardEvaluator(this, intents)
+
+    /**
+     * This model as a term added to another evaluator's score (the gameplay pilot's correction,
+     * mtg-draft-ai `docs/28` §5). 0 once the game is over, which the other evaluator scores.
+     */
+    fun toCorrection(intents: IntentCatalog): BoardEvaluator = BoardEvaluator { state, projected, playerId ->
+        if (terminalScore(state, playerId) != null) 0.0
+        else evaluate(RawBoardFeatures.extract(state, projected, playerId, intents))
+    }
 }
 
 private class RawBoardEvaluator(

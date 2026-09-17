@@ -1032,6 +1032,7 @@ class TriggerMatcher(
         if (trigger.from != null && event.fromZone != trigger.from) return false
         if (trigger.to != null && event.toZone != trigger.to) return false
         if (trigger.excludeTo != null && event.toZone == trigger.excludeTo) return false
+        if (trigger.excludeFrom != null && event.fromZone == trigger.excludeFrom) return false
         // "if it wasn't sacrificed" (Urza's Miter, CR 701.21) — reject sacrifice deaths.
         if (trigger.excludeSacrifice && event.wasSacrificed) return false
         // "while you're activating a craft ability" (Market Gnome, CR 702.167) — fire only when
@@ -2320,6 +2321,8 @@ class TriggerMatcher(
         is com.wingedsheep.sdk.scripting.predicates.StatePredicate.PutIntoGraveyardFromBattlefieldThisTurn -> false
         // No granter context in trigger gating — granter-relative exclusion is resolution-time only.
         is com.wingedsheep.sdk.scripting.predicates.StatePredicate.IsGrantingPermanent -> false
+        // Nor the resolving trigger's context — trigger-relative exclusion is resolution-time only.
+        is com.wingedsheep.sdk.scripting.predicates.StatePredicate.IsTriggeringEntity -> false
         is com.wingedsheep.sdk.scripting.predicates.StatePredicate.Or ->
             predicate.predicates.any { matchesStatePredicateForTrigger(it, state, entityId) }
         is com.wingedsheep.sdk.scripting.predicates.StatePredicate.And ->

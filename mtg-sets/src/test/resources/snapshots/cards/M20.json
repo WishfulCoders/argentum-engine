@@ -1090,6 +1090,75 @@
     ]
 }
 
+// Season of Growth
+{
+    "name": "Season of Growth",
+    "manaCost": "{1}{G}",
+    "typeLine": "Enchantment",
+    "oracleText": "Whenever a creature you control enters, scry 1. (Look at the top card of your library. You may put that card on the bottom.)\nWhenever you cast a spell that targets a creature you control, draw a card.",
+    "script": {
+        "triggeredAbilities": [
+            {
+                "id": "ability_1",
+                "trigger": {
+                    "type": "ZoneChangeEvent",
+                    "filter": "creature ctrl:you",
+                    "to": "Battlefield"
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "Scry",
+                    "count": 1
+                }
+            },
+            {
+                "id": "ability_2",
+                "trigger": {
+                    "type": "SpellCastEvent",
+                    "requires": [
+                        {
+                            "type": "SpellTargetsMatching",
+                            "filter": "creature ctrl:you"
+                        }
+                    ]
+                },
+                "binding": "ANY",
+                "effect": {
+                    "type": "DrawCards",
+                    "count": {
+                        "type": "Fixed",
+                        "amount": 1
+                    }
+                }
+            }
+        ]
+    },
+    "metadata": {
+        "collectorNumber": "191",
+        "rarity": "UNCOMMON",
+        "artist": "Randy Vargas",
+        "flavorText": "\"Awake, and lift your faces to the sun.\"",
+        "imageUri": "https://cards.scryfall.io/normal/front/6/5/65b9a718-01b9-46b2-85eb-55f6206ee5e4.jpg?1783932959",
+        "rulings": [
+            {
+                "date": "2019-07-12",
+                "text": "Season of Growth's last ability resolves before the spell that caused it to trigger. It resolves even if that spell is countered."
+            },
+            {
+                "date": "2019-07-12",
+                "text": "If multiple creatures enter the battlefield under your control simultaneously, you'll scry 1 for each of those creatures. You won't look at more than one card from your library at once."
+            },
+            {
+                "date": "2019-07-12",
+                "text": "Season of Growth's last ability triggers when you cast a spell that has multiple targets, as long as at least one of those targets is a creature you control. It doesn't trigger multiple times if you cast a spell that targets a creature you control multiple times or that targets multiple creatures you control."
+            }
+        ]
+    },
+    "colorIdentityOverride": [
+        "GREEN"
+    ]
+}
+
 // Silverback Shaman
 {
     "name": "Silverback Shaman",

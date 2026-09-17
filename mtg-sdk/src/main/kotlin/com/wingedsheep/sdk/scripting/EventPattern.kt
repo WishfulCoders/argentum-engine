@@ -153,7 +153,14 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
          * triggering event's craft-material flag, which the Craft cost payment stamps onto the
          * exile of each chosen material (and only those — an unrelated exile leaves it `false`).
          */
-        val requireCraftMaterial: Boolean = false
+        val requireCraftMaterial: Boolean = false,
+        /**
+         * The origin zone that does **not** match — the mirror of [excludeTo]. "A creature card is
+         * put into a graveyard from anywhere other than the battlefield" (Syr Konrad, the Grim;
+         * Disa the Restless; Ultron's Auxiliary) is `to = GRAVEYARD, excludeFrom = BATTLEFIELD`:
+         * a discard, a mill, a countered spell, but never a death.
+         */
+        val excludeFrom: Zone? = null
     ) : EventPattern {
         override val description: String = buildString {
             append(describeObjectForEvent(filter))
@@ -182,6 +189,7 @@ sealed interface EventPattern : TextReplaceable<EventPattern> {
             } else if (from != null) {
                 append(" would leave ${from.displayName}")
             }
+            if (excludeFrom != null) append(" from anywhere other than ${excludeFrom.displayName}")
             if (requireCraftMaterial) append(" while you're activating a craft ability")
         }
 

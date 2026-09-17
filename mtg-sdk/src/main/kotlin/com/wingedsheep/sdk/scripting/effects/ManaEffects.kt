@@ -179,6 +179,9 @@ data class AddManaEffect(
         if (expiry == ManaExpiry.END_OF_COMBAT) {
             append(". Until end of combat, you don't lose this mana as steps and phases end")
         }
+        if (expiry == ManaExpiry.UNTIL_END_OF_TURN) {
+            append(". Until end of turn, you don't lose this mana as steps and phases end")
+        }
         for (rider in riders) append(". ${rider.description}")
     }
 }

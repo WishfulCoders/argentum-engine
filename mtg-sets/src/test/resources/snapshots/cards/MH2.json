@@ -1202,6 +1202,46 @@
     ]
 }
 
+// Hard Evidence
+{
+    "name": "Hard Evidence",
+    "manaCost": "{U}",
+    "typeLine": "Sorcery",
+    "oracleText": "Create a 0/3 blue Crab creature token.\nInvestigate. (Create a Clue token. It's an artifact with \"{2}, Sacrifice this token: Draw a card.\")",
+    "script": {
+        "spellEffect": {
+            "type": "Composite",
+            "effects": [
+                {
+                    "type": "CreateToken",
+                    "power": 0,
+                    "toughness": 3,
+                    "colors": [
+                        "BLUE"
+                    ],
+                    "creatureTypes": [
+                        "Crab"
+                    ],
+                    "imageUri": "https://cards.scryfall.io/normal/front/7/e/7ef7f37a-b7f5-45a1-8f2b-7097089ca2e5.jpg?1783926593"
+                },
+                {
+                    "type": "CreatePredefinedToken",
+                    "tokenType": "Clue"
+                }
+            ]
+        }
+    },
+    "metadata": {
+        "collectorNumber": "46",
+        "artist": "Yeong-Hao Han",
+        "flavorText": "The investigator felt a pinch on his ankle. When he looked down, something glittered in the sand.",
+        "imageUri": "https://cards.scryfall.io/normal/front/5/0/501599d6-1072-4124-b05d-01f96de153f3.jpg?1783926878"
+    },
+    "colorIdentityOverride": [
+        "BLUE"
+    ]
+}
+
 // Healer's Flock
 {
     "name": "Healer's Flock",
