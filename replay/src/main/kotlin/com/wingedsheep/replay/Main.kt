@@ -70,7 +70,7 @@ fun main(args: Array<String>) {
                 try {
                     val seats = Seats.of(steps.first().before)
                     lineJson.encodeToString(GameLine.serializer(),
-                        writers.get().line(spec, result, seats, steps, reconstructor.acceptedThrough))
+                        writers.get().line(spec, result, seats, steps, reconstructor.acceptedThrough, reconstructor.gaps))
                 } catch (e: Throwable) {
                     System.err.println("line ${spec.gameId}: $e")
                     null
@@ -206,6 +206,17 @@ private fun summarize(results: List<GameResult>) {
     println("status: $byStatus")
     if (halfTurns > 0) {
         println("half-turns reproduced in order: $reproduced / $halfTurns (${"%.1f".format(100.0 * reproduced / halfTurns)}%)")
+    }
+    val resynced = played.filter { it.matched != null }
+    if (resynced.isNotEmpty()) {
+        val after = resynced.sumOf { it.halfTurns - it.reproduced }
+        val kept = resynced.sumOf { it.matched!! - it.reproduced }
+        println("resync: ${resynced.size} games, ${resynced.sumOf { it.gaps.size }} gaps; " +
+            "half-turns after the first break rebuilt $kept / $after (${"%.1f".format(100.0 * kept / maxOf(after, 1))}%); " +
+            "all half-turns ${played.sumOf { it.matched ?: it.reproduced }} / $halfTurns")
+        resynced.mapNotNull { it.stopReason }.groupingBy { it.take(40) }
+            .eachCount().entries.sortedByDescending { it.value }.take(8)
+            .forEach { (k, n) -> println("  stopped $n  $k") }
     }
     val medianMs = results.map { it.millis }.sorted().let { if (it.isEmpty()) 0 else it[it.size / 2] }
     println("median time per game: $medianMs ms")

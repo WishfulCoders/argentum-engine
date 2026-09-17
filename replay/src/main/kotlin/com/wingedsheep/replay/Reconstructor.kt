@@ -71,12 +71,18 @@ class Reconstructor(
     private val seed: Long = 20260911L,
     /** Prints the search of one half-turn; see [Tracer]. */
     private val tracer: Tracer? = null,
+    /**
+     * C2: at a half-turn no line rebuilds, pass through it, rewrite the state to its recorded
+     * snapshot ([SnapshotPatcher]) and carry on from the next half-turn, leaving a gap.
+     */
+    private val resync: Boolean = System.getProperty("replay.resync") == "true",
 ) {
     private val processor = ActionProcessor(EngineServices(registry), computeUndo = false)
     private val enumerator = LegalActionEnumerator.create(registry)
     private val responder =
         DecisionResponder(GameSimulator(registry, processor, enumerator), GameEnvironment.defaultEvaluator())
     private val materializer = HiddenWorldMaterializer(registry)
+    private val patcher = SnapshotPatcher(registry, snapshotter, { s, names -> materialize(s, names) }, { nonlandFiller })
 
     /** Why the last [apply] or [materialize] was refused, for the trace and the failure reason. */
     private var lastError: String? = null
@@ -96,7 +102,7 @@ class Reconstructor(
     /** The accepted line of the last [run]: a reproduced game's whole line, a failed one's up to [acceptedThrough]. */
     var acceptedLine: Move? = null
         private set
-    /** Half-turns [acceptedLine] covers. */
+    /** Half-turns [acceptedLine] covers, [gaps] included. */
     var acceptedThrough = 0
         private set
     /**
@@ -104,6 +110,9 @@ class Reconstructor(
      * start of its failed half-turn, which C1 plays on from (mtg-draft-ai `docs/27` §5, [PlayOn]).
      */
     var acceptedState: GameState? = null
+        private set
+    /** Half-turns of the last [run] that were skipped by a resync; their actions are not in [acceptedLine]. */
+    var gaps: List<Int> = emptyList()
         private set
 
     private fun Move?.then(before: GameState, action: GameAction, how: String) =
@@ -158,14 +167,26 @@ class Reconstructor(
         val t0 = System.currentTimeMillis()
         val beamSizes = mutableListOf<Int>()
         val nodeCounts = mutableListOf<Int>()
+        val gapList = mutableListOf<Int>()
+        val editCounts = mutableListOf<Int>()
+        val madeCards = mutableListOf<String>()
+        var firstFail: Int? = null
+        var firstReason: String? = null
+        var matched = 0
         fun result(status: String, reproduced: Int, failedAt: Int? = null, reason: String? = null) = GameResult(
             spec.gameId, status, spec.halfTurns.size, reproduced, failedAt, reason,
             beamSizes.toList(), nodeCounts.toList(), System.currentTimeMillis() - t0,
+        )
+        // with gaps, the game counts as failed at its first break; the rest says how far resyncs took it
+        fun resynced(stoppedAt: Int?, why: String?) = result("failed", firstFail!!, firstFail, firstReason).copy(
+            gaps = gapList.toList(), matched = matched, resyncEdits = editCounts.toList(),
+            resyncMade = madeCards.toList(), stoppedAt = stoppedAt, stopReason = why,
         )
 
         acceptedLine = null
         acceptedThrough = 0
         acceptedState = null
+        gaps = emptyList()
         missingCard(spec)?.let { return result("skipped", 0, reason = "card not in engine: $it") }
         val init = try {
             GameInitializer(registry).initializeGame(
@@ -190,6 +211,8 @@ class Reconstructor(
         acceptedState = stacked
         // the previous half-turn's matching end states left out of the beam
         var spare = emptyList<Kept>()
+        // [spare] as the half-turn's search found it, before the backtrack cleared it: resync starts
+        var previousSpare = emptyList<Kept>()
         for (i in spec.halfTurns.indices) {
             var search = searchStep(spec, i, beam, seats, withDrawOrders = false)
             nodeCounts += search.nodes
@@ -212,16 +235,175 @@ class Reconstructor(
             spare = emptyList()
             if (search.ends.isEmpty()) {
                 val why = search.closest?.joinToString("; ") ?: "no line reached the end of the half-turn"
-                return result("failed", i, i, why)
+                if (!resync || ht.last) {
+                    return if (firstFail == null) result("failed", i, i, why) else resynced(i, why)
+                }
+                if (firstFail == null) {
+                    firstFail = i
+                    firstReason = why
+                }
+                val restarts = resyncStep(spec, i, beam + previousSpare, seats)
+                if (restarts.isEmpty()) return resynced(i, resyncError ?: "resync: nothing to resync from")
+                gapList += i
+                gaps = gapList.toList()
+                editCounts += resyncEditCount
+                madeCards += resyncMade.map { "$i:$it" }
+                beam = restarts
+                beamSizes += beam.size
+                acceptedLine = beam.first().line
+                acceptedState = beam.first().state
+                acceptedThrough = i + 1
+                previousSpare = emptyList()
+                continue
             }
+            matched++
             beam = pickBeam(search.ends, search.groupOf)
             spare = search.ends.filter { e -> beam.none { it === e } }
+            previousSpare = spare
             beamSizes += beam.size
             acceptedLine = beam.first().line
             acceptedState = beam.first().state
             acceptedThrough = i + 1
         }
+        if (firstFail != null) return resynced(null, null)
         return result("reproduced", spec.halfTurns.size)
+    }
+
+    // =========================================================================
+    // C2: resynchronise at the next snapshot
+    // =========================================================================
+
+    /** Why the last [resyncStep] found no start state. */
+    private var resyncError: String? = null
+    /** Edits the last successful [resyncStep]'s first state needed. */
+    private var resyncEditCount = 0
+    /** Cards the last successful [resyncStep]'s first state made ([SnapshotPatcher.lastMade]). */
+    private var resyncMade: List<String> = emptyList()
+
+    /**
+     * The states to replay half-turn [i] + 1 from, when half-turn [i] could not be rebuilt: from each
+     * of up to [RESYNC_STARTS] of the [starts] (the states half-turn [i] was searched from), nobody
+     * acts through the half-turn, the end step's state is rewritten to [i]'s snapshot, and the turn
+     * ends. The lines stay those that reached half-turn [i]: the gap's own actions are not the
+     * players'. Empty, with [resyncError] set, when no start could be patched.
+     */
+    private fun resyncStep(spec: GameSpec, i: Int, starts: List<Kept>, seats: Seats): List<Kept> {
+        val ht = spec.halfTurns[i]
+        halfTurnIndex = i
+        resyncError = null
+        val tracing = tracer?.halfTurn == i
+        val out = mutableListOf<Kept>()
+        val seen = HashSet<Any>()
+        for (k in starts.distinctBy { StateProgress.digest(it.state) }.take(RESYNC_STARTS)) {
+            val ready = if (ht.active == "user" || ht.drawn.isNotEmpty()) {
+                restackUser(k.state, seats, ht, laterDraws(spec, i)) ?: k.state
+            } else k.state
+            val end = endOfTurn(ready, i + 1)
+            if (end == null) {
+                resyncError = "resync: could not pass through the half-turn: $lastError"
+                continue
+            }
+            val patched = patcher.patch(end, seats, ht.eot)
+            if (patched == null) {
+                resyncError = patcher.lastError
+                if (tracing) tracer!!.line("### resync refused: ${patcher.lastError}${patcher.lastDetail?.let { "\n###   $it" } ?: ""}")
+                continue
+            }
+            val next = nextTurn(patched, i + 1)
+            if (next == null) {
+                resyncError = "resync: the turn would not end after the patch: $lastError"
+                continue
+            }
+            // the next turn must start with what the patch put there (an Aura without a host would be gone)
+            val after = names(next, seats)
+            val lost = names(patched, seats).filter { (n, c) -> (after[n] ?: 0) < c }.keys
+            if (lost.isNotEmpty()) {
+                resyncError = "resync: gone when the turn ended: ${lost.sorted().joinToString(" ")}"
+                continue
+            }
+            if (!seen.add(StateProgress.digest(next))) continue
+            if (out.isEmpty()) {
+                resyncEditCount = patcher.lastEdits.size
+                resyncMade = patcher.lastMade
+            }
+            if (tracing) tracer!!.line("### resync: ${patcher.lastEdits.joinToString(", ")}${patcher.lastMade.joinToString("") { "; made $it" }}")
+            out += Kept(next, k.line)
+        }
+        return out.take(beamWidth)
+    }
+
+    private fun names(s: GameState, seats: Seats): Map<String, Int> =
+        Snapshotter.counts(listOf("user", "oppo").flatMap { side ->
+            s.controlledBattlefield(seats.of(side)).filterNot { snapshotter.isToken(s, it) }
+                .mapNotNull { snapshotter.name(s, it)?.let { n -> "$side:$n" } }
+        })
+
+    /**
+     * Nobody acting, the state at the end step of turn [turn] with an empty stack and nothing
+     * pending; else, if the engine never stops there, the last state of the turn when nothing is
+     * pending in it.
+     */
+    private fun endOfTurn(start: GameState, turn: Int): GameState? {
+        var s = start
+        repeat(MAX_PASS_STEPS) {
+            if (s.turnNumber > turn) return null
+            if (s.step == Step.END && s.stack.isEmpty() && s.pendingDecision == null && s.priorityPlayerId != null) return s
+            val next = passStep(s) ?: return null
+            if (next.turnNumber > turn) {
+                return s.takeIf { it.pendingDecision == null && it.stack.isEmpty() }
+                    .also { if (it == null) lastError = "the turn ended from a pending decision or a non-empty stack" }
+            }
+            s = next
+        }
+        lastError = "the turn did not end in $MAX_PASS_STEPS steps"
+        return null
+    }
+
+    /** Nobody acting, the first state after turn [turn] is over. */
+    private fun nextTurn(start: GameState, turn: Int): GameState? {
+        var s = start
+        repeat(MAX_PASS_STEPS) {
+            val next = passStep(s) ?: return null
+            if (next.gameOver) {
+                lastError = "the game ended"
+                return null
+            }
+            if (next.turnNumber > turn) return next
+            s = next
+        }
+        lastError = "the turn did not end in $MAX_PASS_STEPS steps"
+        return null
+    }
+
+    /** One step of a turn in which nobody acts: no attacks, no blocks, decisions by the AI, else pass. */
+    private fun passStep(s: GameState): GameState? {
+        if (s.gameOver) {
+            lastError = "the game ended"
+            return null
+        }
+        s.pendingDecision?.let { d ->
+            for (r in heuristic(s, d)) apply(s, SubmitDecision(d.playerId, r))?.let { return it }
+            lastError = "no answer to ${d::class.simpleName}: $lastError"
+            return null
+        }
+        val player = s.priorityPlayerId ?: run {
+            lastError = "no priority player"
+            return null
+        }
+        val legal = enumerator.enumerate(s, player, EnumerationMode.ACTIONS_ONLY)
+        val seats = Seats.of(s)
+        // a creature that must attack: one attacker at a time, then all of them
+        val attackers = legal.firstOrNull { it.actionType == "DeclareAttackers" }?.validAttackers.orEmpty()
+        val defender = if (player == seats.user) seats.oppo else seats.user
+        val forced = (attackers.map { listOf(it) } + listOf(attackers)).filter { it.isNotEmpty() }
+            .map { ids -> DeclareAttackers(player, ids.associateWith { defender }) }
+        val preferred = listOfNotNull(
+            legal.firstOrNull { it.actionType == "DeclareAttackers" }?.let { DeclareAttackers(player, emptyMap()) },
+            legal.firstOrNull { it.actionType == "DeclareBlockers" }?.let { DeclareBlockers(player, emptyMap()) },
+            legal.firstOrNull { it.action is PassPriority }?.action,
+        ) + forced + legal.filter { !it.isManaAbility }.take(MAX_FALLBACK_ACTIONS).map { it.action }
+        for (a in preferred) apply(s, a)?.let { return it }
+        return null
     }
 
     /**
@@ -1623,6 +1805,10 @@ class Reconstructor(
         /** Cards an impulse exiles when its text gives no number ("that many"). */
         const val IMPULSE_DEFAULT_COUNT = 3
         const val MAX_PAYMENT_OPTIONS = 12
+        /** Start states a resync patches; the beam after it is at most [beamWidth] of them. */
+        const val RESYNC_STARTS = 8
+        /** Engine steps a turn with nobody acting may take before a resync gives up on it. */
+        const val MAX_PASS_STEPS = 400
         /** How a [Move] was chosen: it used up a recorded action; the search chose it; the AI's responder did. */
         const val PLAN = "plan"
         const val SEARCH = "search"
