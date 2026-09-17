@@ -4,6 +4,15 @@ import com.wingedsheep.engine.core.GameAction
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.model.EntityId
 
+/** Exact declaration-wide restrictions for a DeclareBlockers action. */
+data class BlockDeclarationConstraints(
+    val attackerMinBlockCounts: Map<EntityId, Int> = emptyMap(),
+    val attackerMaxBlockCounts: Map<EntityId, Int> = emptyMap(),
+    val maxBlockingCreatures: Int? = null,
+    val blockerCoRequirements: Map<EntityId, List<List<EntityId>>> = emptyMap(),
+    val blockerTaxCosts: Map<EntityId, Int> = emptyMap(),
+)
+
 /**
  * Engine-level representation of a legal action a player can take.
  *
@@ -88,6 +97,7 @@ data class LegalAction(
     val validBlockerAssignments: Map<EntityId, List<EntityId>>? = null,
     val blockerMaxBlockCounts: Map<EntityId, Int>? = null,
     val mandatoryBlockerAssignments: Map<EntityId, List<EntityId>>? = null,
+    val blockDeclarationConstraints: BlockDeclarationConstraints? = null,
 
     // Costs
     val manaCostString: String? = null,

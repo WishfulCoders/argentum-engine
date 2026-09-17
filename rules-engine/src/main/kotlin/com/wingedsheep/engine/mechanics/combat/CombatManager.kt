@@ -81,6 +81,13 @@ class CombatManager(
     fun getMandatoryBlockerAssignments(state: GameState, blockingPlayer: EntityId): Map<EntityId, List<EntityId>> =
         blockPhase.getMandatoryBlockerAssignments(state, blockingPlayer)
 
+    fun getBlockDeclarationConstraints(
+        state: GameState,
+        blockingPlayer: EntityId,
+        validAssignments: Map<EntityId, List<EntityId>>,
+    ): com.wingedsheep.engine.legalactions.BlockDeclarationConstraints =
+        blockPhase.getBlockDeclarationConstraints(state, blockingPlayer, validAssignments)
+
     fun getMandatoryAttackers(state: GameState, attackingPlayer: EntityId): List<EntityId> =
         attackPhase.getMandatoryAttackers(state, attackingPlayer)
 

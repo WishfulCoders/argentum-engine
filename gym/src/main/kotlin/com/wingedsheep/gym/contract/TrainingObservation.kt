@@ -253,7 +253,15 @@ data class EntityFeatures(
     val counters: Map<String, Int> = emptyMap(),
     /** Non-null if attached (aura/equipment) to another entity. */
     val attachedTo: EntityId? = null,
-    val attachments: List<EntityId> = emptyList()
+    val attachments: List<EntityId> = emptyList(),
+    /** Live combat role. These are public battlefield facts, never hidden identity. */
+    val attacking: Boolean = false,
+    /** Player, planeswalker or battle this creature is attacking. */
+    val attackTargetId: EntityId? = null,
+    /** Attackers this creature is currently blocking (normally one, but rules can raise the cap). */
+    val blockingEntityIds: List<EntityId> = emptyList(),
+    /** Creatures currently blocking this attacker. */
+    val blockedByEntityIds: List<EntityId> = emptyList()
 )
 
 /** An item on the stack (spell or ability). */
@@ -344,8 +352,28 @@ data class LegalActionView(
      * than it could is illegal, so this is not advisory.
      */
     val mandatoryBlockerAssignments: Map<EntityId, List<EntityId>> = emptyMap(),
+    /** Whole-declaration restrictions that cannot be represented by pairwise assignments alone. */
+    val blockDeclarationConstraints: BlockDeclarationConstraintsView? = null,
     /** True when this entry was generated from [PendingDecisionView], not a GameAction. */
     val isDecisionOption: Boolean = false
+)
+
+/**
+ * Complete declarative mask for the block constraints enforced after pairwise legality.
+ *
+ * A count of zero means an attacker stays unblocked. If it receives any blocker,
+ * [attackerMinBlockCounts] applies (menace and its generalized forms). Each nested co-blocker list
+ * is one requirement's alternatives for "can't block alone/unless an X also blocks"; every nested
+ * list needs a selected member. Tax costs are exact additive generic costs per distinct blocker;
+ * submitting the declaration may still open the existing mana-source decision.
+ */
+@Serializable
+data class BlockDeclarationConstraintsView(
+    val attackerMinBlockCounts: Map<EntityId, Int> = emptyMap(),
+    val attackerMaxBlockCounts: Map<EntityId, Int> = emptyMap(),
+    val maxBlockingCreatures: Int? = null,
+    val blockerCoRequirements: Map<EntityId, List<List<EntityId>>> = emptyMap(),
+    val blockerTaxCosts: Map<EntityId, Int> = emptyMap()
 )
 
 /** Policy-facing form of one independently constrained target requirement. */

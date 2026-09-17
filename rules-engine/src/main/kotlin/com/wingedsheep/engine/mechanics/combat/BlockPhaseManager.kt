@@ -19,6 +19,7 @@ import com.wingedsheep.engine.state.components.identity.FaceDownComponent
 import com.wingedsheep.engine.state.components.player.ManaPoolComponent
 import com.wingedsheep.engine.mechanics.combat.rules.BlockCheckContext
 import com.wingedsheep.engine.mechanics.combat.rules.BlockEvasionRule
+import com.wingedsheep.engine.legalactions.BlockDeclarationConstraints
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.ManaSymbol
@@ -287,6 +288,59 @@ internal class BlockPhaseManager(
                 }
             }
             .filterValues { it.isNotEmpty() }
+    }
+
+    /**
+     * Exact declaration-wide facts needed to construct a block without trial-and-error against
+     * [declareBlockers]. Pairwise legality and per-blocker capacities stay on `LegalAction`; this
+     * object covers the constraints that only become meaningful after pairs are combined.
+     */
+    fun getBlockDeclarationConstraints(
+        state: GameState,
+        blockingPlayer: EntityId,
+        validAssignments: Map<EntityId, List<EntityId>> = getValidBlockerAssignments(state, blockingPlayer),
+    ): BlockDeclarationConstraints {
+        val projected = state.projectedState
+        val attackers = validAssignments.values.flatten().distinct()
+        val blockers = validAssignments.keys.toList()
+        val coRequirements = mutableMapOf<EntityId, List<List<EntityId>>>()
+        for (blockerId in blockers) {
+            val container = state.getEntity(blockerId) ?: continue
+            if (container.has<FaceDownComponent>()) continue
+            val card = container.get<CardComponent>() ?: continue
+            val printed = cardRegistry.getCard(card.cardDefinitionId)?.staticAbilities.orEmpty()
+            val granted = state.grantedStaticAbilities
+                .filter { it.entityId == blockerId }
+                .map { it.ability }
+            val restrictions = (printed + granted)
+                .filterIsInstance<CantBlockUnlessCoBlocker>()
+                .filter { it.filter.scope is Scope.Self }
+            if (restrictions.isEmpty()) continue
+            val context = PredicateContext(
+                controllerId = projected.getController(blockerId) ?: blockerId
+            )
+            coRequirements[blockerId] = restrictions.map { restriction ->
+                blockers.filter { otherId ->
+                    otherId != blockerId && predicateEvaluator.matches(
+                        state, projected, otherId, restriction.coBlockerFilter, context
+                    )
+                }
+            }
+        }
+
+        return BlockDeclarationConstraints(
+            attackerMinBlockCounts = attackers.mapNotNull { attackerId ->
+                minimumBlockersFor(state, attackerId).takeIf { it > 1 }?.let { attackerId to it }
+            }.toMap(),
+            attackerMaxBlockCounts = attackers.mapNotNull { attackerId ->
+                maximumBlockersFor(state, attackerId)?.let { attackerId to it }
+            }.toMap(),
+            maxBlockingCreatures = globalBlockerCap(state),
+            blockerCoRequirements = coRequirements,
+            blockerTaxCosts = blockers.associateWith { blockerId ->
+                CombatTaxes.blockTax(state, cardRegistry, setOf(blockerId), projected)
+            }.filterValues { it > 0 },
+        )
     }
 
     /**
@@ -620,15 +674,8 @@ internal class BlockPhaseManager(
 
         for ((attackerId, blockerList) in attackerToBlockers) {
             if (blockerList.isEmpty()) continue
-            val attackerContainer = state.getEntity(attackerId) ?: continue
-            if (attackerContainer.has<FaceDownComponent>()) continue
-            val attackerCard = attackerContainer.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(attackerCard.cardDefinitionId) ?: continue
-
-            val minBlockers = cardDef.staticAbilities
-                .filterIsInstance<com.wingedsheep.sdk.scripting.CantBeBlockedByFewerThan>()
-                .filter { it.filter.scope is com.wingedsheep.sdk.scripting.filters.unified.Scope.Self }
-                .maxOfOrNull { it.minBlockers } ?: continue
+            val attackerCard = state.getEntity(attackerId)?.get<CardComponent>() ?: continue
+            val minBlockers = minimumBlockersFor(state, attackerId)
 
             if (blockerList.size < minBlockers) {
                 return "${attackerCard.name} can't be blocked except by $minBlockers or more creatures"
@@ -636,6 +683,19 @@ internal class BlockPhaseManager(
         }
 
         return null
+    }
+
+    private fun minimumBlockersFor(state: GameState, attackerId: EntityId): Int {
+        val attackerContainer = state.getEntity(attackerId) ?: return 1
+        val menace = if (state.projectedState.hasKeyword(attackerId, Keyword.MENACE)) 2 else 1
+        if (attackerContainer.has<FaceDownComponent>()) return menace
+        val attackerCard = attackerContainer.get<CardComponent>() ?: return menace
+        val printed = cardRegistry.getCard(attackerCard.cardDefinitionId)?.staticAbilities
+            .orEmpty()
+            .filterIsInstance<com.wingedsheep.sdk.scripting.CantBeBlockedByFewerThan>()
+            .filter { it.filter.scope is Scope.Self }
+            .maxOfOrNull { it.minBlockers } ?: 1
+        return maxOf(menace, printed)
     }
 
     /**
@@ -654,54 +714,8 @@ internal class BlockPhaseManager(
         }
 
         for ((attackerId, count) in attackerToBlockerCount) {
-            val attackerContainer = state.getEntity(attackerId) ?: continue
-            if (attackerContainer.has<FaceDownComponent>()) continue
-            val attackerCard = attackerContainer.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(attackerCard.cardDefinitionId)
-
-            // Printed "can't be blocked by more than N", including the conditional form
-            // (Akawalli's descend-8 "can't be blocked by more than one creature") — unwrap a
-            // ConditionalStaticAbility and honor it only while its condition currently holds,
-            // mirroring the MustBeBlocked handling in attackersWithMustBeBlockedStatic. cardDef
-            // may be null for tokens/copies without a registered definition — the granted forms
-            // below still apply.
-            val attackerController = state.projectedState.getController(attackerId)
-            val staticLimit = cardDef?.staticAbilities
-                ?.mapNotNull { ability ->
-                    val unwrapped = if (ability is ConditionalStaticAbility) ability.ability else ability
-                    if (unwrapped !is CantBeBlockedByMoreThan) return@mapNotNull null
-                    if (unwrapped.filter.scope !is com.wingedsheep.sdk.scripting.filters.unified.Scope.Self) {
-                        return@mapNotNull null
-                    }
-                    if (ability is ConditionalStaticAbility) {
-                        if (attackerController == null) return@mapNotNull null
-                        if (!conditionEvaluator.evaluate(
-                                state,
-                                ability.condition,
-                                EffectContext(sourceId = attackerId, controllerId = attackerController)
-                            )
-                        ) return@mapNotNull null
-                    }
-                    unwrapped.maxBlockers
-                }
-                ?.minOrNull()
-            // Granted static-ability form: e.g. Full Steam Ahead grants CantBeBlockedByMoreThan(1)
-            // until end of turn via grantedStaticAbilities.
-            val grantedLimit = state.grantedStaticAbilities
-                .filter { it.entityId == attackerId }
-                .map { it.ability }
-                .filterIsInstance<CantBeBlockedByMoreThan>()
-                .filter { it.filter.scope is com.wingedsheep.sdk.scripting.filters.unified.Scope.Self }
-                .minOfOrNull { it.maxBlockers }
-            // Granted (floating) flag form (CR 509.1b): a temporary "can't be blocked by more than one
-            // creature" via Effects.GrantKeyword(AbilityFlag.CANT_BE_BLOCKED_BY_MORE_THAN_ONE) caps at 1.
-            val flagLimit = if (
-                state.projectedState.hasKeyword(
-                    attackerId,
-                    com.wingedsheep.sdk.core.AbilityFlag.CANT_BE_BLOCKED_BY_MORE_THAN_ONE
-                )
-            ) 1 else null
-            val limit = listOfNotNull(staticLimit, grantedLimit, flagLimit).minOrNull() ?: continue
+            val attackerCard = state.getEntity(attackerId)?.get<CardComponent>() ?: continue
+            val limit = maximumBlockersFor(state, attackerId) ?: continue
 
             if (count > limit) {
                 val countText = if (limit == 1) "more than one creature" else "more than $limit creatures"
@@ -709,6 +723,43 @@ internal class BlockPhaseManager(
             }
         }
         return null
+    }
+
+    private fun maximumBlockersFor(state: GameState, attackerId: EntityId): Int? {
+        val attackerContainer = state.getEntity(attackerId) ?: return null
+        if (attackerContainer.has<FaceDownComponent>()) return null
+        val attackerCard = attackerContainer.get<CardComponent>() ?: return null
+        val cardDef = cardRegistry.getCard(attackerCard.cardDefinitionId)
+        val attackerController = state.projectedState.getController(attackerId)
+        val staticLimit = cardDef?.staticAbilities
+            ?.mapNotNull { ability ->
+                val unwrapped = if (ability is ConditionalStaticAbility) ability.ability else ability
+                if (unwrapped !is CantBeBlockedByMoreThan || unwrapped.filter.scope !is Scope.Self) {
+                    return@mapNotNull null
+                }
+                if (ability is ConditionalStaticAbility) {
+                    if (attackerController == null || !conditionEvaluator.evaluate(
+                            state,
+                            ability.condition,
+                            EffectContext(sourceId = attackerId, controllerId = attackerController)
+                        )
+                    ) return@mapNotNull null
+                }
+                unwrapped.maxBlockers
+            }
+            ?.minOrNull()
+        val grantedLimit = state.grantedStaticAbilities
+            .filter { it.entityId == attackerId }
+            .map { it.ability }
+            .filterIsInstance<CantBeBlockedByMoreThan>()
+            .filter { it.filter.scope is Scope.Self }
+            .minOfOrNull { it.maxBlockers }
+        val flagLimit = if (state.projectedState.hasKeyword(
+                attackerId,
+                com.wingedsheep.sdk.core.AbilityFlag.CANT_BE_BLOCKED_BY_MORE_THAN_ONE
+            )
+        ) 1 else null
+        return listOfNotNull(staticLimit, grantedLimit, flagLimit).minOrNull()
     }
 
     /**
@@ -720,14 +771,13 @@ internal class BlockPhaseManager(
         state: GameState,
         blockerIds: Set<EntityId>
     ): String? {
-        var cap: Int? = null
-        var capDescription = ""
+        val cap = globalBlockerCap(state)
+        var capDescription = "No more than $cap creatures can block each combat"
         for (permId in state.getBattlefield()) {
             val cardComponent = state.getEntity(permId)?.get<CardComponent>() ?: continue
             val cardDef = cardRegistry.getCard(cardComponent.cardDefinitionId) ?: continue
             for (ability in cardDef.staticAbilities.filterIsInstance<BlockerCountLimit>()) {
-                if (cap == null || ability.maxBlockers < cap) {
-                    cap = ability.maxBlockers
+                if (ability.maxBlockers == cap) {
                     capDescription = ability.description
                 }
             }
@@ -737,6 +787,16 @@ internal class BlockPhaseManager(
         }
         return null
     }
+
+    private fun globalBlockerCap(state: GameState): Int? = state.getBattlefield()
+        .flatMap { permanentId ->
+            val card = state.getEntity(permanentId)?.get<CardComponent>() ?: return@flatMap emptyList()
+            cardRegistry.getCard(card.cardDefinitionId)?.staticAbilities
+                .orEmpty()
+                .filterIsInstance<BlockerCountLimit>()
+                .map { it.maxBlockers }
+        }
+        .minOrNull()
 
     /**
      * Validate "can't block unless [X] also blocks" restrictions ([CantBlockUnlessCoBlocker], CR

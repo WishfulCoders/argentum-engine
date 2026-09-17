@@ -1138,6 +1138,14 @@ class TurnManager(
         return combatManager.getMandatoryBlockerAssignments(state, playerId)
     }
 
+    fun getBlockDeclarationConstraints(
+        state: GameState,
+        playerId: EntityId,
+        validAssignments: Map<EntityId, List<EntityId>>,
+    ): com.wingedsheep.engine.legalactions.BlockDeclarationConstraints {
+        return combatManager.getBlockDeclarationConstraints(state, playerId, validAssignments)
+    }
+
     fun hasAttackingCreatures(state: GameState): Boolean {
         val battlefield = state.getBattlefield()
         return battlefield.any { entityId ->

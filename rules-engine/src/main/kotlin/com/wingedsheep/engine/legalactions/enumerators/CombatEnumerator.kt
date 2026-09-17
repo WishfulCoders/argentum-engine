@@ -118,6 +118,9 @@ class CombatEnumerator : ActionEnumerator {
                     }
                 }
                 val mandatoryAssignments = context.turnManager.getMandatoryBlockerAssignments(state, playerId)
+                val declarationConstraints = context.turnManager.getBlockDeclarationConstraints(
+                    state, playerId, validBlockerAssignments
+                )
                 return listOf(LegalAction(
                     actionType = "DeclareBlockers",
                     description = "Declare blockers",
@@ -125,7 +128,8 @@ class CombatEnumerator : ActionEnumerator {
                     validBlockers = validBlockers,
                     validBlockerAssignments = validBlockerAssignments,
                     blockerMaxBlockCounts = blockerMaxBlockCounts.ifEmpty { null },
-                    mandatoryBlockerAssignments = mandatoryAssignments.ifEmpty { null }
+                    mandatoryBlockerAssignments = mandatoryAssignments.ifEmpty { null },
+                    blockDeclarationConstraints = declarationConstraints,
                 ))
             }
         }

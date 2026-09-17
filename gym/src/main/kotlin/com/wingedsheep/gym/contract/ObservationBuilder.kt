@@ -63,6 +63,9 @@ import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.state.components.battlefield.DamageComponent
 import com.wingedsheep.engine.state.components.battlefield.SummoningSicknessComponent
 import com.wingedsheep.engine.state.components.battlefield.TappedComponent
+import com.wingedsheep.engine.state.components.combat.AttackingComponent
+import com.wingedsheep.engine.state.components.combat.BlockedComponent
+import com.wingedsheep.engine.state.components.combat.BlockingComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.identity.ControllerComponent
 import com.wingedsheep.engine.state.components.identity.FaceDownComponent
@@ -354,7 +357,17 @@ class ObservationBuilder(
             counters = container.get<CountersComponent>()?.counters
                 ?.mapKeys { it.key.name } ?: emptyMap(),
             attachedTo = container.get<AttachedToComponent>()?.targetId,
-            attachments = container.get<AttachmentsComponent>()?.attachedIds ?: emptyList()
+            attachments = container.get<AttachmentsComponent>()?.attachedIds ?: emptyList(),
+            attacking = onBattlefield && container.get<AttackingComponent>() != null,
+            attackTargetId = if (onBattlefield) {
+                container.get<AttackingComponent>()?.defenderId
+            } else null,
+            blockingEntityIds = if (onBattlefield) {
+                container.get<BlockingComponent>()?.blockedAttackerIds.orEmpty()
+            } else emptyList(),
+            blockedByEntityIds = if (onBattlefield) {
+                container.get<BlockedComponent>()?.blockerIds.orEmpty()
+            } else emptyList()
         )
     }
 
@@ -481,6 +494,15 @@ class ObservationBuilder(
             validBlockerAssignments = la.validBlockerAssignments.orEmpty(),
             blockerMaxBlockCounts = la.blockerMaxBlockCounts.orEmpty(),
             mandatoryBlockerAssignments = la.mandatoryBlockerAssignments.orEmpty(),
+            blockDeclarationConstraints = la.blockDeclarationConstraints?.let { constraints ->
+                BlockDeclarationConstraintsView(
+                    attackerMinBlockCounts = constraints.attackerMinBlockCounts,
+                    attackerMaxBlockCounts = constraints.attackerMaxBlockCounts,
+                    maxBlockingCreatures = constraints.maxBlockingCreatures,
+                    blockerCoRequirements = constraints.blockerCoRequirements,
+                    blockerTaxCosts = constraints.blockerTaxCosts,
+                )
+            },
             isDecisionOption = false
         )
     }

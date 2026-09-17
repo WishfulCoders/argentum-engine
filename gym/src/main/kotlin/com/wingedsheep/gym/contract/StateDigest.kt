@@ -115,6 +115,10 @@ object StateDigest {
             )
             .append(",att=").append(e.attachedTo?.value)
             .append(",eqp=").append(e.attachments.joinToString("/") { it.value })
+            .append(",atk=").append(e.attacking)
+            .append(",atkt=").append(e.attackTargetId?.value)
+            .append(",blk=").append(e.blockingEntityIds.joinToString("/") { it.value })
+            .append(",blkd=").append(e.blockedByEntityIds.joinToString("/") { it.value })
     }
 
     /**

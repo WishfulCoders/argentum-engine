@@ -13,6 +13,9 @@ import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.ZoneKey
 import com.wingedsheep.engine.state.components.identity.ControllerComponent
 import com.wingedsheep.engine.state.components.identity.RevealedToComponent
+import com.wingedsheep.engine.state.components.combat.AttackingComponent
+import com.wingedsheep.engine.state.components.combat.BlockedComponent
+import com.wingedsheep.engine.state.components.combat.BlockingComponent
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
 import com.wingedsheep.engine.state.components.stack.TargetsComponent
 import com.wingedsheep.engine.state.components.stack.TriggeredAbilityOnStackComponent
@@ -85,6 +88,59 @@ class TrainingObservationTest : FunSpec({
         val encoded = json.encodeToString(TrainingObservation.serializer(), obs)
         val decoded = json.decodeFromString(TrainingObservation.serializer(), encoded)
         decoded shouldBe obs
+    }
+
+    test("battlefield entities expose both directions of live combat state") {
+        val env = newEnv()
+        val me = env.playerIds[0]
+        val opponent = env.playerIds[1]
+        val blocker = env.state.getZone(ZoneKey(me, Zone.HAND)).first()
+        val attacker = env.state.getZone(ZoneKey(opponent, Zone.HAND)).first()
+        val meHand = ZoneKey(me, Zone.HAND)
+        val theirHand = ZoneKey(opponent, Zone.HAND)
+        val myBattlefield = ZoneKey(me, Zone.BATTLEFIELD)
+        val theirBattlefield = ZoneKey(opponent, Zone.BATTLEFIELD)
+        val state = env.state.copy(
+            zones = env.state.zones + mapOf(
+                meHand to (env.state.getZone(meHand) - blocker),
+                theirHand to (env.state.getZone(theirHand) - attacker),
+                myBattlefield to (env.state.getZone(myBattlefield) + blocker),
+                theirBattlefield to (env.state.getZone(theirBattlefield) + attacker),
+            )
+        ).withEntity(
+            attacker,
+            env.state.getEntity(attacker)!!
+                .with(ControllerComponent(opponent))
+                .with(AttackingComponent(me))
+                .with(BlockedComponent(listOf(blocker)))
+        ).withEntity(
+            blocker,
+            env.state.getEntity(blocker)!!
+                .with(ControllerComponent(me))
+                .with(BlockingComponent(listOf(attacker)))
+        )
+
+        val observation = ObservationBuilder(env.cardRegistry)
+            .build(state, me, emptyList())
+            .observation as TrainingObservation
+        val entities = observation.zones.flatMap { it.cards }.associateBy { it.entityId }
+        entities[attacker]!!.attacking shouldBe true
+        entities[attacker]!!.attackTargetId shouldBe me
+        entities[attacker]!!.blockedByEntityIds shouldBe listOf(blocker)
+        entities[blocker]!!.attacking shouldBe false
+        entities[blocker]!!.blockingEntityIds shouldBe listOf(attacker)
+
+        val withoutCombat = observation.copy(zones = observation.zones.map { zone ->
+            zone.copy(cards = zone.cards.map { entity ->
+                entity.copy(
+                    attacking = false,
+                    attackTargetId = null,
+                    blockingEntityIds = emptyList(),
+                    blockedByEntityIds = emptyList(),
+                )
+            })
+        })
+        StateDigest.compute(observation) shouldNotBe StateDigest.compute(withoutCombat)
     }
 
     test("per-player zones have an explicit complete schema order") {

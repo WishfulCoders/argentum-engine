@@ -18,6 +18,7 @@ import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 
 /**
@@ -332,10 +333,15 @@ class GameGymEnvCombatTest : FunSpec({
             withClue("the defender should receive a block declaration") {
                 (block != null).shouldBeTrue()
             }
+            val attackingEntity = afterAttack.zones.flatMap { it.cards }
+                .single { it.entityId == attacker }
+            attackingEntity.attacking.shouldBeTrue()
+            attackingEntity.attackTargetId shouldBe defender
             block!!.validBlockerAssignments.keys shouldBe block.validBlockers.toSet()
             block.validBlockerAssignments.values.forEach { attackers ->
                 attackers shouldBe listOf(attacker)
             }
+            block.blockDeclarationConstraints.shouldNotBeNull()
         }
 
         test("blockers params complete the template the enumerator could only offer empty") {
