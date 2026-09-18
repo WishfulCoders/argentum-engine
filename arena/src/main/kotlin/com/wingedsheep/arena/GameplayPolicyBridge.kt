@@ -64,6 +64,7 @@ class GameplayPolicyBridge(
     python: String,
     checkpoint: File,
     pythonPath: String? = null,
+    failureDir: File? = null,
     device: String = "cpu",
     private val deterministic: Boolean = true,
     private val temperature: Double = 1.0,
@@ -71,9 +72,16 @@ class GameplayPolicyBridge(
     private val enumerator = LegalActionEnumerator.create(registry)
     private val observations = ObservationBuilder(registry)
     private val simulator = GameSimulator(registry)
-    private val process = ProcessBuilder(
-        python, "-m", "mtgdraft.gameplay.arena_worker", checkpoint.absolutePath, "--device", device,
-    ).apply {
+    private val failureDirectory = failureDir?.also {
+        require(it.isDirectory || it.mkdirs()) {
+            "could not create gameplay policy failure directory: $it"
+        }
+    }
+    private val process = ProcessBuilder(buildList {
+        addAll(listOf(python, "-m", "mtgdraft.gameplay.arena_worker", checkpoint.absolutePath))
+        addAll(listOf("--device", device))
+        failureDirectory?.let { addAll(listOf("--failure-dir", it.absolutePath)) }
+    }).apply {
         redirectError(ProcessBuilder.Redirect.INHERIT)
         pythonPath?.let { environment()["PYTHONPATH"] = it }
     }.start()

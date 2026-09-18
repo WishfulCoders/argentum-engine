@@ -93,6 +93,7 @@ fun main(args: Array<String>) {
                 python = System.getProperty("arena.policyPython") ?: "python3",
                 checkpoint = it,
                 pythonPath = System.getProperty("arena.policyPythonPath"),
+                failureDir = System.getProperty("arena.policyFailureDir")?.let(::File),
                 device = System.getProperty("arena.policyDevice") ?: "cpu",
                 deterministic = System.getProperty("arena.policyDeterministic", "true").toBoolean(),
                 temperature = System.getProperty("arena.policyTemperature")?.toDouble() ?: 1.0,
