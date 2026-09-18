@@ -471,6 +471,12 @@ gym-server:
 test-gym-server:
     scripts/gradle-locked :gym-server:test
 
+# Compare in-process MultiEnvService against the real HTTP transport for batched stepping and forks.
+[group: 'ai']
+benchmark-gym-transport ENVS="16" ROUNDS="100" FORKS="1000":
+    scripts/gradle-locked :gym-server:test --tests "*.GymTransportBenchmark" -Dbenchmark=true \
+        -DbenchmarkEnvs={{ENVS}} -DbenchmarkRounds={{ROUNDS}} -DbenchmarkForks={{FORKS}}
+
 # Run gym-trainer tests (MCTS + self-play)
 [group: 'build']
 test-gym-trainer:
