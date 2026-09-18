@@ -11,6 +11,7 @@ import com.wingedsheep.mtg.sets.tokens.PredefinedTokens
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import java.io.File
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.Callable
 import java.util.concurrent.ExecutorCompletionService
 import java.util.concurrent.Executors
@@ -46,6 +47,10 @@ fun main(args: Array<String>) {
     val registry = eclRegistry()
     val profile = arenaProfile(System.getProperty("arena.profile") ?: "current")
     val targetProfile = System.getProperty("arena.targetProfile")?.let(::arenaProfile) ?: profile
+    val policyCheckpoint = System.getProperty("arena.policyCheckpoint")?.let(::File)
+    require(policyCheckpoint == null || policyCheckpoint.isFile) {
+        "-Darena.policyCheckpoint is not a file: $policyCheckpoint"
+    }
 
     val decks = input.readLines().filter { it.isNotBlank() }.map { arenaJson.decodeFromString<DeckSpec>(it) }
     val (known, unknown) = decks.partition { d -> d.cards.all { registry.hasCard(it) } }
@@ -73,14 +78,30 @@ fun main(args: Array<String>) {
     }
     println(
         "arena: ${targets.size} targets x ${opponents.size} opponents x $gamesPerPair games, " +
-            "${jobs.size} to play (${done.size} already done), profile ${profile.id}, target ${targetProfile.id}, $threads threads",
+            "${jobs.size} to play (${done.size} already done), profile ${profile.id}, " +
+                "target ${policyCheckpoint?.let { "bc:${it.name}" } ?: targetProfile.id}, $threads threads",
     )
     if (jobs.isEmpty()) return
 
     val measureHolding = System.getProperty("arena.holding").toBoolean()
     val measureCards = System.getProperty("arena.cards").toBoolean()
+    val policyBridges = ConcurrentLinkedQueue<GameplayPolicyBridge>()
     val local = ThreadLocal.withInitial {
-        GameRunner(registry, profile, measureHolding = measureHolding, measureCards = measureCards)
+        val bridge = policyCheckpoint?.let {
+            GameplayPolicyBridge(
+                registry = registry,
+                python = System.getProperty("arena.policyPython") ?: "python3",
+                checkpoint = it,
+                pythonPath = System.getProperty("arena.policyPythonPath"),
+                device = System.getProperty("arena.policyDevice") ?: "cpu",
+                deterministic = System.getProperty("arena.policyDeterministic", "true").toBoolean(),
+                temperature = System.getProperty("arena.policyTemperature")?.toDouble() ?: 1.0,
+            ).also(policyBridges::add)
+        }
+        GameRunner(
+            registry, profile, measureHolding = measureHolding, measureCards = measureCards,
+            gameplayPolicy = bridge,
+        )
     }
     val pool = Executors.newFixedThreadPool(threads)
     val completion = ExecutorCompletionService<GameRecord>(pool)
@@ -101,6 +122,7 @@ fun main(args: Array<String>) {
                     seats, job.seed,
                     if (targetSeat == 0) listOf(targetProfile, profile) else listOf(profile, targetProfile),
                     probeSeat = if (probeStranded) targetSeat else null,
+                    policySeat = targetSeat.takeIf { policyCheckpoint != null },
                 )
                 base.copy(
                     winnerSeat = o.winnerSeat,
@@ -111,6 +133,18 @@ fun main(args: Array<String>) {
                     probeWindows = o.probe.windows, probeAffordable = o.probe.affordable,
                     probeStranded = o.probe.stranded, probeStrandedCards = o.probe.strandedCards,
                     probeFixable = o.probe.fixable, probeFixMissed = o.probe.fixMissed,
+                    policyActions = o.policyActions,
+                    policyPasses = o.policyPasses, policyCasts = o.policyCasts,
+                    policyLandPlays = o.policyLandPlays, policyActivations = o.policyActivations,
+                    policyOtherActions = o.policyOtherActions,
+                    policyPaymentActions = o.policyPaymentActions,
+                    policyAttacks = o.policyAttacks, policyAttackers = o.policyAttackers,
+                    policyBlocks = o.policyBlocks, policyBlockers = o.policyBlockers,
+                    policyOrderMismatches = o.policyOrderMismatches,
+                    policyFailures = o.policyFailures,
+                    policyFirstFailure = o.policyFirstFailure,
+                    policyIllegal = o.policyIllegal,
+                    policyFirstRejection = o.policyFirstRejection,
                 )
             } catch (e: Throwable) {
                 base.copy(reason = "init(${e::class.simpleName}: ${e.message?.take(200)})", millis = System.currentTimeMillis() - t0)
@@ -145,6 +179,7 @@ fun main(args: Array<String>) {
         }
     }
     pool.shutdown()
+    policyBridges.forEach(GameplayPolicyBridge::close)
     if (profile.rolloutsOnlyWhenHolding || targetProfile.rolloutsOnlyWhenHolding) println(HoldingGatedEvaluator.summary())
     // Only ever non-zero for an arm that switched the hook on (mtg-draft-ai `docs/27` §7.4).
     if (ResponseLookaheadStats.windows.get() > 0) println("  lookahead: $ResponseLookaheadStats")

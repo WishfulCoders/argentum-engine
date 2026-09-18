@@ -60,6 +60,23 @@ data class GameRecord(
     val lastWindow: List<List<Int>>? = null,
     /** [GameRunner.Outcome.gaps], with `-Darena.cards=true -Darena.gaps=true`; bins [GameRunner.GAP_BINS]. */
     val gaps: List<Map<String, List<Int>>>? = null,
+    /** Learned target-policy telemetry; zero for ordinary heuristic arena runs. */
+    val policyActions: Int = 0,
+    val policyPasses: Int = 0,
+    val policyCasts: Int = 0,
+    val policyLandPlays: Int = 0,
+    val policyActivations: Int = 0,
+    val policyOtherActions: Int = 0,
+    val policyPaymentActions: Int = 0,
+    val policyAttacks: Int = 0,
+    val policyAttackers: Int = 0,
+    val policyBlocks: Int = 0,
+    val policyBlockers: Int = 0,
+    val policyOrderMismatches: Int = 0,
+    val policyFailures: Int = 0,
+    val policyFirstFailure: String? = null,
+    val policyIllegal: Int = 0,
+    val policyFirstRejection: String? = null,
 ) {
     val key: String get() = "$target|$opponent|$game"
 }

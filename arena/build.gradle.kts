@@ -11,9 +11,13 @@ dependencies {
     implementation(project(":mtg-sdk"))
     implementation(project(":mtg-sets"))
     implementation(project(":ai"))
+    implementation(project(":gym"))
 
     implementation(libs.bundles.kotlinxEcosystem)
     runtimeOnly(libs.slf4jApi)
+
+    testImplementation(libs.kotestRunner)
+    testImplementation(libs.kotestAssertions)
 }
 
 application {

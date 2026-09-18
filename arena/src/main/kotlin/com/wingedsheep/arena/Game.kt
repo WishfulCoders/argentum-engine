@@ -5,6 +5,7 @@ import com.wingedsheep.ai.engine.AiProfile
 import com.wingedsheep.ai.engine.hidden.OpponentModel
 import com.wingedsheep.ai.insight.AiInsightSink
 import com.wingedsheep.engine.core.ActionProcessor
+import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.core.CastSpell
 import com.wingedsheep.engine.core.DeclareAttackers
 import com.wingedsheep.engine.core.DeclareBlockers
@@ -58,6 +59,8 @@ class GameRunner(
     private val measureHolding: Boolean = false,
     /** Count [Outcome.cards] (mtg-draft-ai `docs/33` §13); off, a game is not enumerated twice. */
     private val measureCards: Boolean = false,
+    /** Optional learned policy for [policySeat]; complex pending decisions remain with [AIPlayer]. */
+    private val gameplayPolicy: GameplayPolicyBridge? = null,
 ) {
     private val processor = ActionProcessor(registry)
     private val enumerator = LegalActionEnumerator.create(registry)
@@ -113,6 +116,23 @@ class GameRunner(
          * before any idle allowance; `dropped` = never scored).
          */
         val gaps: List<Map<String, List<Int>>>? = null,
+        /** Learned-policy calls and combat declarations, for contract/legality diagnostics. */
+        val policyActions: Int = 0,
+        val policyPasses: Int = 0,
+        val policyCasts: Int = 0,
+        val policyLandPlays: Int = 0,
+        val policyActivations: Int = 0,
+        val policyOtherActions: Int = 0,
+        val policyPaymentActions: Int = 0,
+        val policyAttacks: Int = 0,
+        val policyAttackers: Int = 0,
+        val policyBlocks: Int = 0,
+        val policyBlockers: Int = 0,
+        val policyOrderMismatches: Int = 0,
+        val policyFailures: Int = 0,
+        val policyFirstFailure: String? = null,
+        val policyIllegal: Int = 0,
+        val policyFirstRejection: String? = null,
         /** [StrandedProbe], zeroed unless a `probeSeat` was given. */
         val probe: StrandedProbe = StrandedProbe(),
     )
@@ -150,6 +170,8 @@ class GameRunner(
         seatProfiles: List<AiProfile>? = null,
         /** Seat to run [StrandedProbe] for; null (the default) costs nothing at all. */
         probeSeat: Int? = null,
+        /** Seat controlled by [gameplayPolicy] for priority actions and declarations. */
+        policySeat: Int? = null,
     ): Outcome {
         val init = initializer.initializeGame(
             GameConfig(
@@ -163,7 +185,10 @@ class GameRunner(
         val decklists = seatIds.mapIndexed { seat, id ->
             id to OpponentModel.KnownDecklist(decks[seat].groupingBy { it }.eachCount())
         }.toMap()
-        return playFrom(init.state, seatIds.indices.map { seatProfiles?.get(it) ?: profile }, decklists, probeSeat)
+        return playFrom(
+            init.state, seatIds.indices.map { seatProfiles?.get(it) ?: profile }, decklists,
+            probeSeat = probeSeat, policySeat = policySeat,
+        )
     }
 
     /**
@@ -176,6 +201,7 @@ class GameRunner(
         seatProfiles: List<AiProfile>,
         decklists: Map<EntityId, OpponentModel>,
         probeSeat: Int? = null,
+        policySeat: Int? = null,
     ): Outcome {
         val seatIds = start.turnOrder
         val bySeat = seatIds.withIndex().associate { (seat, id) -> id to seat }
@@ -203,6 +229,22 @@ class GameRunner(
         var state: GameState = start
         var actionCount = 0
         var illegal = 0
+        var policyActions = 0
+        var policyPasses = 0
+        var policyCasts = 0
+        var policyLandPlays = 0
+        var policyActivations = 0
+        var policyOtherActions = 0
+        var policyPaymentActions = 0
+        var policyAttacks = 0
+        var policyAttackers = 0
+        var policyBlocks = 0
+        var policyBlockers = 0
+        var policyOrderMismatches = 0
+        var policyFailures = 0
+        var policyFirstFailure: String? = null
+        var policyIllegal = 0
+        var policyFirstRejection: String? = null
         var lastActivePlayer: EntityId? = null
         var lastProgressAction = 0
         var reason = ""
@@ -371,7 +413,62 @@ class GameRunner(
                 val sorcerySpeed = castable.filter { it in state.getHand(priorityPlayer) && !isInstantSpeed(state, it) }
                 val atLastWindow = ownMain && state.step == Step.POSTCOMBAT_MAIN
                 if (atLastWindow) sawPostcombat = true
-                val action = aiFor(priorityPlayer).chooseAction(state)
+                val policyChoice = if (bySeat[priorityPlayer] == policySeat) gameplayPolicy?.let { policy ->
+                    runCatching { policy.choose(state, priorityPlayer) }.fold(
+                        onSuccess = { chosen ->
+                            if (!chosen.modelDecision) {
+                                policyPaymentActions++
+                            } else when (chosen.action) {
+                                is PassPriority -> {
+                                    policyActions++
+                                    policyPasses++
+                                }
+                                is CastSpell -> {
+                                    policyActions++
+                                    policyCasts++
+                                }
+                                is PlayLand -> {
+                                    policyActions++
+                                    policyLandPlays++
+                                }
+                                is ActivateAbility -> {
+                                    policyActions++
+                                    policyActivations++
+                                }
+                                is DeclareAttackers -> {
+                                    policyActions++
+                                    policyAttacks++
+                                    policyAttackers += chosen.declarationSize
+                                }
+                                is DeclareBlockers -> {
+                                    policyActions++
+                                    policyBlocks++
+                                    policyBlockers += chosen.declarationSize
+                                }
+                                else -> {
+                                    policyActions++
+                                    policyOtherActions++
+                                }
+                            }
+                            if (!chosen.combatOrderMatches) {
+                                policyOrderMismatches++
+                                error(
+                                    "gameplay policy combat_order does not match ${chosen.kind} " +
+                                        "(${chosen.combatOrderSize} ordered pairs, ${chosen.declarationSize} submitted)"
+                                )
+                            }
+                            chosen
+                        },
+                        onFailure = { failure ->
+                            policyFailures++
+                            if (policyFirstFailure == null) {
+                                policyFirstFailure = "${failure::class.simpleName}: ${failure.message}"
+                            }
+                            null
+                        },
+                    )
+                } else null
+                val action = policyChoice?.action ?: aiFor(priorityPlayer).chooseAction(state)
                 if (probeId != null && priorityPlayer == probeId && action is PlayLand && turnLandPlayed == null) {
                     turnLandPlayed = action.cardId
                 }
@@ -419,6 +516,12 @@ class GameRunner(
                 val r = processor.process(state, action).result
                 val next = if (r.error != null) {
                     illegal++
+                    if (policyChoice != null) {
+                        policyIllegal++
+                        if (policyFirstRejection == null) {
+                            policyFirstRejection = "${r.error}; ${policyChoice.diagnostic}"
+                        }
+                    }
                     val fallback = processor.process(state, safeFallbackAction(state, priorityPlayer)).result
                     if (fallback.error != null) {
                         reason = "error(${r.error}; fallback: ${fallback.error})"
@@ -458,6 +561,22 @@ class GameRunner(
             cards = cards?.map { seat -> seat.mapValues { it.value.toList() } },
             lastWindow = lastWindow?.map { it.toList() },
             gaps = gaps?.map { seat -> seat.mapValues { it.value.toList() } },
+            policyActions = policyActions,
+            policyPasses = policyPasses,
+            policyCasts = policyCasts,
+            policyLandPlays = policyLandPlays,
+            policyActivations = policyActivations,
+            policyOtherActions = policyOtherActions,
+            policyPaymentActions = policyPaymentActions,
+            policyAttacks = policyAttacks,
+            policyAttackers = policyAttackers,
+            policyBlocks = policyBlocks,
+            policyBlockers = policyBlockers,
+            policyOrderMismatches = policyOrderMismatches,
+            policyFailures = policyFailures,
+            policyFirstFailure = policyFirstFailure,
+            policyIllegal = policyIllegal,
+            policyFirstRejection = policyFirstRejection,
             probe = StrandedProbe(
                 probeWindows, probeAffordable, probeStranded, probeStrandedIds.size, probeFixable, probeFixMissed,
             ),
