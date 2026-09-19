@@ -36,7 +36,7 @@ class PuzzleSuiteTest : ScenarioTestBase() {
                     PuzzleCatalog.byCategory(category).size shouldBeGreaterThanOrEqual 6
                 }
             }
-            PuzzleCatalog.all.size shouldBe 98
+            PuzzleCatalog.all.size shouldBe 100
         }
 
         test("every KNOWN_FAILURES id names a real puzzle") {
@@ -132,6 +132,19 @@ class PuzzleSuiteTest : ScenarioTestBase() {
             // the hand's curve (or a horizon that reaches next turn's main phase), and it shows up
             // here as 07 flipping to a pass with 08 still passing.
             "sequencing-07",
+
+            // ── Mana colour (mtg-draft-ai `docs/46`) ──
+            // The same 0.6-vs-0.3 constant as sequencing-07, but with the curve argument removed:
+            // here the basic makes the wrong colour and would *never* cast the card in hand, so no
+            // setting of the constant is right — the evaluator has no colour term at all. Confirmed
+            // by reading the scores rather than inferring them: the tapland loses by exactly 0.45
+            // in every position tried, and where the two lands tie the AI picks by hand order.
+            "sequencing-09",
+            // The activation form of the same hole. Cracking Evolving Wilds leaves land count
+            // unchanged and untapped lands one lower, and the colour it buys is not a feature, so
+            // it scores a flat −0.45 against passing whatever the position — empty hand, flooded,
+            // screwed, one card stranded or two. The AI never cracks a fetch land in any position.
+            "activate-07",
 
             // ── Phase 2c: timing ──
             // b904bc8 added these two categories and deferred this list, so the four below have

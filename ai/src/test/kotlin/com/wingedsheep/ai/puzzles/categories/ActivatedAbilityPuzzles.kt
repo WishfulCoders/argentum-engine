@@ -145,5 +145,28 @@ object ActivatedAbilityPuzzles {
                 shouldTarget("Craw Wurm")
             },
         ),
+        AiPuzzle(
+            id = "activate-07",
+            category = PuzzleCategory.ACTIVATED_ABILITIES,
+            expectation = "Crack Evolving Wilds for the Forest that casts the creature stuck in hand",
+            aiSeat = 1,
+            position = { scenario ->
+                scenario.withPlayers()
+                    .withLandsOnBattlefield(1, "Mountain", 2)
+                    .withCardOnBattlefield(1, "Evolving Wilds")
+                    .withCardInHand(1, "Grizzly Bears")
+                    .also { builder -> repeat(3) { builder.withCardInLibrary(1, "Forest") } }
+                    .also { builder -> repeat(20) { builder.withCardInLibrary(1, "Craw Wurm") } }
+                    .build()
+            },
+            // Free in every sense: Grizzly Bears is {1}{G}, no Mountain will ever cast it, and
+            // cracking costs no mana the AI had a use for. It declines anyway, and by a constant:
+            // land count is unchanged (sacrifice one, fetch one) and the basic enters tapped, so
+            // `BoardPresence` charges 0.6 − 0.3 = 0.3 (weight 1.5 → **−0.45**) for a colour it has
+            // no feature for. Measured identical in seven positions — empty hand, flooded, screwed,
+            // one stranded card or two. See mtg-draft-ai `docs/46`; `sequencing-09` is the same
+            // blindness on a land drop instead of an activation.
+            check = { shouldActivate("Evolving Wilds") },
+        ),
     )
 }

@@ -164,5 +164,27 @@ object SequencingPuzzles {
             // is live the moment it is untapped. Here the tapland is the turn-losing play.
             check = { shouldPlayLand("Mountain") },
         ),
+        AiPuzzle(
+            id = "sequencing-09",
+            category = PuzzleCategory.SEQUENCING,
+            expectation = "The tapland is the only green source — play Shivan Oasis, not the Mountain",
+            aiSeat = 1,
+            position = { scenario ->
+                scenario.withPlayers()
+                    .withLandsOnBattlefield(1, "Mountain", 2)
+                    .withCardInHand(1, "Mountain")
+                    .withCardInHand(1, "Shivan Oasis")
+                    .withCardInHand(1, "Grizzly Bears")
+                    .build()
+            },
+            // sequencing-07 and -08 are the *curve* version of this choice, where the tapland's
+            // drawback is free on one turn and expensive on the next, so the right answer flips.
+            // This one does not flip: Grizzly Bears is {1}{G} and the Mountain makes no green, so
+            // an eleventh Mountain would never cast it and the Oasis casts it next turn. The AI
+            // plays the Mountain anyway, by exactly `BoardPresence`'s 0.6 − 0.3 = 0.3 (weight 1.5 →
+            // 0.45), because nothing in the evaluator reads a colour — the same hole that stops it
+            // cracking a fetch land at `activate-07`. See mtg-draft-ai `docs/46`.
+            check = { shouldPlayLand("Shivan Oasis") },
+        ),
     )
 }
