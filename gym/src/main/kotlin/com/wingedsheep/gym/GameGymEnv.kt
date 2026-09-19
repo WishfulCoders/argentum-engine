@@ -52,7 +52,7 @@ class GameGymEnv(
     /** The engine's AI for each seat that needs one: every pilot, and every learner's decisions. */
     private val players = mutableMapOf<EntityId, AIPlayer>()
 
-    /** Engine actions the pilots took during the most recent call, and delegated decisions so far. */
+    /** Pilot actions and delegated learner decisions so far this episode. */
     private var autoAdvanced: Int = 0
     private var delegatedDecisions: Int = 0
 
@@ -97,6 +97,7 @@ class GameGymEnv(
             it.truncation = truncation
             it.lastActive = lastActive
             it.lastProgress = lastProgress
+            it.autoAdvanced = autoAdvanced
             it.delegatedDecisions = delegatedDecisions
             it.build(defaultRevealAll)
         }
@@ -145,6 +146,7 @@ class GameGymEnv(
         lastActive = environment.state.activePlayerId
         lastProgress = 0
         players.clear()
+        autoAdvanced = 0
         delegatedDecisions = 0
         advanceToLearner()
         return build(defaultRevealAll)
@@ -160,7 +162,6 @@ class GameGymEnv(
      * mean training against an action space the arena does not use.
      */
     private fun advanceToLearner() {
-        autoAdvanced = 0
         // No agent spec at all is the original contract: the caller drives every seat and answers
         // every decision itself, through /envs/{id}/decision. Search callers rely on that.
         if (agents.isEmpty()) return

@@ -42,7 +42,10 @@ data class EnvStatus(
     /** Terminal rewards per player; empty while the episode is running or when it was truncated. */
     val reward: List<PlayerReward> = emptyList(),
 
-    /** Engine actions the env's own pilot seats took since the last call returned. */
+    /**
+     * Engine actions the env's own pilot seats have taken this episode. Cumulative, like
+     * [stepCount], so differencing two statuses gives what one call cost.
+     */
     val autoAdvanced: Int = 0,
 
     /**

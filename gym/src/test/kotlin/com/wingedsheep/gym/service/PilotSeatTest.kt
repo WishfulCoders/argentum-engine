@@ -75,14 +75,18 @@ class PilotSeatTest : FunSpec({
         }
     }
 
-    test("the pilot's actions are counted, and the learner's are not") {
+    test("the pilot's actions accumulate over the episode") {
         val svc = MultiEnvService(registry())
         val created = svc.create(oneSided(seed = 5L))
 
         // Passing the learner's whole turn hands the pilot a turn of its own to play.
-        repeat(12) { if (!svc.status(created.envId).done) pass(svc, created.envId) }
+        repeat(6) { if (!svc.status(created.envId).done) pass(svc, created.envId) }
+        val early = svc.status(created.envId).autoAdvanced
+        early shouldBeGreaterThan 0
 
-        svc.status(created.envId).autoAdvanced shouldBeGreaterThan 0
+        repeat(20) { if (!svc.status(created.envId).done) pass(svc, created.envId) }
+        // Cumulative, so differencing two statuses is what one call cost.
+        svc.status(created.envId).autoAdvanced shouldBeGreaterThan early
     }
 
     test("a seat nobody learns is refused, and so is observing from the pilot's") {

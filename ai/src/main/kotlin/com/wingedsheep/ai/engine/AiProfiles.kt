@@ -102,7 +102,9 @@ object AiProfiles {
                     priorityCorrectionChoosesActionOnly = token == "correction-actions",
                 )
             }
-            else -> error("unknown profile token $token in profile name")
+            // A misspelled token is the caller's mistake, not the server's state: throwing
+            // IllegalArgumentException is what makes the gym answer 400 rather than 409.
+            else -> throw IllegalArgumentException("unknown profile token $token in profile name")
         }
     }
 }
