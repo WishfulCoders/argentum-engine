@@ -108,7 +108,18 @@ data class AiProperties(
      * `GameState` per decision, and that is opt-in even on a box where the other dev endpoints are
      * already open. `application-local.yml` turns it on.
      */
-    val insightEnabled: Boolean = false
+    val insightEnabled: Boolean = false,
+    /**
+     * Engine mode only: the AI profile every engine-AI seat plays, as `+`-joined tokens
+     * ([com.wingedsheep.ai.engine.profileFromTokens]). Blank means the built-in production
+     * candidate, which is what normal play uses.
+     *
+     * A research profile is how a human plays against the same AI an arena run measured — the
+     * gameplay pilot is `raceclock+timing+correction-actions` plus its fitted correction under
+     * `-Dargentum.ai.apprentice.dir` (mtg-draft-ai `docs/44`). A profile that names a correction
+     * which did not load fails startup rather than quietly seating the default evaluator.
+     */
+    val profile: String = "",
 ) {
     /** Returns the model to use for deckbuilding — falls back to the gameplay model if not set. */
     val effectiveDeckbuildingModel: String get() = deckbuildingModel.ifBlank { model }

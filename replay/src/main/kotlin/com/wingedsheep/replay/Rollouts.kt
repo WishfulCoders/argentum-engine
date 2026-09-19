@@ -137,9 +137,9 @@ class RolloutWriter(
         fun pilots(spec: String): Pair<Pair<String, AiProfile>, List<Pair<String, AiProfile>>> {
             val names = spec.split(',').map { it.trim() }.filter { it.isNotEmpty() }
             require(names.isNotEmpty()) { "-Dreplay.rollPilots needs at least one profile name" }
-            val acting = names.first().let { it to com.wingedsheep.arena.arenaProfile(it) }
+            val acting = names.first().let { it to com.wingedsheep.ai.engine.profileFromTokens(it) }
             val opponents = (if (names.size == 1) names else names.drop(1))
-                .map { it to com.wingedsheep.arena.arenaProfile(it) }
+                .map { it to com.wingedsheep.ai.engine.profileFromTokens(it) }
             return acting to opponents
         }
     }

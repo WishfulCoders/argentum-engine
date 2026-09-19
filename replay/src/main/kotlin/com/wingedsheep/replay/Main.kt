@@ -1,6 +1,6 @@
 package com.wingedsheep.replay
 
-import com.wingedsheep.arena.arenaProfile
+import com.wingedsheep.ai.engine.profileFromTokens
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.mtg.sets.MtgSetCatalog
 import com.wingedsheep.mtg.sets.tokens.PredefinedTokens
@@ -85,7 +85,7 @@ fun main(args: Array<String>) {
         PreferenceWriter(registry, prefsBase, roller, rollMaxCands)
     }
     val playOnFile = System.getProperty("replay.playOnOut")?.let(::File)
-    val playOnPilots = System.getProperty("replay.playOn")?.split(',')?.map { it to arenaProfile(it) }
+    val playOnPilots = System.getProperty("replay.playOn")?.split(',')?.map { it to profileFromTokens(it) }
     require((playOnFile == null) == (playOnPilots == null)) { "-Dreplay.playOn and -Dreplay.playOnOut go together" }
     val playOns = playOnPilots?.let { pilots -> ThreadLocal.withInitial { PlayOn(registry, pilots) } }
     val pool = Executors.newFixedThreadPool(threads)

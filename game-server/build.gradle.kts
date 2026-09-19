@@ -46,3 +46,13 @@ dependencies {
     testImplementation(libs.testcontainersPostgresql)
     testImplementation(libs.testcontainersJunit)
 }
+
+// The engine AI's fitted evaluators (apprentice / correction) are read from
+// `-Dargentum.ai.apprentice.dir` at first use, and bootRun does not inherit the Gradle JVM's system
+// properties — so `just pilot` passing -D to Gradle would otherwise be silently dropped and the AI
+// would fail to find its correction. Forward just that one property.
+tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
+    System.getProperty("argentum.ai.apprentice.dir")?.takeIf(String::isNotBlank)?.let {
+        systemProperty("argentum.ai.apprentice.dir", it)
+    }
+}

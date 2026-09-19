@@ -1,7 +1,9 @@
 package com.wingedsheep.gameserver.ai
 
 import com.wingedsheep.ai.AiPlayerController
+import com.wingedsheep.ai.engine.AiProfile
 import com.wingedsheep.ai.engine.EngineAiPlayerController
+import com.wingedsheep.ai.engine.profileFromTokens
 import com.wingedsheep.ai.llm.LlmAiPlayerController
 import com.wingedsheep.ai.llm.LlmClient
 import com.wingedsheep.gameserver.config.GameProperties
@@ -40,6 +42,15 @@ class AiGameManager(
     controllerProviders: List<AiControllerProvider> = emptyList(),
 ) {
     private val controllerProviders = AiControllerProviderRegistry(controllerProviders)
+
+    /**
+     * The profile every engine-AI seat plays, resolved once at startup so an unknown token or a
+     * correction that did not load fails the boot rather than the first game.
+     */
+    private val engineProfile: AiProfile =
+        gameProperties.ai.profile.takeIf { it.isNotBlank() }
+            ?.let(::profileFromTokens)
+            ?: AiProfile.PRODUCTION_CANDIDATE_EXPIRING
     /**
      * The live AI sessions of each game, keyed game → AI player. A multiplayer pod seats more than
      * one AI (an FFA table, a Two-Headed Giant team), so this is per *seat* and not per game: keyed
@@ -64,7 +75,7 @@ class AiGameManager(
             return
         }
         if (ai.isEngineMode) {
-            logger.info("AI opponent: enabled | mode=engine (built-in)")
+            logger.info("AI opponent: enabled | mode=engine (built-in) | profile={}", engineProfile.id)
         } else if (ai.isLlmMode) {
             val provider = if (ai.baseUrl.contains("openrouter")) "OpenRouter" else "Local (${ai.baseUrl})"
             logger.info("AI opponent: enabled | mode=llm | provider={} | model={} | deckbuilding-model={}",
@@ -162,6 +173,7 @@ class AiGameManager(
                 playerId = aiPlayerId,
                 gameStateProvider = { gameSession?.getStateSnapshot() },
                 insightSink = insightSink,
+                profile = engineProfile,
             )
         } else {
             val engineFallback = EngineAiPlayerController(
@@ -169,6 +181,7 @@ class AiGameManager(
                 playerId = aiPlayerId,
                 gameStateProvider = { gameSession?.getStateSnapshot() },
                 insightSink = insightSink,
+                profile = engineProfile,
             )
             // Attribute in-game LLM token usage + cost to this game session, so the LLM-tournament
             // can report cost per game. No-op when there's no game (e.g. placeholder identities).
@@ -409,6 +422,7 @@ class AiGameManager(
             // Scenarios are the sharpest use of the local testing mode — a hand-built position is
             // exactly where you want to read what the AI made of it.
             insightSink = aiInsightService.sinkFor(gameSession.sessionId, aiPlayerId),
+            profile = engineProfile,
         )
 
         val (playerSession, identity) = registerAiSession(
