@@ -77,6 +77,8 @@ data class GameRecord(
     val policyFirstFailure: String? = null,
     val policyIllegal: Int = 0,
     val policyFirstRejection: String? = null,
+    /** Policy-family → frozen-pilot-family counts with `-Darena.policyShadowTeacher=true`. */
+    val policyTeacherFamilies: Map<String, Int> = emptyMap(),
 ) {
     val key: String get() = "$target|$opponent|$game"
 }

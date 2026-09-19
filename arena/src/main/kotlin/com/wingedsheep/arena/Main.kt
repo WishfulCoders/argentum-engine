@@ -48,8 +48,12 @@ fun main(args: Array<String>) {
     val profile = arenaProfile(System.getProperty("arena.profile") ?: "current")
     val targetProfile = System.getProperty("arena.targetProfile")?.let(::arenaProfile) ?: profile
     val policyCheckpoint = System.getProperty("arena.policyCheckpoint")?.let(::File)
+    val shadowPolicyTeacher = System.getProperty("arena.policyShadowTeacher").toBoolean()
     require(policyCheckpoint == null || policyCheckpoint.isFile) {
         "-Darena.policyCheckpoint is not a file: $policyCheckpoint"
+    }
+    require(!shadowPolicyTeacher || policyCheckpoint != null) {
+        "-Darena.policyShadowTeacher=true requires -Darena.policyCheckpoint"
     }
 
     val decks = input.readLines().filter { it.isNotBlank() }.map { arenaJson.decodeFromString<DeckSpec>(it) }
@@ -124,6 +128,7 @@ fun main(args: Array<String>) {
                     if (targetSeat == 0) listOf(targetProfile, profile) else listOf(profile, targetProfile),
                     probeSeat = if (probeStranded) targetSeat else null,
                     policySeat = targetSeat.takeIf { policyCheckpoint != null },
+                    shadowPolicyTeacher = shadowPolicyTeacher,
                 )
                 base.copy(
                     winnerSeat = o.winnerSeat,
@@ -146,6 +151,7 @@ fun main(args: Array<String>) {
                     policyFirstFailure = o.policyFirstFailure,
                     policyIllegal = o.policyIllegal,
                     policyFirstRejection = o.policyFirstRejection,
+                    policyTeacherFamilies = o.policyTeacherFamilies,
                 )
             } catch (e: Throwable) {
                 base.copy(reason = "init(${e::class.simpleName}: ${e.message?.take(200)})", millis = System.currentTimeMillis() - t0)

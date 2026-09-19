@@ -133,6 +133,8 @@ class GameRunner(
         val policyFirstFailure: String? = null,
         val policyIllegal: Int = 0,
         val policyFirstRejection: String? = null,
+        /** Learned-policy family → frozen-pilot family on the same visited state, opt-in. */
+        val policyTeacherFamilies: Map<String, Int> = emptyMap(),
         /** [StrandedProbe], zeroed unless a `probeSeat` was given. */
         val probe: StrandedProbe = StrandedProbe(),
     )
@@ -172,6 +174,8 @@ class GameRunner(
         probeSeat: Int? = null,
         /** Seat controlled by [gameplayPolicy] for priority actions and declarations. */
         policySeat: Int? = null,
+        /** Compare each learned model decision with the frozen seat profile without playing it. */
+        shadowPolicyTeacher: Boolean = false,
     ): Outcome {
         val init = initializer.initializeGame(
             GameConfig(
@@ -188,6 +192,7 @@ class GameRunner(
         return playFrom(
             init.state, seatIds.indices.map { seatProfiles?.get(it) ?: profile }, decklists,
             probeSeat = probeSeat, policySeat = policySeat,
+            shadowPolicyTeacher = shadowPolicyTeacher,
         )
     }
 
@@ -202,6 +207,7 @@ class GameRunner(
         decklists: Map<EntityId, OpponentModel>,
         probeSeat: Int? = null,
         policySeat: Int? = null,
+        shadowPolicyTeacher: Boolean = false,
     ): Outcome {
         val seatIds = start.turnOrder
         val bySeat = seatIds.withIndex().associate { (seat, id) -> id to seat }
@@ -225,6 +231,11 @@ class GameRunner(
             AIPlayer.create(registry, id, seatProfiles[seat], decklists, insightSink = sink)
         }
         fun aiFor(playerId: EntityId) = players[bySeat.getValue(playerId)]
+        // Strategist keeps short-lived anti-loop memory. A shadow query must have its own player
+        // instance so it cannot change later fallback or structured-decision choices in this game.
+        val shadowPlayers = if (shadowPolicyTeacher) seatIds.mapIndexed { seat, id ->
+            AIPlayer.create(registry, id, seatProfiles[seat], decklists)
+        } else emptyList()
 
         var state: GameState = start
         var actionCount = 0
@@ -245,6 +256,7 @@ class GameRunner(
         var policyFirstFailure: String? = null
         var policyIllegal = 0
         var policyFirstRejection: String? = null
+        val policyTeacherFamilies = mutableMapOf<String, Int>()
         var lastActivePlayer: EntityId? = null
         var lastProgressAction = 0
         var reason = ""
@@ -468,6 +480,14 @@ class GameRunner(
                         },
                     )
                 } else null
+                if (shadowPolicyTeacher && policyChoice?.modelDecision == true) {
+                    // chooseFrom uses the same enumerated actions as chooseAction but does not stage
+                    // Treasure mana. The independent AI instance isolates Strategist's memory.
+                    val legal = enumerator.enumerate(state, priorityPlayer, EnumerationMode.ACTIONS_ONLY)
+                    val teacher = shadowPlayers[bySeat.getValue(priorityPlayer)].chooseFrom(state, legal).action
+                    val pair = "${policyActionFamily(policyChoice.action)}>${policyActionFamily(teacher)}"
+                    policyTeacherFamilies.merge(pair, 1, Int::plus)
+                }
                 val action = policyChoice?.action ?: aiFor(priorityPlayer).chooseAction(state)
                 if (probeId != null && priorityPlayer == probeId && action is PlayLand && turnLandPlayed == null) {
                     turnLandPlayed = action.cardId
@@ -577,6 +597,7 @@ class GameRunner(
             policyFirstFailure = policyFirstFailure,
             policyIllegal = policyIllegal,
             policyFirstRejection = policyFirstRejection,
+            policyTeacherFamilies = policyTeacherFamilies.toSortedMap(),
             probe = StrandedProbe(
                 probeWindows, probeAffordable, probeStranded, probeStrandedIds.size, probeFixable, probeFixMissed,
             ),
@@ -664,6 +685,16 @@ class GameRunner(
     companion object {
         const val STUCK_ACTIONS_PER_TURN = 300
         private val MAIN_PHASES = setOf(Phase.PRECOMBAT_MAIN, Phase.POSTCOMBAT_MAIN)
+
+        internal fun policyActionFamily(action: GameAction): String = when (action) {
+            is PassPriority -> "pass"
+            is CastSpell -> "cast"
+            is PlayLand -> "land"
+            is ActivateAbility -> "activate"
+            is DeclareAttackers -> "attack"
+            is DeclareBlockers -> "block"
+            else -> "other"
+        }
 
         /** [Outcome.cards]' fields, in order. */
         val CARD_FIELDS = listOf(

@@ -69,4 +69,14 @@ class GameplayPolicyBridgeTest : FunSpec({
             LegalAction(PassPriority(player), "CrewVehicle", "Crew"),
         ) shouldBe false
     }
+
+    test("shadow-teacher telemetry uses stable coarse action families") {
+        GameRunner.policyActionFamily(PassPriority(player)) shouldBe "pass"
+        GameRunner.policyActionFamily(
+            DeclareAttackers(player, mapOf(attacker1 to defender)),
+        ) shouldBe "attack"
+        GameRunner.policyActionFamily(
+            DeclareBlockers(player, mapOf(blocker1 to listOf(attacker1))),
+        ) shouldBe "block"
+    }
 })
