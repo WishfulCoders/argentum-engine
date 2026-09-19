@@ -210,6 +210,28 @@ class FixingBlindnessTest : ScenarioTestBase() {
             (tapland.score!! - basic.score!!) shouldBe (-TAPPED_LAND_CHARGE plusOrMinus 1e-9)
         }
 
+        test("`seqc`: the tapland refund fires when the card it would unlock is the wrong colour") {
+            // Two Mountains, one of them tapped, and Grizzly Bears ({1}{G}) in hand. Untapping the
+            // second Mountain brings mana value 2 within reach, so upstream's test says "a card
+            // would become castable" and withholds the refund — but no arrangement of Mountains
+            // casts a green spell, so the tapped land cost this turn nothing at all. The spare
+            // Mountain in hand is only there to give the position a second legal action, without
+            // which the Strategist short-circuits and records no scores to read.
+            val seqc = AiProfile.PRODUCTION.copy(id = "seqc", sequenceLandsByCastability = true)
+            val seq = AiProfile.PRODUCTION.copy(id = "seq", sequenceLandsByUsableMana = true)
+
+            fun refundShowsIn(profile: AiProfile): Double {
+                val insight = Position(
+                    lands = 1, hand = listOf("Grizzly Bears", "Mountain"), profile = profile,
+                    fetchLand = false, extraTapped = "Mountain",
+                ).decide()
+                return insight.options.single { it.baseline }.score!!
+            }
+
+            // The refund is worth `tapped x IDLE_MANA_REFUND` = 0.3, at weight 1.5.
+            (refundShowsIn(seqc) - refundShowsIn(seq)) shouldBe (0.45 plusOrMinus 1e-9)
+        }
+
         test("`fixing`: a land in hand already covers its colour, so the fetch looks elsewhere") {
             // Holding a Forest, the green card in hand is not what the fetch is for; the Swamp is
             // the colour this board genuinely cannot reach.
@@ -231,6 +253,8 @@ class FixingBlindnessTest : ScenarioTestBase() {
         val profile: AiProfile = AiProfile.PRODUCTION,
         /** Off for the land-drop positions: with a fetch on the battlefield, cracking is better. */
         val fetchLand: Boolean = true,
+        /** A land that starts the position tapped, for the sequencing refund. */
+        val extraTapped: String? = null,
     ) {
         private fun game(): ScenarioTestBase.TestGame {
             var builder: ScenarioTestBase.ScenarioBuilder = scenario()
@@ -238,6 +262,7 @@ class FixingBlindnessTest : ScenarioTestBase() {
                 .withLandsOnBattlefield(1, "Mountain", lands)
                 .withLandsOnBattlefield(2, "Plains", 2)
             if (fetchLand) builder = builder.withCardOnBattlefield(1, "Evolving Wilds", tapped = false)
+            if (extraTapped != null) builder = builder.withCardOnBattlefield(1, extraTapped, tapped = true)
             hand.forEach { builder = builder.withCardInHand(1, it) }
             library.forEach { builder = builder.withCardInLibrary(1, it) }
             // Deep enough that nothing here is playing a decking race, and deliberately not a

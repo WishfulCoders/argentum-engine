@@ -23,6 +23,7 @@ import com.wingedsheep.engine.state.components.player.LandDropsComponent
 import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.model.EntityId
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -157,10 +158,20 @@ object BoardPresence : BoardFeature {
         creatureValuation: CreatureValuation = CreatureValuation.LEGACY,
         priceSacrificeLandsAsNoMana: Boolean = false,
         colourAvailability: ColourAvailability? = null,
+        sequenceLandsByCastability: Boolean = false,
+        cardRegistry: CardRegistry? = null,
     ): Double {
         val sides = state.sidesFor(playerId) ?: return 0.0
+        // The colour-aware form supersedes the mana-value one rather than stacking: they are the
+        // same term, asking the same question with a better answer.
+        val sequencing = when {
+            sequenceLandsByCastability && cardRegistry != null ->
+                landSequencing(state, projected, playerId, intents, cardRegistry)
+            sequenceLandsByUsableMana -> landSequencing(state, projected, playerId, intents, null)
+            else -> 0.0
+        }
         val mine = boardValue(state, projected, sides.mine, intents, creatureValuation, priceSacrificeLandsAsNoMana) +
-            (if (sequenceLandsByUsableMana) landSequencing(state, projected, playerId, intents) else 0.0) +
+            sequencing +
             (colourAvailability?.penalty(state, projected, playerId) ?: 0.0)
         return sides.against(OpponentAggregate.THREAT) { opponent ->
             mine - boardValue(state, projected, opponent, intents, creatureValuation, priceSacrificeLandsAsNoMana)
@@ -226,6 +237,17 @@ object BoardPresence : BoardFeature {
         projected: ProjectedState,
         playerId: EntityId,
         intents: IntentCatalog,
+        /**
+         * Non-null makes the castability test read **colours** as well as amount
+         * ([AiProfile.sequenceLandsByCastability]).
+         *
+         * The KDoc above admits the approximation — "castability is mana *value* against a land
+         * count ... colours ... are ignored" — and on a two-colour deck the two answers differ
+         * constantly. Three Mountains and a `{2}{G}` in hand read as "a card that untapping would
+         * unlock", so the refund is withheld and the AI is charged for a tapland on a turn when the
+         * mana it was not producing could never have cast anything. mtg-draft-ai `docs/46` §9.7.
+         */
+        cardRegistry: CardRegistry?,
     ): Double {
         // Projection on the battlefield, base state in hand: an animated Mishra's Factory is still a
         // land and a Dryad Arbor is one from the moment it arrives, and only the projection knows.
@@ -238,8 +260,19 @@ object BoardPresence : BoardFeature {
         val hand = state.getZone(playerId, Zone.HAND)
             .mapNotNull { state.getEntity(it)?.get<CardComponent>() }
 
+        // What the lands could make between them. Their *colours*, not their availability: the
+        // question is whether untapping would unlock the card, and a tapped land untaps.
+        val producible: Set<Color>? = cardRegistry?.let { registry ->
+            lands.flatMapTo(mutableSetOf()) {
+                ColourNeeds.coloursProducedBy(state, projected, it, registry)
+            }
+        }
         var score = 0.0
-        if (tapped > 0 && hand.none { !it.isLand && it.manaValue in (untapped + 1)..lands.size }) {
+        val unlockable = hand.any { card ->
+            !card.isLand && card.manaValue in (untapped + 1)..lands.size &&
+                (producible == null || card.manaCost.colorCount.keys.all { it in producible })
+        }
+        if (tapped > 0 && !unlockable) {
             score += tapped * IDLE_MANA_REFUND
         }
         score -= TAPLAND_IN_HAND * hand.count {
@@ -268,15 +301,24 @@ object BoardPresence : BoardFeature {
      * make the AI hoard lands. And it is capped, so a three-colour hand on turn one is not scored
      * as a catastrophe it cannot do anything about.
      */
-    class ColourAvailability(private val cardRegistry: CardRegistry) {
+    class ColourAvailability(
+        val registry: CardRegistry,
+        /**
+         * False makes this a registry carrier only, for
+         * [AiProfile.sequenceLandsByCastability] — which needs to read producible colours but must
+         * not also start charging for missing ones, or the two arms could not be told apart.
+         */
+        private val charging: Boolean = true,
+    ) {
         fun penalty(state: GameState, projected: ProjectedState, playerId: EntityId): Double {
-            val needs = ColourNeeds.of(state, projected, playerId, cardRegistry)
+            if (!charging) return 0.0
+            val needs = ColourNeeds.of(state, projected, playerId, registry)
             // `ColourNeeds.available` counts lands in hand as reachable, which is right for
             // choosing what to fetch and wrong here: a land in hand is a colour you have not got
             // yet, and pricing it as though you had would make the land drop worth nothing.
             val onBoard = projected.getBattlefieldControlledBy(playerId)
                 .flatMapTo(mutableSetOf()) {
-                    ColourNeeds.coloursProducedBy(state, projected, it, cardRegistry)
+                    ColourNeeds.coloursProducedBy(state, projected, it, registry)
                 }
             val unmet = needs.handPips.count { (colour, pips) -> pips > 0 && colour !in onBoard }
             return -UNMET_COLOUR * minOf(unmet, UNMET_COLOUR_CAP)

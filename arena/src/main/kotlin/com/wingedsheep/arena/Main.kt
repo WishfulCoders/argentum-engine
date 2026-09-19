@@ -57,9 +57,29 @@ fun main(args: Array<String>) {
     val opponents = known.filter { it.role == "opponent" }.take(maxOpponents)
     val byId = known.associateBy { it.id }
 
+    // Resume, tolerantly. A spot VM copies `out/` to the bucket once a minute while the arena is
+    // still writing to it, so the copy that comes back after a preemption routinely ends in a
+    // *partial line*. Parsing strictly threw there and killed the arm — on 2026-09-19 that cost
+    // `phase0-fixing` 62,650 finished games and would have relaunch-crashed in a loop, because the
+    // truncated file is what the next VM downloads too (mtg-draft-ai `docs/46` §11).
+    //
+    // The file is rewritten rather than only filtered, because the writer below opens it in append
+    // mode: leaving a line with no newline on the end would glue the next record onto it and make
+    // a second corrupt line out of a good one.
     val done = if (output.exists()) {
-        output.readLines().filter { it.isNotBlank() }
-            .map { arenaJson.decodeFromString<GameRecord>(it).key }.toHashSet()
+        val keys = HashSet<String>()
+        val kept = mutableListOf<String>()
+        var dropped = 0
+        for (line in output.readLines()) {
+            if (line.isBlank()) continue
+            val key = runCatching { arenaJson.decodeFromString<GameRecord>(line).key }.getOrNull()
+            if (key == null) dropped++ else { keys += key; kept += line }
+        }
+        if (dropped > 0) {
+            println("resume: dropped $dropped unparseable line(s) from ${output.name}, kept ${kept.size}")
+            output.writeText(kept.joinToString(separator = "\n", postfix = "\n"))
+        }
+        keys
     } else hashSetOf()
 
     data class Job(val target: DeckSpec, val opponent: DeckSpec, val game: Int, val seed: Long)

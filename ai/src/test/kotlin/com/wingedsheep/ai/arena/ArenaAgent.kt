@@ -261,6 +261,23 @@ object ArenaAgents {
                 sequenceLandsByUsableMana = true,
             ),
         ),
+        // docs/46 §9.7's follow-up: the same sequencing term with a castability test that reads
+        // colours. `-seqc` against `production` is the idea; `-seqc` against `production-seq` is
+        // whether the approximation was what made the mana-value form a null.
+        ArenaAgent(
+            "production-seqc",
+            AiProfile.PRODUCTION.copy(id = "production-seqc", sequenceLandsByCastability = true),
+        ),
+        ArenaAgent(
+            "production-fixing-seqc",
+            AiProfile.PRODUCTION.copy(
+                id = "production-fixing-seqc",
+                priceSacrificeLandsAsNoMana = true,
+                choosesLandsByColour = true,
+                chargesForUnavailableColours = true,
+                sequenceLandsByCastability = true,
+            ),
+        ),
         ArenaAgent(
             "production-fixing-colour",
             AiProfile.PRODUCTION.copy(id = "production-fixing-colour", chargesForUnavailableColours = true),

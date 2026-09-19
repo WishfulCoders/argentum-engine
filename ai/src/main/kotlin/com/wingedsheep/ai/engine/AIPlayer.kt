@@ -269,11 +269,15 @@ class AIPlayer(
                 creatureValuation = profile.creatureValuation,
                 priceLandsInHandAsMana = profile.priceLandsInHandAsMana,
                 priceSacrificeLandsAsNoMana = profile.priceSacrificeLandsAsNoMana,
-                colourAvailability = if (profile.chargesForUnavailableColours) {
-                    BoardPresence.ColourAvailability(cardRegistry)
+                // The holder is built whenever either colour term needs it: it carries the
+                // registry `landSequencing` reads producible colours from, and the charge itself
+                // is applied only under `chargesForUnavailableColours`.
+                colourAvailability = if (profile.chargesForUnavailableColours || profile.sequenceLandsByCastability) {
+                    BoardPresence.ColourAvailability(cardRegistry, charging = profile.chargesForUnavailableColours)
                 } else {
                     null
                 },
+                sequenceLandsByCastability = profile.sequenceLandsByCastability,
             )
             // Its features read the full catalog, as they did where it was fit (replay's PreferenceWriter).
             val correction = profile.priorityCorrectionId?.let(EvalWeights::correction)

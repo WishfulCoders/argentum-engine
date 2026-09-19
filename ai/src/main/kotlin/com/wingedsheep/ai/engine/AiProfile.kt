@@ -480,6 +480,21 @@ data class AiProfile(
      * leads to, with no special case for any of them.
      */
     val chargesForUnavailableColours: Boolean = false,
+
+    /**
+     * [sequenceLandsByUsableMana] with its castability test reading colours as well as amount.
+     *
+     * Supersedes that flag rather than stacking with it — same term, better answer. Upstream's
+     * version asks whether untapping the tapped lands would bring a card in hand within reach by
+     * *mana value*, which its own KDoc admits ignores colours; on three Mountains with a `{2}{G}`
+     * in hand it says yes, so the refund is withheld and the AI is charged for a tapland on a turn
+     * when the mana it was not producing could never have cast anything.
+     *
+     * Its own flag because `docs/46` §9.7 measured the mana-value form at parity on 600 games and
+     * named this as the likeliest reason, so the two have to be separable to tell whether the idea
+     * or the approximation was at fault.
+     */
+    val sequenceLandsByCastability: Boolean = false,
     /** Non-null profiles may only be selected automatically for this set. Arena selection stays explicit. */
     val restrictedToSet: String? = null,
     /**
