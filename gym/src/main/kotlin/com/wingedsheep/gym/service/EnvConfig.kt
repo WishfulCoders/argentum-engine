@@ -1,7 +1,9 @@
 package com.wingedsheep.gym.service
 
+import com.wingedsheep.ai.engine.AiProfiles
 import com.wingedsheep.gym.contract.ActionParams
 import com.wingedsheep.sdk.model.EntityId
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
@@ -59,6 +61,15 @@ data class EnvConfig(
         require(players.size >= 2) { "Need at least 2 players" }
         require(perspectivePlayerIndex in players.indices) {
             "perspectivePlayerIndex=$perspectivePlayerIndex out of range for ${players.size} players"
+        }
+        require(players.any { it.agent is AgentSpec.Learner }) {
+            "At least one seat must be a Learner; an env with none would never return"
+        }
+        // Observing from a seat nobody is learning is a silent way to train on the wrong
+        // information set, so it is refused rather than defaulted.
+        require(players[perspectivePlayerIndex].agent is AgentSpec.Learner) {
+            "perspectivePlayerIndex=$perspectivePlayerIndex is a ${players[perspectivePlayerIndex].agent} seat, " +
+                "not a Learner"
         }
     }
 }
@@ -123,8 +134,40 @@ data class PlayerSpec(
     val name: String,
     val deck: DeckSpec,
     val startingLife: Int = 20,
-    val playerId: EntityId? = null
+    val playerId: EntityId? = null,
+
+    /** Who acts for this seat. Defaults to the caller, which is how every env behaved before. */
+    val agent: AgentSpec = AgentSpec.Learner()
 )
+
+/**
+ * Who answers for a seat.
+ *
+ * A gym env used to hand every seat's decision to its caller. That is right for search and for
+ * symmetric self-play, and wrong for training one policy against a fixed opponent: the opponent
+ * would have to be reimplemented outside the engine that defines it. A [Pilot] seat is played
+ * inside the env by the engine's own AI, so the trainer sees only the seat it is learning.
+ */
+@Serializable
+sealed interface AgentSpec {
+
+    /**
+     * The caller acts for this seat.
+     *
+     * [decisionProfile] answers the structured pending decisions the flat action space cannot
+     * express — targets, damage assignment, ordering, library search. The learned policy has no
+     * heads for those, so the engine's AI takes them, exactly as it does in the arena; set it to
+     * the same profile as the opponent so the two seats differ only where the policy actually acts.
+     */
+    @Serializable
+    @SerialName("Learner")
+    data class Learner(val decisionProfile: String = "current") : AgentSpec
+
+    /** The engine's AI plays this seat inside the env, under [AiProfiles.parse]'s profile name. */
+    @Serializable
+    @SerialName("Pilot")
+    data class Pilot(val profile: String = "current") : AgentSpec
+}
 
 /** A single environment's `step()` input — batched into [com.wingedsheep.gym.service.MultiEnvService.stepBatch]. */
 @Serializable

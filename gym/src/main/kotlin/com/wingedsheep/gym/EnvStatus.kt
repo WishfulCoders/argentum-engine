@@ -41,6 +41,16 @@ data class EnvStatus(
 
     /** Terminal rewards per player; empty while the episode is running or when it was truncated. */
     val reward: List<PlayerReward> = emptyList(),
+
+    /** Engine actions the env's own pilot seats took since the last call returned. */
+    val autoAdvanced: Int = 0,
+
+    /**
+     * Structured pending decisions answered for a learner seat by its `decisionProfile` AI, since
+     * the last reset. This is the part of the learner's behaviour it is not learning, so it is
+     * counted rather than hidden.
+     */
+    val delegatedDecisions: Int = 0,
 ) {
     /** True once the episode is over for either reason. A caller should reset or dispose it. */
     val done: Boolean get() = terminated || truncated

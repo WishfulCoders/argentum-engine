@@ -55,15 +55,16 @@ class MultiEnvService(
      * is the opening state (post-mulligan if [EnvConfig.skipMulligans]).
      */
     fun create(config: EnvConfig): CreatedEnv {
-        val gameConfig = config.toGameConfig()
-        val env = GameEnvironment.create(cardRegistry)
-        env.reset(gameConfig)
         val gymEnv = GameGymEnv(
-            env, config.perspectivePlayerIndex, config.revealAll, limits = config.limits,
+            GameEnvironment.create(cardRegistry), config.perspectivePlayerIndex, config.revealAll,
+            limits = config.limits, agents = config.players.map { it.agent },
         )
+        // Reset through the gym env, not the raw environment: it is what seeds the episode counters
+        // and plays the pilot seats forward, so the opening observation is already the learner's.
+        val opening = gymEnv.reset(config.toGameConfig())
         val envId = EnvId.generate()
         envs[envId] = gymEnv
-        return CreatedEnv(envId, gymEnv.observe())
+        return CreatedEnv(envId, opening)
     }
 
     /**
@@ -84,7 +85,10 @@ class MultiEnvService(
 
     /** Reset an existing game env while keeping the same [EnvId]. */
     fun reset(envId: EnvId, config: EnvConfig): ObservationResult =
-        requireGameEnv(envId).reset(config.toGameConfig())
+        requireGameEnv(envId).reset(
+            config.toGameConfig(), config.limits, config.players.map { it.agent },
+            config.perspectivePlayerIndex, config.revealAll,
+        )
 
     /** Drop envs from the registry. Idempotent. */
     fun dispose(envIds: Collection<EnvId>) {
