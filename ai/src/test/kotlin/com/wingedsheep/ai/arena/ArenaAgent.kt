@@ -242,6 +242,25 @@ object ArenaAgents {
             "production-fixing-choose",
             AiProfile.PRODUCTION.copy(id = "production-fixing-choose", choosesLandsByColour = true),
         ),
+        // Upstream's `sequenceLandsByUsableMana`, which is the *timing* question the colour flags
+        // do not touch: play the tapland on a turn when the mana it is not producing is mana you
+        // had no use for. Built long ago and on in only two upstream profiles, so it has never been
+        // measured beside anything here. `-seq` isolates it; `-both` asks whether it composes with
+        // the colour terms or overlaps them.
+        ArenaAgent(
+            "production-seq",
+            AiProfile.PRODUCTION.copy(id = "production-seq", sequenceLandsByUsableMana = true),
+        ),
+        ArenaAgent(
+            "production-fixing-seq",
+            AiProfile.PRODUCTION.copy(
+                id = "production-fixing-seq",
+                priceSacrificeLandsAsNoMana = true,
+                choosesLandsByColour = true,
+                chargesForUnavailableColours = true,
+                sequenceLandsByUsableMana = true,
+            ),
+        ),
         ArenaAgent(
             "production-fixing-colour",
             AiProfile.PRODUCTION.copy(id = "production-fixing-colour", chargesForUnavailableColours = true),
