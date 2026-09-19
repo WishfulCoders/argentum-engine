@@ -117,6 +117,15 @@ class GameEnvironment private constructor(
         private set
 
     /**
+     * The seed this game was initialized with — [GameConfig.seed] when it was supplied, otherwise
+     * the entropy seed the initializer drew. Recording it is what makes a game reproducible: the
+     * engine is a pure function once seeded, so a run that does not keep its seed cannot be
+     * replayed, paired against another arm, or re-examined after a surprising result.
+     */
+    var seed: Long = 0L
+        private set
+
+    /**
      * Why the engine rejected the most recent submission, or `null` when it was accepted.
      *
      * An illegal action leaves the state untouched, which on its own is indistinguishable from an
@@ -171,6 +180,7 @@ class GameEnvironment private constructor(
         lastStepEvents = initResult.events
         lastRejection = null
         stepCount = 0
+        seed = initResult.seed
         return buildStepResult(initResult.events)
     }
 
@@ -289,6 +299,7 @@ class GameEnvironment private constructor(
         forked.events = emptyList() // forked environments start with clean event history
         forked.lastStepEvents = emptyList()
         forked.stepCount = stepCount
+        forked.seed = seed
         return forked
     }
 

@@ -5,6 +5,7 @@ import com.wingedsheep.engine.core.DecisionResponse
 import com.wingedsheep.engine.core.GameConfig
 import com.wingedsheep.engine.core.PlayerConfig
 import com.wingedsheep.gym.GameEnvironment
+import com.wingedsheep.gym.EnvStatus
 import com.wingedsheep.gym.GameGymEnv
 import com.wingedsheep.gym.GymEnv
 import com.wingedsheep.gym.contract.ObservationResult
@@ -57,7 +58,9 @@ class MultiEnvService(
         val gameConfig = config.toGameConfig()
         val env = GameEnvironment.create(cardRegistry)
         env.reset(gameConfig)
-        val gymEnv = GameGymEnv(env, config.perspectivePlayerIndex, config.revealAll)
+        val gymEnv = GameGymEnv(
+            env, config.perspectivePlayerIndex, config.revealAll, limits = config.limits,
+        )
         val envId = EnvId.generate()
         envs[envId] = gymEnv
         return CreatedEnv(envId, gymEnv.observe())
@@ -119,6 +122,14 @@ class MultiEnvService(
     fun submitDecision(envId: EnvId, response: DecisionResponse): ObservationResult =
         requireGameEnv(envId).submitDecision(response)
 
+    /**
+     * Episode bookkeeping for one env: termination, truncation, seed and terminal reward.
+     *
+     * Cheap and side-effect free — a registry lookup and a few field reads — so a batched caller
+     * reads it for every env it stepped without a second round trip.
+     */
+    fun status(envId: EnvId): EnvStatus = requireEnv(envId).status()
+
     // =========================================================================
     // Fork / snapshot / restore
     // =========================================================================
@@ -157,7 +168,8 @@ class MultiEnvService(
         startingHandSize = startingHandSize,
         skipMulligans = skipMulligans,
         useHandSmoother = useHandSmoother,
-        startingPlayerIndex = startingPlayerIndex
+        startingPlayerIndex = startingPlayerIndex,
+        seed = seed,
     )
 
     private fun requireEnv(envId: EnvId): GymEnv =

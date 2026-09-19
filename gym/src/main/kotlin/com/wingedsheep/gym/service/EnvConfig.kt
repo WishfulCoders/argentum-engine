@@ -43,13 +43,52 @@ data class EnvConfig(
      * If `true`, opponent hand and libraries are revealed — debug only,
      * must never be enabled in production self-play.
      */
-    val revealAll: Boolean = false
+    val revealAll: Boolean = false,
+
+    /**
+     * RNG seed for shuffles, coin flips and every other "at random" choice. `null` draws fresh
+     * entropy, which is the right default for training diversity; the drawn seed is reported on
+     * [com.wingedsheep.gym.EnvStatus] either way, so any episode can be replayed exactly.
+     */
+    val seed: Long? = null,
+
+    /** When to cut an episode short. See [EnvLimits]. */
+    val limits: EnvLimits = EnvLimits(),
 ) {
     init {
         require(players.size >= 2) { "Need at least 2 players" }
         require(perspectivePlayerIndex in players.indices) {
             "perspectivePlayerIndex=$perspectivePlayerIndex out of range for ${players.size} players"
         }
+    }
+}
+
+/**
+ * Bounds that stop an env running forever. The defaults mirror the arena's, so a policy truncates
+ * at the same place whether it is being trained or evaluated.
+ *
+ * These are not paranoia. A learned policy that has not yet learned when to stop passing will churn
+ * priority indefinitely — one behaviour-cloned checkpoint played **zero** games in five minutes on
+ * the arena schedule. Without a bound the env simply never returns.
+ */
+@Serializable
+data class EnvLimits(
+    /** Turn cap per seat; compared against the engine's turn counter times the seat count. */
+    val maxTurnsPerSeat: Int = 50,
+
+    /** Total actions submitted in one episode. */
+    val maxActions: Int = 20_000,
+
+    /**
+     * Actions allowed without the active player changing. This is the arena's stuck detector: a
+     * loop that never passes the turn is not a long game, it is a stuck one.
+     */
+    val maxActionsWithoutProgress: Int = 300,
+) {
+    init {
+        require(maxTurnsPerSeat > 0) { "maxTurnsPerSeat must be positive" }
+        require(maxActions > 0) { "maxActions must be positive" }
+        require(maxActionsWithoutProgress > 0) { "maxActionsWithoutProgress must be positive" }
     }
 }
 

@@ -1,6 +1,7 @@
 package com.wingedsheep.gym.deckbuild
 
 import com.wingedsheep.ai.engine.LimitedCardRater
+import com.wingedsheep.gym.EnvStatus
 import com.wingedsheep.gym.GymEnv
 import com.wingedsheep.gym.contract.ActionParams
 import com.wingedsheep.gym.contract.ActionRegistry
@@ -55,6 +56,9 @@ class DeckbuildEnvironment(
     private var actions: List<DeckbuildAction> = emptyList()
 
     override val isTerminal: Boolean get() = finalized
+
+    /** A build has no game RNG, no turns and no reward; it is finished or it is not. */
+    override fun status(): EnvStatus = EnvStatus(terminated = finalized)
 
     /** The finished decklist once finalized, else null. */
     val finalDeck: Map<String, Int>? get() = if (finalized) LinkedHashMap(selected) else null

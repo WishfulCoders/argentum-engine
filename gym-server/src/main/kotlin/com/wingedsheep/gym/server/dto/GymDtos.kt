@@ -1,5 +1,6 @@
 package com.wingedsheep.gym.server.dto
 
+import com.wingedsheep.gym.EnvStatus
 import com.wingedsheep.gym.contract.ActionParams
 import com.wingedsheep.gym.contract.Observation
 import com.wingedsheep.gym.service.EnvId
@@ -15,7 +16,9 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class CreateEnvResponse(
     val envId: EnvId,
-    val observation: Observation
+    val observation: Observation,
+    /** Episode bookkeeping, including the seed this game was initialised with. */
+    val status: EnvStatus = EnvStatus(terminated = false),
 )
 
 /**
@@ -39,11 +42,17 @@ data class StepBatchItem(
     val params: ActionParams = ActionParams.EMPTY
 )
 
-/** Result entry for `POST /envs/step-batch`. */
+/**
+ * Result entry for `POST /envs/step-batch`.
+ *
+ * [status] rides along on every stepped env so a training loop learns that an episode ended — and
+ * what it paid — without a second round trip per decision.
+ */
 @Serializable
 data class StepBatchResult(
     val envId: EnvId,
-    val observation: Observation
+    val observation: Observation,
+    val status: EnvStatus = EnvStatus(terminated = false),
 )
 
 /** Body for `POST /envs/{id}/restore`. */

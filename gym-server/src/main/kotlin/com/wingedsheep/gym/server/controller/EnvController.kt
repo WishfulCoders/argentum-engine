@@ -8,6 +8,7 @@ import com.wingedsheep.gym.service.EnvId
 import com.wingedsheep.gym.service.MultiEnvService
 import com.wingedsheep.gym.service.SnapshotHandle
 import com.wingedsheep.gym.service.StepRequest
+import com.wingedsheep.gym.EnvStatus
 import com.wingedsheep.gym.server.dto.CreateEnvResponse
 import com.wingedsheep.gym.server.dto.DisposeBody
 import com.wingedsheep.gym.server.dto.RestoreBody
@@ -169,7 +170,9 @@ class EnvController(
     @PostMapping
     fun create(@RequestBody config: EnvConfig): CreateEnvResponse {
         val created = multiEnvService.create(config)
-        return CreateEnvResponse(created.envId, created.observation.observation)
+        return CreateEnvResponse(
+            created.envId, created.observation.observation, multiEnvService.status(created.envId),
+        )
     }
 
     @Operation(
@@ -194,7 +197,9 @@ class EnvController(
     @PostMapping("/deckbuild")
     fun createDeckbuild(@RequestBody config: DeckbuildConfig): CreateEnvResponse {
         val created = multiEnvService.createDeckbuild(config)
-        return CreateEnvResponse(created.envId, created.observation.observation)
+        return CreateEnvResponse(
+            created.envId, created.observation.observation, multiEnvService.status(created.envId),
+        )
     }
 
     @Operation(summary = "List live env IDs")
@@ -237,6 +242,17 @@ class EnvController(
     ): Observation =
         multiEnvService.observe(EnvId(id), revealAll).observation
 
+    @Operation(
+        summary = "Read an env's episode status",
+        description = """
+            Termination, truncation, action/turn counts, the seed the game was initialised with, and
+            the terminal reward once there is one. Every `step-batch` result already carries this;
+            call it directly after a `reset`, or when driving an env one action at a time.
+        """
+    )
+    @GetMapping("/{id}/status")
+    fun status(@PathVariable id: String): EnvStatus = multiEnvService.status(EnvId(id))
+
     // =========================================================================
     // Stepping
     // =========================================================================
@@ -267,7 +283,7 @@ class EnvController(
     fun stepBatch(@RequestBody items: List<StepBatchItem>): List<StepBatchResult> {
         val requests = items.map { StepRequest(it.envId, it.actionId, it.params) }
         return multiEnvService.stepBatch(requests).map { (envId, obs) ->
-            StepBatchResult(envId, obs.observation)
+            StepBatchResult(envId, obs.observation, multiEnvService.status(envId))
         }
     }
 

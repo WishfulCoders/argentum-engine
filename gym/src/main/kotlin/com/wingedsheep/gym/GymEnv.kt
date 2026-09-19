@@ -42,4 +42,11 @@ interface GymEnv {
 
     /** Branch this env. Children diverge independently from the next [step] on. */
     fun fork(): GymEnv
+
+    /**
+     * Episode bookkeeping for the current position: termination, truncation, seed and reward.
+     *
+     * Deliberately not part of the observation — see [EnvStatus].
+     */
+    fun status(): EnvStatus
 }
