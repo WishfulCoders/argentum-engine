@@ -444,6 +444,37 @@ assay-ready SET *ARGS:
 server:
     @if [ -f .env ]; then set -a && . ./.env && set +a; fi && ./gradlew :game-server:bootRun --args='--spring.profiles.active=local'
 
+# Play a research AI profile in the web client instead of the production candidate. Defaults to the
+# gameplay pilot (mtg-draft-ai docs/44): the race clock, the hold rules and the rc2 fitted correction.
+# The correction is read from a LOCAL copy of artifacts/gameplay_pilot/rc2_actions: the external
+# drive lost read permission on a remount once already, and a correction that cannot be read fails
+# the boot by design.
+# `determinize` is on because a human is in the other seat: without it the evaluator reads card names
+# out of BOTH hands for removalInHandDifference (docs/44 §4). Drop that token to reproduce the seat
+# docs/28 §9 measured. A correction that fails to load fails the boot.
+# Pair with `just client`, or use `just dev-pilot` for both.
+[group: 'dev']
+pilot PROFILE="raceclock+timing+correction-actions+determinize" DIR="$HOME/mtg/models/rc2_actions":
+    @if [ -f .env ]; then set -a && . ./.env && set +a; fi && \
+      GAME_AI_PROFILE="{{PROFILE}}" \
+      GAME_REPLAY_EXPORT_DIR="${GAME_REPLAY_EXPORT_DIR:-$HOME/mtg/artifacts/engine_games/$(date +%Y-%m-%d)/replays}" \
+      GAME_DEV_ENDPOINTS_ENABLED=true \
+      GAME_PLAYTEST_MATCHUPS_FILE="${GAME_PLAYTEST_MATCHUPS_FILE:-$HOME/mtg/artifacts/playtest/matchups.jsonl}" \
+      ./gradlew :game-server:bootRun \
+      --args='--spring.profiles.active=local' -Dargentum.ai.apprentice.dir="{{DIR}}"
+
+# `just pilot` and the web client together
+[group: 'dev']
+dev-pilot PROFILE="raceclock+timing+correction-actions+determinize":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    just pilot "{{PROFILE}}" &
+    server_pid=$!
+    just client &
+    client_pid=$!
+    trap 'kill "$server_pid" "$client_pid" 2>/dev/null || true; wait "$server_pid" "$client_pid" 2>/dev/null || true' EXIT INT TERM
+    wait "$server_pid" "$client_pid"
+
 # Start the game server and web client together
 [group: 'dev']
 dev:

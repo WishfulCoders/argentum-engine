@@ -931,6 +931,12 @@ export type GameStore = {
   spectatorNames: readonly string[]
   createGame: (deckList: Record<string, number>, setCode?: string) => void
   createAiGame: (deckList: Record<string, number>, setCode?: string) => void
+  /** Playtest: a game where BOTH decks are fixed. See `PlaytestPage`. */
+  createPlaytestGame: (
+    deckList: Record<string, number>,
+    aiDeckList: Record<string, number>,
+    setCode?: string,
+  ) => void
   joinGame: (sessionId: string, deckList: Record<string, number>) => void
   submitAction: (action: GameAction, interactionEpoch: string | null | undefined) => void
   /** The decision ID must come from the rendered prompt, never from a later store snapshot. */

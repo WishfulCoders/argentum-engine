@@ -2117,6 +2117,12 @@ export interface CreateGameMessage {
   readonly cardEntries?: readonly DeckEntry[]
   /** Constructed sideboard ("outside the game", CR 100.4a), card name → count. Wish target. */
   readonly sideboard?: Record<string, number>
+  /**
+   * The exact deck the AI seat plays, card name → count. Only meaningful with `vsAi`; omitted, the
+   * AI gets a generated sealed deck as before. Used by the playtest page, where the point is a
+   * named matchup rather than a fresh pool (mtg-draft-ai `docs/44`).
+   */
+  readonly aiDeckList?: Record<string, number>
 }
 
 /**
@@ -2314,6 +2320,7 @@ export function createCreateGameMessage(
   setCode?: string,
   cardEntries?: readonly DeckEntry[],
   sideboard?: Record<string, number>,
+  aiDeckList?: Record<string, number>,
 ): CreateGameMessage {
   const msg: CreateGameMessage = {
     type: 'createGame',
@@ -2322,6 +2329,7 @@ export function createCreateGameMessage(
     ...(setCode ? { setCode } : {}),
     ...(cardEntries && cardEntries.length > 0 ? { cardEntries } : {}),
     ...(sideboard && Object.keys(sideboard).length > 0 ? { sideboard } : {}),
+    ...(aiDeckList && Object.keys(aiDeckList).length > 0 ? { aiDeckList } : {}),
   }
   return msg
 }
