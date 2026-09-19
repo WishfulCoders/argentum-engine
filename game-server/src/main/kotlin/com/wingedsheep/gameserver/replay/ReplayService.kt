@@ -1,9 +1,13 @@
 package com.wingedsheep.gameserver.replay
 
 import com.wingedsheep.engine.state.GameState
+import com.wingedsheep.gameserver.persistence.persistenceJson
 import jakarta.annotation.PreDestroy
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
+import java.nio.file.Files
+import java.nio.file.Path
 import java.time.Instant
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -64,6 +68,16 @@ class ReplayService(
     private val store: ReplayStore,
     private val reconstructor: ReplayReconstructor,
     private val presentation: ReplayPresentation,
+    /**
+     * Where to write a copy of every finished game's input log, one `<gameId>.json` per game. Blank
+     * (the default) writes nothing.
+     *
+     * Without accounts the store is in memory, so a research session's games die with the server —
+     * and a game played to produce training labels that vanishes on Ctrl-C is the one outcome worth
+     * spending a file write on. The export is the full [CompactReplay], the same record the store
+     * holds, so it re-simulates into states and actions offline (mtg-draft-ai `docs/44`).
+     */
+    @Value("\${game.replay.export-dir:}") private val exportDir: String = "",
 ) {
     private val logger = LoggerFactory.getLogger(ReplayService::class.java)
 
@@ -92,6 +106,7 @@ class ReplayService(
     fun save(replay: CompactReplay, archive: Boolean) {
         val record = StoredReplay(replay = replay, status = ReplayStatus.FINISHED)
         store.save(record)
+        export(replay)
         if (!archive) return
 
         archiver.execute {
@@ -160,6 +175,23 @@ class ReplayService(
         logger.info(
             "Finalized partial replay {} at {} actions", gameId, stored.replay.actions.size,
         )
+        export(stored.replay)
+    }
+
+    /**
+     * Write [replay] to [exportDir] if one is configured. Best-effort and never fatal: a full disk
+     * or an unmounted drive must not fail a game that was played correctly, and the in-memory store
+     * still holds the record for as long as the server lives.
+     */
+    private fun export(replay: CompactReplay) {
+        if (exportDir.isBlank()) return
+        runCatching {
+            val dir = Path.of(exportDir)
+            Files.createDirectories(dir)
+            val file = dir.resolve("\${replay.gameId}.json")
+            Files.writeString(file, persistenceJson.encodeToString(CompactReplay.serializer(), replay))
+            logger.info("Exported replay {} ({} actions) to {}", replay.gameId, replay.actions.size, file)
+        }.onFailure { logger.error("Could not export replay {}: {}", replay.gameId, it.message) }
     }
 
     /** The stored record for [gameId], or null if unknown. */
