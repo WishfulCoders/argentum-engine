@@ -47,12 +47,15 @@ data class EvaluationWeights(
         discountedRaceClock: Boolean = false,
         creatureValuation: CreatureValuation = CreatureValuation.LEGACY,
         priceLandsInHandAsMana: Boolean = false,
+        priceSacrificeLandsAsNoMana: Boolean = false,
+        colourAvailability: BoardPresence.ColourAvailability? = null,
     ): BoardEvaluator = CompositeBoardEvaluator(
         listOf(
             life to LifeDifferential,
             boardPresence to BoardFeature { state, projected, playerId ->
                 BoardPresence.score(
                     state, projected, playerId, intents, sequenceLandsByUsableMana, creatureValuation,
+                    priceSacrificeLandsAsNoMana, colourAvailability,
                 )
             },
             cardAdvantage to BoardFeature { state, projected, playerId ->
@@ -144,12 +147,15 @@ object EvalWeights {
         discountedRaceClock: Boolean = false,
         creatureValuation: CreatureValuation = CreatureValuation.LEGACY,
         priceLandsInHandAsMana: Boolean = false,
+        priceSacrificeLandsAsNoMana: Boolean = false,
+        colourAvailability: BoardPresence.ColourAvailability? = null,
     ): BoardEvaluator =
         apprenticeWeights[id]?.takeIf(RawEvaluationWeights::isValid)?.toEvaluator(intents)
             ?: rawResourceWeights[id]?.takeIf(RawEvaluationWeights::isValid)?.toEvaluator(intents)
             ?: resolve(id).toEvaluator(
                 intents, landDropIsNotCardLoss, sequenceLandsByUsableMana, discountedRaceClock,
-                creatureValuation, priceLandsInHandAsMana,
+                creatureValuation, priceLandsInHandAsMana, priceSacrificeLandsAsNoMana,
+                colourAvailability,
             )
 
     /** An installed linear correction ([RawEvaluationWeights.toCorrection]), or null if none loaded. */

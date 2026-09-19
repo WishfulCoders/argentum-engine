@@ -268,6 +268,12 @@ class AIPlayer(
                 discountedRaceClock = profile.discountedRaceClock,
                 creatureValuation = profile.creatureValuation,
                 priceLandsInHandAsMana = profile.priceLandsInHandAsMana,
+                priceSacrificeLandsAsNoMana = profile.priceSacrificeLandsAsNoMana,
+                colourAvailability = if (profile.chargesForUnavailableColours) {
+                    BoardPresence.ColourAvailability(cardRegistry)
+                } else {
+                    null
+                },
             )
             // Its features read the full catalog, as they did where it was fit (replay's PreferenceWriter).
             val correction = profile.priorityCorrectionId?.let(EvalWeights::correction)
@@ -293,6 +299,8 @@ class AIPlayer(
                 advisorRegistry = advisorRegistry,
                 budgetPolicy = profile.budgetPolicy,
                 intents = intents,
+                cardRegistry = cardRegistry,
+                choosesLandsByColour = profile.choosesLandsByColour,
             )
 
             // Wire up the decision resolver so simulations can resolve non-trivial

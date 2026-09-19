@@ -3,6 +3,7 @@ package com.wingedsheep.ai.puzzles
 import com.wingedsheep.ai.engine.AiProfile
 import com.wingedsheep.engine.support.ScenarioTestBase
 import io.kotest.assertions.withClue
+import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.ints.shouldBeLessThan
 import io.kotest.matchers.shouldBe
@@ -47,6 +48,44 @@ class PuzzleSuiteTest : ScenarioTestBase() {
             val results = runner.runAll(PuzzleCatalog.all, AiProfile.PRODUCTION)
             println(PuzzleReport.summary(AiProfile.PRODUCTION.id, results))
             results.filterNot { it.passed }.map { it.puzzle.id }.toSet() shouldBe KNOWN_FAILURES
+        }
+
+        // The two mana-colour failures are failures of the *baseline*, and the whole point of
+        // recording them is that something closes them. `docs/46`'s `fixing` arm does, and asserting
+        // it here rather than only in `FixingBlindnessTest` keeps the claim in the same file as the
+        // set it contradicts — if the flags stop working, the KNOWN_FAILURES entry above becomes a
+        // lie and this is what says so.
+        test("`fixing` solves the two mana-colour puzzles the baseline cannot") {
+            val fixing = AiProfile.PRODUCTION.copy(
+                id = "production-fixing",
+                priceSacrificeLandsAsNoMana = true,
+                choosesLandsByColour = true,
+                chargesForUnavailableColours = true,
+            )
+            val mana = PuzzleCatalog.all.filter { it.id in setOf("activate-07", "sequencing-09") }
+            mana.size shouldBe 2
+            withClue("baseline") {
+                runner.runAll(mana, AiProfile.PRODUCTION).filter { it.passed } shouldBe emptyList()
+            }
+            val fixed = runner.runAll(mana, fixing)
+            withClue(fixed.joinToString("; ") { "${it.puzzle.id}: ${it.move} ${it.failure ?: ""}" }) {
+                fixed.all { it.passed }.shouldBeTrue()
+            }
+        }
+
+        // Nothing else may move. The suite's contract is that `KNOWN_FAILURES` describes a fixed
+        // agent, and `fixing` is a new arm rather than a change to it — but the search fix in
+        // `DecisionResponder` is *not* behind a flag, so this is the assertion that it was safe.
+        test("`fixing` breaks nothing else, and the unflagged search fix breaks nothing at all") {
+            val fixing = AiProfile.PRODUCTION.copy(
+                id = "production-fixing",
+                priceSacrificeLandsAsNoMana = true,
+                choosesLandsByColour = true,
+                chargesForUnavailableColours = true,
+            )
+            val failing = runner.runAll(PuzzleCatalog.all, fixing)
+                .filterNot { it.passed }.map { it.puzzle.id }.toSet()
+            failing shouldBe KNOWN_FAILURES - setOf("activate-07", "sequencing-09")
         }
 
         // The arena proved it discriminates by beating a zero-weight agent 200-0. Same argument,

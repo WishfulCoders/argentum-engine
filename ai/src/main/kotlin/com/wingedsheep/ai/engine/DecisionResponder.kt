@@ -8,6 +8,8 @@ import com.wingedsheep.ai.engine.budget.LegacyBudgetPolicy
 import com.wingedsheep.ai.engine.evaluation.BoardEvaluator
 import com.wingedsheep.ai.engine.evaluation.BoardPresence
 import com.wingedsheep.ai.engine.knowledge.IntentCatalog
+import com.wingedsheep.ai.engine.mana.ColourNeeds
+import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.core.*
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.battlefield.TappedComponent
@@ -45,6 +47,14 @@ class DecisionResponder(
      * [IntentCatalog.NONE] is the off position and leaves both at their pre-Phase-6 behaviour.
      */
     private val intents: IntentCatalog = IntentCatalog.NONE,
+    /**
+     * The registry, for reading what colours a card could produce — which is the one fact a
+     * library search for a land turns on and the one this class had no way to ask.
+     * Null keeps the pre-`docs/46` behaviour, where every basic ties and deck order decides.
+     */
+    private val cardRegistry: CardRegistry? = null,
+    /** [com.wingedsheep.ai.engine.AiProfile.choosesLandsByColour]. Off leaves the ranking alone. */
+    private val choosesLandsByColour: Boolean = false,
 ) {
     fun respond(state: GameState, decision: PendingDecision, playerId: EntityId): DecisionResponse {
         // Try card-specific advisor first
@@ -256,6 +266,16 @@ class DecisionResponder(
                 // Generic "select up to N" — pick best
                 val ranked = rankCardsContextual(state, options, playerId, wantToKeep = true)
                 CardsSelectedResponse(decision.id, ranked.take(max))
+            }
+            // A library search whose legal options are at most what it lets you take — "search for
+            // up to one basic land" with one basic left. The branch above never fires (`max` is not
+            // *less* than `options.size`), and the `else` takes `min`, which for the DSL's
+            // `SelectionMode.ChooseUpTo` is zero: the AI declines its own search and has sacrificed
+            // the land for nothing. Taking the best `max` is what the branch above would have done
+            // with one more card on offer, and what the search was for. mtg-draft-ai `docs/46` §3.3.
+            max > 0 && isLibrarySearch(state, options, playerId) -> {
+                val ranked = rankCardsContextual(state, options, playerId, wantToKeep = true)
+                CardsSelectedResponse(decision.id, ranked.take(max.coerceAtMost(options.size)))
             }
             else -> {
                 val ranked = rankCardsContextual(state, options, playerId, wantToKeep = true)
@@ -548,8 +568,10 @@ class DecisionResponder(
         }
 
         // Context-aware search: what does my board need?
+        val needs = colourNeeds(state, playerId)
         val ranked = decision.options.sortedByDescending { entityId ->
-            searchCardContextualScore(state, decision.cards[entityId], playerId)
+            searchCardContextualScore(state, decision.cards[entityId], playerId) +
+                colourBonus(state, entityId, state.getEntity(entityId)?.get<CardComponent>(), needs)
         }
 
         val count = decision.maxSelections.coerceAtMost(ranked.size)
@@ -613,6 +635,44 @@ class DecisionResponder(
      * Rank cards considering board context. [wantToKeep] = true means higher = better to keep;
      * false means higher = better to discard/bottom.
      */
+    /**
+     * Whether every option sits in [playerId]'s own library, i.e. this decision is a search.
+     *
+     * The distinguishing property, and the reason it is safe to take an optional selection here
+     * and nowhere else: a discard, a bottom-of-library or a sacrifice prompt offers cards from the
+     * hand or the battlefield, and "take fewer" is the right instinct for all of them.
+     */
+    private fun isLibrarySearch(state: GameState, options: List<EntityId>, playerId: EntityId): Boolean {
+        if (options.isEmpty()) return false
+        val library = state.getZone(playerId, Zone.LIBRARY).toSet()
+        return options.all { it in library }
+    }
+
+    private fun colourNeeds(state: GameState, playerId: EntityId): ColourNeeds? =
+        if (choosesLandsByColour && cardRegistry != null) {
+            ColourNeeds.of(state, state.projectedState, playerId, cardRegistry)
+        } else {
+            null
+        }
+
+    /**
+     * What this card is worth for the colours it makes, on top of what it is worth as a card.
+     *
+     * Lands only. A creature that happens to tap for mana is chosen for its body, and letting a
+     * colour term move it would be the tail wagging the dog — whereas between two basic lands the
+     * colour term is the *entire* difference, which is exactly the decision `docs/46` §3.2 found
+     * being made by library order.
+     */
+    private fun colourBonus(
+        state: GameState,
+        entityId: EntityId,
+        card: CardComponent?,
+        needs: ColourNeeds?,
+    ): Double {
+        if (needs == null || card?.isLand != true || cardRegistry == null) return 0.0
+        return needs.rank(ColourNeeds.coloursProducedBy(state, state.projectedState, entityId, cardRegistry))
+    }
+
     private fun rankCardsContextual(
         state: GameState,
         cards: List<EntityId>,
@@ -628,10 +688,12 @@ class DecisionResponder(
         }
         val handSize = state.getZone(playerId, Zone.HAND).size
 
+        val needs = colourNeeds(state, playerId)
         val scored = cards.map { entityId ->
             val card = state.getEntity(entityId)?.get<CardComponent>()
             val score = if (card != null) {
-                contextualCardScore(card, myLands, myCreatures, handSize)
+                contextualCardScore(card, myLands, myCreatures, handSize) +
+                    colourBonus(state, entityId, card, needs)
             } else 0.0
             entityId to score
         }

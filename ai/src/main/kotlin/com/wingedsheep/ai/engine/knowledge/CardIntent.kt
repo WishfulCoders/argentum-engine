@@ -89,6 +89,22 @@ data class CardIntent(
      */
     val entersTapped: Boolean = false,
     /**
+     * A land that makes no mana of its own and whose every activated ability eats it — a fetch
+     * land, and essentially nothing else.
+     *
+     * Structural, like [entersTapped], and for the same reason: the consumer is the evaluator,
+     * which otherwise has one constant (tapped or untapped) to tell every land in Magic apart.
+     * That constant says an Evolving Wilds sitting on the battlefield is worth as much as a
+     * Mountain, when in fact it produces nothing at all and the only thing you can do with it is
+     * spend it — so cracking it read as a strict loss in every position, and the AI never did
+     * (mtg-draft-ai `docs/46`).
+     *
+     * Deliberately *not* "a land with no mana ability": Maze of Ith makes no mana either and is a
+     * permanent you keep. The sacrifice clause is the whole guard — a land whose ability consumes
+     * it is not something you are holding on to, it is something you have not spent yet.
+     */
+    val sacrificeLand: Boolean = false,
+    /**
      * Whether this card is a **permanent with flash** — a body you may deploy on either player's
      * turn.
      *

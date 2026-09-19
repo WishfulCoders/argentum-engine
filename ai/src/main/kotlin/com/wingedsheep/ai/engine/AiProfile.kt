@@ -429,6 +429,57 @@ data class AiProfile(
      * hand, and it is why this gets a real arena run rather than a puzzle column.
      */
     val priceLandsInHandAsMana: Boolean = false,
+
+    /**
+     * Price a land that cannot make mana as the permanent it is: nothing.
+     *
+     * The first half of mtg-draft-ai `docs/46`. `BoardPresence` tells one land from another with a
+     * single constant — 0.6 untapped, 0.3 tapped — and an Evolving Wilds sitting on the battlefield
+     * collects the 0.6 while producing no mana at all. So cracking it lost the 0.6 and gained a
+     * tapped basic's 0.3: **−0.45 in every position measured**, whatever was stranded in hand, and
+     * the AI never cracked a fetch land in any of them.
+     *
+     * With this on the permanent is worth nothing, cracking gains the basic outright, and the play
+     * stops needing a special case. Needs [useCardIntent], because "makes no mana and eats itself"
+     * is [com.wingedsheep.ai.engine.knowledge.CardIntent.sacrificeLand], read off the card's script.
+     *
+     * Paired with [choosesLandsByColour], and separable from it on purpose: this one decides
+     * *whether* to crack, that one decides *what to take*, and an arena arm should be able to say
+     * which of the two is carrying the result.
+     */
+    val priceSacrificeLandsAsNoMana: Boolean = false,
+
+    /**
+     * Rank a land search by the colours it fixes rather than by library order.
+     *
+     * The second half of `docs/46`. `DecisionResponder.contextualCardScore` grades a land by how
+     * many lands are already on the battlefield and nothing else, so every basic in a fetch's
+     * options ties and the stable sort takes the first — the AI fetched a Swamp with a {1}{G}
+     * creature stranded in hand, and fetched a Forest instead when the library happened to be
+     * ordered the other way.
+     *
+     * On, [com.wingedsheep.ai.engine.mana.ColourNeeds] supplies the missing fact: prefer a colour
+     * the hand is asking for and the board cannot make, then one the board cannot make at all, then
+     * whichever colour the deck leans on hardest. The ladder is bounded so that it orders lands
+     * against each other and never lifts a basic above a real card.
+     */
+    val choosesLandsByColour: Boolean = false,
+
+    /**
+     * Charge the board for each colour the hand needs and the battlefield cannot make.
+     *
+     * The third of `docs/46`'s three call sites, and the general one:
+     * [com.wingedsheep.ai.engine.evaluation.BoardPresence.ColourAvailability]. The other two fix a
+     * fetch land — whether to crack it, and what to take — and neither reaches the commonest form
+     * of the same mistake, which is a *land drop*: with two Mountains out and a {1}{G} creature in
+     * hand, the AI plays a third Mountain over the tapland that is its only green source, because
+     * an untapped land scores 0.6 and a tapped one 0.3 and no term knows what either one taps for.
+     *
+     * A penalty on the position rather than a bonus on a card, so any play that makes a colour
+     * available — a land drop, a fetch, a mana creature — is credited for it through the board it
+     * leads to, with no special case for any of them.
+     */
+    val chargesForUnavailableColours: Boolean = false,
     /** Non-null profiles may only be selected automatically for this set. Arena selection stays explicit. */
     val restrictedToSet: String? = null,
     /**

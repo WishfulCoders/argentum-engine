@@ -6,6 +6,8 @@ import com.wingedsheep.engine.mechanics.layers.SerializableModification
 import com.wingedsheep.ai.engine.OpponentAggregate
 import com.wingedsheep.ai.engine.knowledge.CardIntent
 import com.wingedsheep.ai.engine.knowledge.IntentCatalog
+import com.wingedsheep.ai.engine.mana.ColourNeeds
+import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.ai.engine.lifePoolsOf
 import com.wingedsheep.ai.engine.sidesFor
 import com.wingedsheep.engine.state.ComponentContainer
@@ -153,12 +155,15 @@ object BoardPresence : BoardFeature {
         intents: IntentCatalog,
         sequenceLandsByUsableMana: Boolean = false,
         creatureValuation: CreatureValuation = CreatureValuation.LEGACY,
+        priceSacrificeLandsAsNoMana: Boolean = false,
+        colourAvailability: ColourAvailability? = null,
     ): Double {
         val sides = state.sidesFor(playerId) ?: return 0.0
-        val mine = boardValue(state, projected, sides.mine, intents, creatureValuation) +
-            if (sequenceLandsByUsableMana) landSequencing(state, projected, playerId, intents) else 0.0
+        val mine = boardValue(state, projected, sides.mine, intents, creatureValuation, priceSacrificeLandsAsNoMana) +
+            (if (sequenceLandsByUsableMana) landSequencing(state, projected, playerId, intents) else 0.0) +
+            (colourAvailability?.penalty(state, projected, playerId) ?: 0.0)
         return sides.against(OpponentAggregate.THREAT) { opponent ->
-            mine - boardValue(state, projected, opponent, intents, creatureValuation)
+            mine - boardValue(state, projected, opponent, intents, creatureValuation, priceSacrificeLandsAsNoMana)
         }
     }
 
@@ -168,12 +173,15 @@ object BoardPresence : BoardFeature {
         side: List<EntityId>,
         intents: IntentCatalog,
         creatureValuation: CreatureValuation,
+        priceSacrificeLandsAsNoMana: Boolean = false,
     ): Double {
         var total = 0.0
         for (playerId in side) {
             for (entityId in projected.getBattlefieldControlledBy(playerId)) {
                 val card = state.getEntity(entityId)?.get<CardComponent>() ?: continue
-                total += permanentValue(state, projected, entityId, card, intents, creatureValuation)
+                total += permanentValue(
+                    state, projected, entityId, card, intents, creatureValuation, priceSacrificeLandsAsNoMana,
+                )
             }
         }
         return total
@@ -240,6 +248,41 @@ object BoardPresence : BoardFeature {
         return score
     }
 
+    /**
+     * The colours your hand is asking for that your board cannot make, as a charge on the board.
+     *
+     * The one fact no term in this evaluator could state (mtg-draft-ai `docs/46`). Everything else
+     * about mana here is a *count* — `Tempo` counts lands, [LAND_UNTAPPED] counts whether one is
+     * tapped — and counting is exactly the thing that cannot tell a Mountain from the Forest that
+     * casts the creature you are holding.
+     *
+     * As a penalty on the position rather than a bonus on a card, which is what makes it work
+     * without special-casing anything: a land drop, a fetch activation and a mana creature all
+     * *remove* the penalty by making the colour available, so each of them is credited for fixing
+     * in the ordinary way, through the board they lead to.
+     *
+     * **Own seat only**, like [landSequencing], and for its reason: it reads the hand.
+     *
+     * Two deliberate limits. It charges per missing *colour*, not per unpayable card, so it says
+     * nothing about how much mana you have — that is [Tempo]'s job and double-counting it would
+     * make the AI hoard lands. And it is capped, so a three-colour hand on turn one is not scored
+     * as a catastrophe it cannot do anything about.
+     */
+    class ColourAvailability(private val cardRegistry: CardRegistry) {
+        fun penalty(state: GameState, projected: ProjectedState, playerId: EntityId): Double {
+            val needs = ColourNeeds.of(state, projected, playerId, cardRegistry)
+            // `ColourNeeds.available` counts lands in hand as reachable, which is right for
+            // choosing what to fetch and wrong here: a land in hand is a colour you have not got
+            // yet, and pricing it as though you had would make the land drop worth nothing.
+            val onBoard = projected.getBattlefieldControlledBy(playerId)
+                .flatMapTo(mutableSetOf()) {
+                    ColourNeeds.coloursProducedBy(state, projected, it, cardRegistry)
+                }
+            val unmet = needs.handPips.count { (colour, pips) -> pips > 0 && colour !in onBoard }
+            return -UNMET_COLOUR * minOf(unmet, UNMET_COLOUR_CAP)
+        }
+    }
+
     internal fun permanentValue(
         state: GameState,
         projected: ProjectedState,
@@ -247,6 +290,7 @@ object BoardPresence : BoardFeature {
         card: CardComponent,
         intents: IntentCatalog = IntentCatalog.NONE,
         creatureValuation: CreatureValuation = CreatureValuation.LEGACY,
+        priceSacrificeLandsAsNoMana: Boolean = false,
     ): Double {
         val container = state.getEntity(entityId) ?: return 0.0
 
@@ -256,6 +300,17 @@ object BoardPresence : BoardFeature {
 
         // Non-creature permanents
         if (card.isLand) {
+            // A fetch land is not a mana source. `LAND_UNTAPPED` is a claim about mana you can
+            // spend, and an Evolving Wilds sitting on the battlefield has none — its only ability
+            // eats it. Pricing it 0.6 made cracking it cost 0.6 − 0.3 = 0.3 (weight 1.5 → 0.45)
+            // in every position, which is why the AI never did (mtg-draft-ai `docs/46` §3.1).
+            // Priced at nothing, cracking *gains* the tapped basic instead, and the choice stops
+            // being a special case. [AiProfile.priceSacrificeLandsAsNoMana].
+            if (priceSacrificeLandsAsNoMana &&
+                intents.forPermanent(container, card.name).any { it.sacrificeLand }
+            ) {
+                return LAND_NO_MANA
+            }
             return if (container.has<TappedComponent>()) LAND_TAPPED else LAND_UNTAPPED
         }
 
@@ -565,6 +620,29 @@ object BoardPresence : BoardFeature {
     /** What a land is worth on the battlefield. Historical constants; [landSequencing] refines them. */
     private const val LAND_UNTAPPED = 0.6
     private const val LAND_TAPPED = 0.3
+
+    /**
+     * What a land that cannot produce mana is worth as a *permanent*: nothing.
+     *
+     * Not a tuned constant — the whole point is that there is nothing to tune. Its worth is its
+     * ability, and the ability is scored where every other ability is, on the board the activation
+     * leads to. See [CardIntent.sacrificeLand].
+     */
+    private const val LAND_NO_MANA = 0.0
+
+    /**
+     * What one colour your hand needs and your board cannot make is worth, before the weight.
+     *
+     * Sized against the one constant it has to beat. The only thing that previously separated two
+     * land drops was [LAND_UNTAPPED] − [LAND_TAPPED] = 0.3, in the basic's favour — so a tapland
+     * that is your only source of a colour has to clear 0.3, and 0.75 clears it without swamping
+     * the board terms it sits beside. `sequencing-07` and `-08` are untouched by construction:
+     * both are single-colour positions, where this term is zero for every candidate.
+     */
+    private const val UNMET_COLOUR = 0.75
+
+    /** Past two missing colours the position is not about a land drop any more. */
+    private const val UNMET_COLOUR_CAP = 2
 
     /** Exactly the charge [permanentValue] applied, so an idle tapped land nets out to a full land. */
     private const val IDLE_MANA_REFUND = LAND_UNTAPPED - LAND_TAPPED

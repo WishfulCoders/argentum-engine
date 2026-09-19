@@ -15,6 +15,7 @@ import com.wingedsheep.sdk.model.EntityId
 import io.kotest.assertions.withClue
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
 
 /**
  * What the evaluator cannot see about mana, measured rather than argued.
@@ -75,22 +76,22 @@ class FixingBlindnessTest : ScenarioTestBase() {
             }
         }
 
-        test("with exactly one legal basic left, the search takes nothing at all") {
-            // A separate defect, found while building the position above and kept because it is not
-            // hypothetical: `respondSelectCards` routes "search for **up to** one" (min 0, max 1)
-            // through the `max < options.size` branch, which is false when the library holds exactly
-            // one legal card. It falls to the `else`, which takes `min` — zero. The optional search
-            // is declined, and the AI has sacrificed the land for nothing.
-            Position(lands = 2, hand = listOf("Grizzly Bears"), library = listOf("Forest"))
-                .fetchedBasic() shouldBe NOTHING
-
-            // Which makes the activation look even worse than the flat charge above: the land is
-            // gone (0.6 × 1.5) and `Tempo` drops a land as well (landValue(3) − landValue(2) = 2.0,
-            // × 0.6), for −2.10 instead of −0.45.
-            val insight = Position(lands = 2, hand = listOf("Grizzly Bears"), library = listOf("Forest")).decide()
-            val pass = insight.options.single { it.baseline }
-            val crack = insight.options.single { it.actionType == "ActivateAbility" }
-            (crack.score!! - pass.score!!) shouldBe (-2.10 plusOrMinus 1e-9)
+        test("an optional search with exactly one legal card takes it, on every profile") {
+            // A separate defect, found while building the position above: `respondSelectCards`
+            // routed "search for **up to** one" (min 0, max 1) through its `max < options.size`
+            // branch, which is false when the library holds exactly one legal card, and fell to
+            // the `else` — which takes `min`, i.e. zero. The AI declined its own search and had
+            // sacrificed the land for nothing, which made the activation score −2.10 rather than
+            // −0.45. Fixed on every profile rather than behind a flag: declining a free search is
+            // not a tuning choice.
+            for (profile in listOf(AiProfile.PRODUCTION, FIXING)) {
+                withClue(profile.id) {
+                    Position(
+                        lands = 2, hand = listOf("Grizzly Bears"),
+                        library = listOf("Forest"), profile = profile,
+                    ).fetchedBasic() shouldBe "Forest"
+                }
+            }
         }
 
         // ── The land drop: the same charge, one zone over ──
@@ -130,6 +131,93 @@ class FixingBlindnessTest : ScenarioTestBase() {
             }
             chosen shouldBe listOf("Play Deathcap Glade", "Play Mountain")
         }
+        // ── With `fixing` on, all four are the other way round ──
+
+        test("`fixing`: it cracks the fetch land, and by more when the fetch actually fixes") {
+            // The constant is gone. Cracking is worth the tapped basic it brings — the land it ate
+            // was worth nothing as a permanent — plus, when the basic supplies a colour the hand
+            // needs and the board cannot make, the `UNMET_COLOUR` charge it lifts.
+            val land = TAPPED_LAND_CHARGE                       // 0.3 x weight 1.5
+            val colour = 0.75 * 1.5                             // UNMET_COLOUR x weight 1.5
+            val positions = mapOf(
+                "a green card stranded in hand" to (listOf("Grizzly Bears") to land + colour),
+                "two cards stranded" to (listOf("Grizzly Bears", "Craw Wurm") to land + colour),
+                "mana screwed" to (listOf("Grizzly Bears") to land + colour),
+                "nothing in hand at all" to (emptyList<String>() to land),
+                "a castable card in hand" to (listOf("Goblin Piker") to land),
+            )
+            for ((label, expectation) in positions) {
+                val (hand, gain) = expectation
+                withClue(label) {
+                    val insight = Position(lands = 2, hand = hand, profile = FIXING).decide()
+                    val pass = insight.options.single { it.baseline }
+                    val crack = insight.options.single { it.actionType == "ActivateAbility" }
+                    (crack.score!! - pass.score!!) shouldBe (gain plusOrMinus 1e-9)
+                    insight.chosenLabel shouldContain "Sacrifice"
+                }
+            }
+        }
+
+        test("`fixing`: it fetches the colour its hand needs, whatever the library order") {
+            for (library in listOf(listOf("Swamp", "Forest"), listOf("Forest", "Swamp"))) {
+                withClue("library order $library") {
+                    Position(
+                        lands = 2, hand = listOf("Grizzly Bears"),
+                        library = library, profile = FIXING,
+                    ).fetchedBasic() shouldBe "Forest"
+                }
+            }
+        }
+
+        test("`fixing`: with no colour missing, it takes the colour the deck leans on") {
+            // Two Mountains out, and a hand of {2}{R} plus Shivan Dragon's {4}{R}{R}: red is
+            // already available, so the "fixes something held" clause is silent for both options.
+            // The Swamp is a colour this board cannot make — and nothing wants, which is why the
+            // missing-colour clause must not fire for it. Three red pips do want a third Mountain.
+            Position(
+                lands = 2, hand = listOf("Goblin Piker", "Shivan Dragon"),
+                library = listOf("Swamp", "Mountain"), profile = FIXING,
+            ).fetchedBasic() shouldBe "Mountain"
+        }
+
+        test("`fixing`: it plays the tapland that is its only source of the colour it needs") {
+            val insight = Position(
+                lands = 2,
+                hand = listOf("Grizzly Bears", "Shivan Oasis", "Mountain"),
+                profile = FIXING,
+                fetchLand = false,
+            ).decide()
+            val basic = insight.options.single { it.isPlayOf("Mountain") }
+            val tapland = insight.options.single { it.isPlayOf("Shivan Oasis") }
+
+            // The Oasis removes the unmet-green charge and the Mountain does not, so it wins by
+            // `UNMET_COLOUR` 0.75 less the 0.3 it gives up for entering tapped, at weight 1.5.
+            (tapland.score!! - basic.score!!) shouldBe (0.675 plusOrMinus 1e-9)
+            insight.chosenLabel shouldBe "Play Shivan Oasis"
+        }
+
+        test("`fixing`: a single-colour position is untouched, so sequencing-07/-08 cannot move") {
+            // Nothing in hand needs a colour the board cannot make, so the charge is zero for
+            // every candidate and the land drop is decided by exactly what decided it before.
+            val insight = Position(
+                lands = 2,
+                hand = listOf("Goblin Piker", "Shivan Oasis", "Mountain"),
+                profile = FIXING,
+                fetchLand = false,
+            ).decide()
+            val basic = insight.options.single { it.isPlayOf("Mountain") }
+            val tapland = insight.options.single { it.isPlayOf("Shivan Oasis") }
+            (tapland.score!! - basic.score!!) shouldBe (-TAPPED_LAND_CHARGE plusOrMinus 1e-9)
+        }
+
+        test("`fixing`: a land in hand already covers its colour, so the fetch looks elsewhere") {
+            // Holding a Forest, the green card in hand is not what the fetch is for; the Swamp is
+            // the colour this board genuinely cannot reach.
+            Position(
+                lands = 2, hand = listOf("Grizzly Bears", "Forest", "Bog Imp"),
+                library = listOf("Forest", "Swamp"), profile = FIXING,
+            ).fetchedBasic() shouldBe "Swamp"
+        }
     }
 
     // ── Harness ──
@@ -140,13 +228,16 @@ class FixingBlindnessTest : ScenarioTestBase() {
         val lands: Int,
         val hand: List<String>,
         val library: List<String> = listOf("Forest", "Swamp"),
+        val profile: AiProfile = AiProfile.PRODUCTION,
+        /** Off for the land-drop positions: with a fetch on the battlefield, cracking is better. */
+        val fetchLand: Boolean = true,
     ) {
         private fun game(): ScenarioTestBase.TestGame {
-            var builder = scenario()
+            var builder: ScenarioTestBase.ScenarioBuilder = scenario()
                 .withPlayers()
                 .withLandsOnBattlefield(1, "Mountain", lands)
-                .withCardOnBattlefield(1, "Evolving Wilds", tapped = false)
                 .withLandsOnBattlefield(2, "Plains", 2)
+            if (fetchLand) builder = builder.withCardOnBattlefield(1, "Evolving Wilds", tapped = false)
             hand.forEach { builder = builder.withCardInHand(1, it) }
             library.forEach { builder = builder.withCardInLibrary(1, it) }
             // Deep enough that nothing here is playing a decking race, and deliberately not a
@@ -166,7 +257,7 @@ class FixingBlindnessTest : ScenarioTestBase() {
         fun decide(): AiDecisionInsight {
             val game = game()
             val captured = mutableListOf<AiDecisionInsight>()
-            AIPlayer.create(cardRegistry, game.player1Id, AiProfile.PRODUCTION) { _, insight ->
+            AIPlayer.create(cardRegistry, game.player1Id, profile) { _, insight ->
                 captured += insight
             }.chooseAction(game.state)
             return captured.last()
@@ -175,7 +266,7 @@ class FixingBlindnessTest : ScenarioTestBase() {
         /** Which basic the AI takes once the activation has been made for it, or [NOTHING]. */
         fun fetchedBasic(): String {
             val game = game()
-            val ai = AIPlayer.create(cardRegistry, game.player1Id, AiProfile.PRODUCTION)
+            val ai = AIPlayer.create(cardRegistry, game.player1Id, profile)
             // Not `single { it.action is ActivateAbility }`: full enumeration also offers every
             // Mountain's mana ability.
             val activation = LegalActionEnumerator.create(cardRegistry)
@@ -188,7 +279,7 @@ class FixingBlindnessTest : ScenarioTestBase() {
             game.resolveStack()
             val decision = game.getPendingDecision() as SelectCardsDecision
             val response = ai.respondToDecision(game.state, decision) as CardsSelectedResponse
-            return response.selectedCards.singleOrNull()?.let { nameOf(game.state, it) } ?: NOTHING
+            return response.selectedCards.singleOrNull()?.let { nameOf(game.state, it) } ?: "nothing"
         }
     }
 
@@ -199,9 +290,15 @@ class FixingBlindnessTest : ScenarioTestBase() {
         /** `EvaluationWeights.boardPresence` × (`LAND_UNTAPPED` − `LAND_TAPPED`) = 1.5 × 0.3. */
         const val TAPPED_LAND_CHARGE = 0.45
 
-        const val NOTHING = "nothing"
-
         /** Same date-stamp convention as `PuzzleRunner.PUZZLE_SEED` and `ArenaConfig.DEFAULT_SEED`. */
         const val SEED = 20260919L
+
+        /** `docs/46`'s fix, on top of the same frozen baseline the readings above are taken on. */
+        val FIXING = AiProfile.PRODUCTION.copy(
+            id = "production-fixing",
+            priceSacrificeLandsAsNoMana = true,
+            choosesLandsByColour = true,
+            chargesForUnavailableColours = true,
+        )
     }
 }

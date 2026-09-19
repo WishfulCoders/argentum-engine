@@ -30,6 +30,12 @@ import com.wingedsheep.ai.engine.rollout.RolloutSettings
  *   ([AiProfile.determinizeHiddenInformation]) — the fairness token for playing a human, see below.
  * - `lookahead`: the one-response lookahead ([AiProfile.opponentRespondsInSimulation], `docs/27` §7.6). The
  *   measured arm was `timing+lookahead`, against `timing`.
+ * - `fixing`: the AI can see a colour (mtg-draft-ai `docs/46`) — a land that makes no mana is priced
+ *   as one ([AiProfile.priceSacrificeLandsAsNoMana], so it finally cracks a fetch land) and a land
+ *   search is ranked by the colour it buys ([AiProfile.choosesLandsByColour]), and the board is
+ *   charged for a colour the hand needs and cannot reach ([AiProfile.chargesForUnavailableColours],
+ *   which is what fixes the *land drop*). Implies `intent`, where "makes no mana and eats itself"
+ *   is read from.
  * - `idle`: in the last sorcery-speed window of its turn, a sorcery-speed cast needs to beat passing only by
  *   `-Darena.idleAllowance` (default 1.0) ([AiProfile.spendIdleManaAtSorcerySpeed], `docs/33` §13).
  *
@@ -78,6 +84,13 @@ private fun withToken(p: AiProfile, token: String): AiProfile {
          */
         "determinize" -> p.copy(id = id, determinizeHiddenInformation = true)
         "lookahead" -> p.copy(id = id, opponentRespondsInSimulation = true)
+        "fixing" -> p.copy(
+            id = id,
+            useCardIntent = true,
+            priceSacrificeLandsAsNoMana = true,
+            choosesLandsByColour = true,
+            chargesForUnavailableColours = true,
+        )
         "idle" -> {
             val allowance = System.getProperty("arena.idleAllowance")?.toDouble() ?: 1.0
             p.copy(id = "$id-$allowance", spendIdleManaAtSorcerySpeed = allowance)

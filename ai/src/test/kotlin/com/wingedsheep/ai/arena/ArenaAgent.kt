@@ -215,7 +215,40 @@ object ArenaAgents {
      * Every resource vector is automatically arena-addressable as `eval-<id>`. A tuning run can
      * replace the JSON artifact and immediately A/B its candidates without changing Kotlin.
      */
-    private val all: List<ArenaAgent> = builtIn + EvalWeights.ids.map { weightsId ->
+    /**
+     * `docs/46`'s three colour flags on top of `production`, and nothing else.
+     *
+     * The A/B the arena exists for: `just arena production production-fixing 500 SOS`. `production`
+     * is the right baseline rather than a pilot profile because the flags are evaluator-side and
+     * this is the only pair that differs in nothing but them.
+     */
+    private val fixingAgents: List<ArenaAgent> = listOf(
+        ArenaAgent(
+            "production-fixing",
+            AiProfile.PRODUCTION.copy(
+                id = "production-fixing",
+                priceSacrificeLandsAsNoMana = true,
+                choosesLandsByColour = true,
+                chargesForUnavailableColours = true,
+            ),
+        ),
+        // The three isolated, so a result can say which one carried it. `-crack` is the fetch
+        // activation, `-choose` is which basic it takes, `-colour` is the land drop.
+        ArenaAgent(
+            "production-fixing-crack",
+            AiProfile.PRODUCTION.copy(id = "production-fixing-crack", priceSacrificeLandsAsNoMana = true),
+        ),
+        ArenaAgent(
+            "production-fixing-choose",
+            AiProfile.PRODUCTION.copy(id = "production-fixing-choose", choosesLandsByColour = true),
+        ),
+        ArenaAgent(
+            "production-fixing-colour",
+            AiProfile.PRODUCTION.copy(id = "production-fixing-colour", chargesForUnavailableColours = true),
+        ),
+    )
+
+    private val all: List<ArenaAgent> = builtIn + fixingAgents + EvalWeights.ids.map { weightsId ->
         ArenaAgent(
             name = "eval-$weightsId",
             profile = AiProfile.LEGACY_V0.copy(
