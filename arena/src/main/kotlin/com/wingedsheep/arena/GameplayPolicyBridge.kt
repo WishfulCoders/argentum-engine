@@ -13,6 +13,7 @@ import com.wingedsheep.gym.contract.ActionParameterizer
 import com.wingedsheep.gym.contract.ActionParams
 import com.wingedsheep.gym.contract.ObservationBuilder
 import com.wingedsheep.gym.contract.PolicyActionBoundary
+import com.wingedsheep.gym.contract.PolicyActionStager
 import com.wingedsheep.gym.contract.ResolvedAction
 import com.wingedsheep.gym.contract.TrainingObservation
 import com.wingedsheep.sdk.model.EntityId
@@ -86,6 +87,7 @@ class GameplayPolicyBridge(
     private val enumerator = LegalActionEnumerator.create(registry)
     private val observations = ObservationBuilder(registry)
     private val simulator = GameSimulator(registry)
+    private val stager = PolicyActionStager(simulator)
     private val failureDirectory = failureDir?.also {
         require(it.isDirectory || it.mkdirs()) {
             "could not create gameplay policy failure directory: $it"
@@ -101,7 +103,6 @@ class GameplayPolicyBridge(
     }.start()
     private val input = process.outputStream.bufferedWriter()
     private val output = process.inputStream.bufferedReader()
-    private var pendingAfterManaFloat: Pair<List<GameAction>, GameAction>? = null
 
     init {
         require(temperature > 0) { "-Darena.policyTemperature must be positive" }
@@ -111,17 +112,12 @@ class GameplayPolicyBridge(
     fun choose(state: GameState, playerId: EntityId): GameplayPolicyAction {
         check(state.pendingDecision == null) { "structured decisions stay with the arena AI" }
         check(state.priorityPlayerId == playerId) { "policy actor $playerId does not have priority" }
-        pendingAfterManaFloat?.let { (activations, action) ->
-            pendingAfterManaFloat = null
-            val next = activations.firstOrNull() ?: action
-            if (simulator.accepts(state, next)) {
-                if (activations.isNotEmpty()) {
-                    pendingAfterManaFloat = activations.drop(1) to action
-                }
-                return wrapped(
-                    next, "staged mana payment for ${action::class.simpleName}", modelDecision = false,
-                )
-            }
+        stager.continuePending(state)?.let { submission ->
+            return wrapped(
+                submission.action,
+                "staged mana payment for ${submission.original::class.simpleName}",
+                modelDecision = false,
+            )
         }
         // Keep unsupported actions as observation context but hard-mask them exactly like an
         // unaffordable action. The shared boundary admits only payment shapes ActionParams can
@@ -178,12 +174,11 @@ class GameplayPolicyBridge(
         }
         val diagnostic = "actionId=$actionId kind=${view.kind} description=${view.description} " +
             "affordable=${view.affordable} manaCost=${view.manaCost} params=${response.params}"
-        if (!simulator.accepts(state, action)) {
-            val mana = simulator.floatSacrificeMana(state, action)
-                ?: error("policy action failed engine preflight; $diagnostic")
-            pendingAfterManaFloat = mana.activations.drop(1) to action
+        val submission = stager.begin(state, action)
+            ?: error("policy action failed engine preflight; $diagnostic")
+        if (submission.staged) {
             return wrapped(
-                mana.activations.first(), "staged mana payment; $diagnostic", modelDecision = false,
+                submission.action, "staged mana payment; $diagnostic", modelDecision = false,
             )
         }
         return wrapped(

@@ -203,6 +203,23 @@ class PolicyActionBoundaryTest : FunSpec({
         staged.activations.size shouldBe 1
         staged.activations.single().sourceId shouldBe treasure
 
+        val raw = GameEnvironment.create(driver.cardRegistry)
+        raw.restore(driver.state, listOf(driver.player1, driver.player2))
+        val stager = PolicyActionStager(simulator)
+        stager.begin(raw.state, CastSpell(player, EntityId("absent-card"))) shouldBe null
+        stager.continuePending(raw.state) shouldBe null
+        (treasure in raw.state.getBattlefield()) shouldBe true
+        val payment = requireNotNull(stager.begin(raw.state, completed))
+        payment.staged shouldBe true
+        payment.action shouldBe staged.activations.single()
+        raw.stepExactlyOne(payment.action)
+        raw.lastRejection shouldBe null
+        val finalCast = requireNotNull(stager.continuePending(raw.state))
+        finalCast.action shouldBe completed
+        raw.stepExactlyOne(finalCast.action)
+        raw.lastRejection shouldBe null
+        stager.continuePending(raw.state) shouldBe null
+
         val arenaView = ObservationBuilder(driver.cardRegistry)
             .build(driver.state, player, PolicyActionBoundary.mask(legal, driver.state, simulator))
         val environment = GameEnvironment.create(driver.cardRegistry)
@@ -219,8 +236,16 @@ class PolicyActionBoundaryTest : FunSpec({
             .single { it.sourceEntityId == spell && it.kind == "CastSpell" }.actionId
         gym.step(actionId)
         environment.lastRejection shouldBe null
+        (treasure in raw.state.getBattlefield()) shouldBe false
+        (spell in raw.state.getHand(player)) shouldBe false
         (treasure in environment.state.getBattlefield()) shouldBe false
         (spell in environment.state.getHand(player)) shouldBe false
+
+        driver.putLandOnBattlefield(player, "Mountain")
+        val direct = requireNotNull(stager.begin(driver.state, completed))
+        direct.staged shouldBe false
+        direct.action shouldBe completed
+        stager.continuePending(driver.state) shouldBe null
     }
 
     test("Blight options match the arena and learner gym and pay the chosen creature") {
