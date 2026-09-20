@@ -55,6 +55,19 @@ data class StepBatchResult(
     val status: EnvStatus = EnvStatus(terminated = false),
 )
 
+/**
+ * Result for `POST /envs/{id}/playout`.
+ *
+ * The caller of a playout wants the outcome, not the position, so [status] — which carries the
+ * terminal reward and the truncation reason — is the part that does the work here. The observation
+ * rides along because a playout that stopped short of a terminal leaves the env on a live decision.
+ */
+@Serializable
+data class PlayoutResult(
+    val observation: Observation,
+    val status: EnvStatus,
+)
+
 /** Body for `POST /envs/{id}/restore`. */
 @Serializable
 data class RestoreBody(val handle: SnapshotHandle)

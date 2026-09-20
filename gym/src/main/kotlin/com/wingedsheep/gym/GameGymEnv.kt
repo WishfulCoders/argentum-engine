@@ -59,6 +59,9 @@ class GameGymEnv(
     private var autoAdvanced: Int = 0
     private var delegatedDecisions: Int = 0
 
+    /** Priority actions [playout] took for a learner seat, which the caller did not choose. */
+    private var playedOut: Int = 0
+
     private fun agentAt(index: Int): AgentSpec = agents.getOrElse(index) { AgentSpec.Learner() }
 
     private fun isLearner(playerId: EntityId): Boolean {
@@ -102,6 +105,7 @@ class GameGymEnv(
             it.lastProgress = lastProgress
             it.autoAdvanced = autoAdvanced
             it.delegatedDecisions = delegatedDecisions
+            it.playedOut = playedOut
             it.build(defaultRevealAll)
         }
 
@@ -114,6 +118,7 @@ class GameGymEnv(
         seed = environment.seed,
         autoAdvanced = autoAdvanced,
         delegatedDecisions = delegatedDecisions,
+        playedOut = playedOut,
         // A truncated episode pays nothing: its outcome was never decided.
         reward = if (isTerminal) {
             environment.terminalRewards().map { (playerId, value) -> PlayerReward(playerId, value) }
@@ -151,6 +156,7 @@ class GameGymEnv(
         players.clear()
         autoAdvanced = 0
         delegatedDecisions = 0
+        playedOut = 0
         advanceToLearner()
         return build(defaultRevealAll)
     }
@@ -168,6 +174,42 @@ class GameGymEnv(
         // No agent spec at all is the original contract: the caller drives every seat and answers
         // every decision itself, through /envs/{id}/decision. Search callers rely on that.
         if (agents.isEmpty()) return
+        drive(learnerActions = 0)
+    }
+
+    /**
+     * Play on with every seat — the learner's included — driven by its own AI.
+     *
+     * This is what a paired branch rollout needs. A forked state has to be finished by a *fixed*
+     * player for the branches' outcomes to be comparable, and finishing it inside the JVM keeps
+     * Python out of a loop it has nothing to contribute to: no learner decision leaves the env, so
+     * a branch costs one call rather than one round trip per decision.
+     *
+     * The learner seat is played by its `decisionProfile` — the same AI that already answers its
+     * structured decisions (§3.2) — so a playout introduces no third behaviour into the episode.
+     * Point that profile at the frozen pilot and a playout is the frozen pilot finishing the game.
+     *
+     * @param maxLearnerActions stop once the learner's own AI has taken this many priority actions.
+     *   The default runs to a terminal state or a limit. One is "advance the generating trajectory
+     *   by a single pilot decision", which is how a sampler walks from one candidate state to the
+     *   next without ever choosing an action itself.
+     */
+    fun playout(maxLearnerActions: Int = Int.MAX_VALUE): ObservationResult {
+        check(truncation == null) { "Env was truncated ($truncation); reset it before playing on" }
+        require(maxLearnerActions > 0) { "maxLearnerActions must be positive" }
+        drive(learnerActions = maxLearnerActions)
+        // Leave the env where a stepping caller expects to find it: on a learner decision.
+        advanceToLearner()
+        return build(defaultRevealAll)
+    }
+
+    /**
+     * The one loop behind [advanceToLearner] and [playout]: resolve pending decisions and priority
+     * until the learner has something to decide, having acted for the learner [learnerActions]
+     * times on the way. Zero is "stop at the learner", which is what a `step` means.
+     */
+    private fun drive(learnerActions: Int) {
+        var taken = 0
         while (truncation == null && !isTerminal) {
             val decision = environment.state.pendingDecision
             if (decision != null) {
@@ -183,7 +225,11 @@ class GameGymEnv(
                 truncation = "noPriority(turn=${environment.turnNumber})"
                 return
             }
-            if (isLearner(priority)) return
+            if (isLearner(priority)) {
+                if (taken >= learnerActions) return
+                taken++
+                playedOut++
+            }
             environment.step(aiFor(priority).chooseAction(environment.state))
             autoAdvanced++
             checkLimits()

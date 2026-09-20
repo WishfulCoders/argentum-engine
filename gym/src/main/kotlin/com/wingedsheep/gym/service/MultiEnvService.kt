@@ -120,6 +120,17 @@ class MultiEnvService(
     }
 
     /**
+     * Play [envId] on with every seat driven by its own AI, the learner's included.
+     *
+     * A branch rollout forks a state, steps the one action it is measuring, and then needs the
+     * rest of the game played by a fixed player. Doing that here rather than over HTTP is the
+     * difference between one call and one round trip per decision, and it is why a paired label
+     * is affordable at all.
+     */
+    fun playout(envId: EnvId, maxLearnerActions: Int = Int.MAX_VALUE): ObservationResult =
+        requireGameEnv(envId).playout(maxLearnerActions)
+
+    /**
      * Submit a raw `DecisionResponse` for a game env paused on a complex pending
      * decision. Simple decisions are driven via [step] with a folded action ID.
      */

@@ -11,6 +11,7 @@ import com.wingedsheep.gym.service.StepRequest
 import com.wingedsheep.gym.EnvStatus
 import com.wingedsheep.gym.server.dto.CreateEnvResponse
 import com.wingedsheep.gym.server.dto.DisposeBody
+import com.wingedsheep.gym.server.dto.PlayoutResult
 import com.wingedsheep.gym.server.dto.RestoreBody
 import com.wingedsheep.gym.server.dto.StepBatchItem
 import com.wingedsheep.gym.server.dto.StepBatchResult
@@ -303,6 +304,29 @@ class EnvController(
         @RequestBody response: DecisionResponse
     ): Observation =
         multiEnvService.submitDecision(EnvId(id), response).observation
+
+    @Operation(
+        summary = "Play on with every seat driven by its own AI",
+        description = """
+            Finishes the episode without returning a single learner decision to the caller: the
+            learner seat is played by its `decisionProfile`, the same AI that already answers its
+            structured decisions. This is what a paired branch rollout needs — a forked state
+            finished by a fixed player, in the JVM, at one call rather than one round trip per
+            decision.
+
+            `maxLearnerActions` stops the playout after that many of the learner's own priority
+            actions; omit it to run to a terminal state or a limit. Returns 409 if the env was
+            already truncated.
+        """
+    )
+    @PostMapping("/{id}/playout")
+    fun playout(
+        @PathVariable id: String,
+        @RequestParam(required = false) maxLearnerActions: Int?,
+    ): PlayoutResult {
+        val result = multiEnvService.playout(EnvId(id), maxLearnerActions ?: Int.MAX_VALUE)
+        return PlayoutResult(result.observation, multiEnvService.status(EnvId(id)))
+    }
 
     // =========================================================================
     // Fork / snapshot / restore

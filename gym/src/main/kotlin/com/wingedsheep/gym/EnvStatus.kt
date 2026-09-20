@@ -54,6 +54,13 @@ data class EnvStatus(
      * counted rather than hidden.
      */
     val delegatedDecisions: Int = 0,
+
+    /**
+     * Priority actions a `playout` took for a learner seat since the last reset. These are the
+     * learner's decisions made by its own AI rather than by the caller, so an episode that mixes
+     * stepped and played-out decisions says how many of each it holds instead of blending them.
+     */
+    val playedOut: Int = 0,
 ) {
     /** True once the episode is over for either reason. A caller should reset or dispose it. */
     val done: Boolean get() = terminated || truncated
