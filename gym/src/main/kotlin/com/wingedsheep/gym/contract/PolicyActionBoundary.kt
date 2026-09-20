@@ -30,6 +30,14 @@ object PolicyActionBoundary {
         require(tapOptions.isEmpty() || params.tappedPermanents.isNotEmpty()) {
             "TapPermanents activation requires tappedPermanents"
         }
+        val beholdOptions = action.policyBeholdPaymentOptions
+        require(params.beheldCards.isEmpty() ||
+            (params.targets.size == 1 && params.beheldCards in beholdOptions[params.targets.single()].orEmpty())) {
+            "beheldCards is not an engine-checked option for this target"
+        }
+        require(beholdOptions.isEmpty() || params.beheldCards.isNotEmpty()) {
+            "Behold cast requires beheldCards"
+        }
     }
 
     fun callable(action: LegalAction): Boolean =
@@ -59,8 +67,56 @@ object PolicyActionBoundary {
             if (action.additionalCostInfo?.costType == "TapPermanents") {
                 prepared = prepared.copy(policyTapPaymentOptions = tapOptions(action, state, simulator))
             }
+            if (action.additionalCostInfo?.costType == "Behold") {
+                prepared = prepared.copy(policyBeholdPaymentOptions = beholdOptions(action, state, simulator))
+            }
             prepared
         })
+
+    /** Bound the cross product and preflight each complete target/payment pair. */
+    private fun beholdOptions(
+        action: LegalAction, state: GameState, simulator: GameSimulator,
+    ): Map<EntityId, List<List<EntityId>>> {
+        val cast = action.action as? CastSpell ?: return emptyMap()
+        val info = action.additionalCostInfo ?: return emptyMap()
+        if (!action.affordable || action.hasXCost || !action.requiresTargets ||
+            action.minTargets != 1 || action.targetCount != 1 ||
+            action.targetRequirements.orEmpty().isNotEmpty() || cast.targets.isNotEmpty() ||
+            action.modalEnumeration != null || action.requiresDamageDistribution ||
+            action.hasConvoke || action.hasDelve || action.hasTapForGeneric ||
+            action.hasHarmonize || action.requiresManaColorChoice ||
+            action.manaCostPerExtraTarget != null || info.costType != "Behold" ||
+            info.beholdCount !in 1..MAX_BEHOLD_COUNT ||
+            info.validBeholdTargets.size > MAX_BEHOLD_CANDIDATES ||
+            action.validTargets.orEmpty().size !in 1..MAX_BEHOLD_TARGETS
+        ) return emptyMap()
+        val candidates = info.validBeholdTargets.distinct().sortedBy { it.value }
+        val targets = action.validTargets.orEmpty().distinct().sortedBy { it.value }
+        val payments = mutableListOf<List<EntityId>>()
+        fun visit(start: Int, chosen: List<EntityId>) {
+            if (chosen.size == info.beholdCount) {
+                payments.add(chosen)
+                return
+            }
+            for (index in start until candidates.size) visit(index + 1, chosen + candidates[index])
+        }
+        visit(0, emptyList())
+        if (payments.isEmpty()) return emptyMap()
+        val accepted = linkedMapOf<EntityId, List<List<EntityId>>>()
+        for (target in targets) {
+            val options = payments.filter { payment ->
+                val completed = ActionParameterizer.apply(
+                    cast, ActionParams(targets = listOf(target), beheldCards = payment), state,
+                )
+                simulator.accepts(state, completed)
+            }
+            // The model can choose any advertised target. Keep this action masked unless every
+            // target has a complete, accepted Behold payment.
+            if (options.isEmpty()) return emptyMap()
+            accepted[target] = options
+        }
+        return accepted
+    }
 
     /** At most 56 selections: eight candidates choose up to three permanents. */
     private fun tapOptions(
@@ -199,9 +255,15 @@ object PolicyActionBoundary {
     private const val MAX_BLIGHT_CANDIDATES = 8
     private const val MAX_TAP_CANDIDATES = 8
     private const val MAX_TAP_COUNT = 3
+    private const val MAX_BEHOLD_CANDIDATES = 6
+    private const val MAX_BEHOLD_TARGETS = 4
+    private const val MAX_BEHOLD_COUNT = 3
 
     private fun additionalCostCallable(action: LegalAction): Boolean {
         val info = action.additionalCostInfo ?: return true
+        if (action.action is CastSpell) {
+            return info.costType == "Behold" && action.policyBeholdPaymentOptions.isNotEmpty()
+        }
         // SacrificeSelf needs no parameter only when the source is its sole payment; Blight
         // needs an engine-checked recipient before the policy may submit it.
         val activation = action.action as? ActivateAbility ?: return false

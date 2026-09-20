@@ -3,6 +3,7 @@ package com.wingedsheep.arena
 import com.wingedsheep.engine.core.DeclareAttackers
 import com.wingedsheep.engine.core.DeclareBlockers
 import com.wingedsheep.engine.core.ActivateAbility
+import com.wingedsheep.engine.core.CastSpell
 import com.wingedsheep.engine.core.PassPriority
 import com.wingedsheep.engine.legalactions.AdditionalCostData
 import com.wingedsheep.engine.legalactions.CounterRemovalCreatureData
@@ -115,6 +116,18 @@ class GameplayPolicyBridgeTest : FunSpec({
         GameplayPolicyBridge.policyCallable(blight) shouldBe false
         GameplayPolicyBridge.policyCallable(
             blight.copy(policyBlightTargetOptions = listOf(source)),
+        ) shouldBe true
+        val behold = LegalAction(
+            CastSpell(player, EntityId("spell")), "CastWithKicker", "Cast with Behold",
+            additionalCostInfo = AdditionalCostData(
+                "Behold a Dragon", "Behold", validBeholdTargets = listOf(source), beholdCount = 1,
+            ),
+            validTargets = listOf(defender), requiresTargets = true,
+            minTargets = 1, targetCount = 1,
+        )
+        GameplayPolicyBridge.policyCallable(behold) shouldBe false
+        GameplayPolicyBridge.policyCallable(
+            behold.copy(policyBeholdPaymentOptions = mapOf(defender to listOf(listOf(source)))),
         ) shouldBe true
     }
 

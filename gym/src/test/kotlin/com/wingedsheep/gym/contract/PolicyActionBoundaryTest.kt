@@ -21,9 +21,13 @@ import com.wingedsheep.gym.service.AgentSpec
 import com.wingedsheep.mtg.sets.definitions.por.PortalSet
 import com.wingedsheep.mtg.sets.definitions.ecl.cards.GristleGlutton
 import com.wingedsheep.mtg.sets.definitions.lci.cards.AdaptiveGemguard
+import com.wingedsheep.mtg.sets.definitions.tdm.cards.MoltenExhale
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.core.Subtype
+import com.wingedsheep.sdk.core.ManaCost
+import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.AbilityId
@@ -268,6 +272,75 @@ class PolicyActionBoundaryTest : FunSpec({
         environment.lastRejection shouldBe null
         environment.state.getEntity(first)?.has<TappedComponent>() shouldBe true
         environment.state.getEntity(second)?.has<TappedComponent>() shouldBe true
+    }
+
+    test("targeted Behold cast exposes only complete engine-checked target payments") {
+        val dragonDef = CardDefinition.creature(
+            name = "Policy Test Dragon", manaCost = ManaCost.parse("{4}{R}"),
+            subtypes = setOf(Subtype.DRAGON), power = 4, toughness = 4,
+        )
+        val ogreDef = CardDefinition.creature(
+            name = "Policy Test Ogre", manaCost = ManaCost.parse("{3}{R}"),
+            subtypes = setOf(Subtype("Ogre")), power = 4, toughness = 4,
+        )
+        val driver = GameTestDriver()
+        driver.registerCards(TestCards.all)
+        driver.registerCard(MoltenExhale)
+        driver.registerCard(dragonDef)
+        driver.registerCard(ogreDef)
+        driver.initMirrorMatch(deck = Deck.of("Mountain" to 40), skipMulligans = true)
+        val player = driver.activePlayer!!
+        val opponent = driver.getOpponent(player)
+        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
+        val dragon = driver.putCreatureOnBattlefield(player, "Policy Test Dragon")
+        val handDragon = driver.putCardInHand(player, "Policy Test Dragon")
+        val ogre = driver.putCreatureOnBattlefield(opponent, "Policy Test Ogre")
+        val spell = driver.putCardInHand(player, "Molten Exhale")
+        driver.passPriorityUntil(Step.END)
+        driver.giveMana(player, Color.RED, 2)
+        val simulator = GameSimulator(driver.cardRegistry)
+        val legal = LegalActionEnumerator.create(driver.cardRegistry)
+            .enumerate(driver.state, player, EnumerationMode.ACTIONS_ONLY)
+        val bare = legal.first { (it.action as? CastSpell)?.cardId == spell && it.actionType == "CastWithKicker" }
+        bare.additionalCostInfo?.costType shouldBe "Behold"
+        PolicyActionBoundary.callable(bare) shouldBe false
+
+        val masked = PolicyActionBoundary.mask(legal, driver.state, simulator)
+        val cast = masked.first { (it.action as? CastSpell)?.cardId == spell && it.actionType == "CastWithKicker" }
+        cast.affordable shouldBe true
+        cast.policyBeholdPaymentOptions.keys shouldBe cast.validTargets.orEmpty().toSet()
+        cast.policyBeholdPaymentOptions[ogre]?.toSet() shouldBe
+            setOf(listOf(dragon), listOf(handDragon))
+        cast.policyBeholdPaymentOptions.forEach { (target, payments) ->
+            payments.forEach { payment ->
+                val completed = ActionParameterizer.apply(
+                    cast.action, ActionParams(targets = listOf(target), beheldCards = payment),
+                    driver.state,
+                )
+                simulator.accepts(driver.state, completed) shouldBe true
+            }
+        }
+        val view = ObservationBuilder(driver.cardRegistry).build(driver.state, player, masked)
+            .observation as TrainingObservation
+        val option = view.legalActions.first { it.sourceEntityId == spell && it.kind == "CastWithKicker" }
+        option.beholdCount shouldBe 1
+        option.beholdPaymentOptions shouldBe cast.policyBeholdPaymentOptions
+
+        val environment = GameEnvironment.create(driver.cardRegistry)
+        environment.restore(driver.state, listOf(driver.player1, driver.player2))
+        val gym = GameGymEnv(
+            environment, perspectivePlayerIndex = 0, defaultRevealAll = false,
+            agents = listOf(AgentSpec.Learner(), AgentSpec.Learner()),
+        )
+        (gym.observe().observation as TrainingObservation).legalActions shouldBe view.legalActions
+        shouldThrow<IllegalArgumentException> {
+            gym.step(option.actionId, ActionParams(targets = listOf(ogre)))
+        }
+        shouldThrow<IllegalArgumentException> {
+            gym.step(option.actionId, ActionParams(targets = listOf(ogre), beheldCards = listOf(spell)))
+        }
+        gym.step(option.actionId, ActionParams(targets = listOf(ogre), beheldCards = listOf(dragon)))
+        environment.lastRejection shouldBe null
     }
 
     test("learner gym action views match the arena-style mask entry by entry") {

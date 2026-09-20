@@ -121,6 +121,8 @@ data class LegalAction(
     val policyBlightTargetOptions: List<EntityId> = emptyList(),
     /** Engine-preflighted TapPermanents selections for the flat policy. */
     val policyTapPaymentOptions: List<List<EntityId>> = emptyList(),
+    /** For each single spell target, Behold selections accepted by the engine on this state. */
+    val policyBeholdPaymentOptions: Map<EntityId, List<List<EntityId>>> = emptyMap(),
 
     // Convoke / Delve
     val hasConvoke: Boolean = false,
