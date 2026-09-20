@@ -1,6 +1,7 @@
 package com.wingedsheep.ai.arena
 
 import com.wingedsheep.ai.engine.buildSeededSealedDeck
+import com.wingedsheep.ai.engine.draftableCards
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.mtg.sets.MtgSetCatalog
 import com.wingedsheep.sdk.model.MtgSet
@@ -98,7 +99,7 @@ object PodArena {
     ): PodArenaRun {
         val set = MtgSetCatalog.requireByCode(config.setCode)
         val registry = CardRegistry().apply {
-            register(set.cards)
+            register(draftableCards(set))
             register(set.basicLands)
         }
 
@@ -146,7 +147,7 @@ object PodArena {
         val groupSeed = mixSeed(config.seed, groupId.toLong())
         // One decklist for the whole table, as in the head-to-head arena: identical decks are the
         // lowest-variance design, and the seats still draw different shuffles of it.
-        val deck = buildSeededSealedDeck(set.cards, Random(groupSeed))
+        val deck = buildSeededSealedDeck(set, Random(groupSeed))
         val table = config.table
         val decks = List(table.seats) { deck }
 
