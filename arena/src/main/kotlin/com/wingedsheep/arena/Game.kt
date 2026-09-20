@@ -2,6 +2,7 @@ package com.wingedsheep.arena
 
 import com.wingedsheep.ai.engine.AIPlayer
 import com.wingedsheep.ai.engine.AiProfile
+import com.wingedsheep.ai.engine.GameSimulator
 import com.wingedsheep.ai.engine.hidden.OpponentModel
 import com.wingedsheep.ai.insight.AiInsightSink
 import com.wingedsheep.engine.core.ActionProcessor
@@ -12,6 +13,7 @@ import com.wingedsheep.engine.core.DeclareBlockers
 import com.wingedsheep.engine.core.GameAction
 import com.wingedsheep.engine.core.GameConfig
 import com.wingedsheep.engine.core.GameInitializer
+import com.wingedsheep.engine.core.ManaSpentEvent
 import com.wingedsheep.engine.core.PassPriority
 import com.wingedsheep.engine.core.PlayLand
 import com.wingedsheep.engine.core.PlayerConfig
@@ -26,6 +28,7 @@ import com.wingedsheep.engine.state.components.battlefield.SummoningSicknessComp
 import com.wingedsheep.engine.state.components.battlefield.TappedComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
+import com.wingedsheep.gym.contract.PolicyActionBoundary
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Phase
 import com.wingedsheep.sdk.core.Step
@@ -59,12 +62,17 @@ class GameRunner(
     private val measureHolding: Boolean = false,
     /** Count [Outcome.cards] (mtg-draft-ai `docs/33` §13); off, a game is not enumerated twice. */
     private val measureCards: Boolean = false,
+    /** Per-turn land opportunities and end-of-cycle untapped-source checks. */
+    private val measureBasics: Boolean = false,
+    /** Opt-in policy rank/teacher comparison; requires [shadowPolicyTeacher] when playing. */
+    private val measureRank: Boolean = false,
     /** Optional learned policy for [policySeat]; complex pending decisions remain with [AIPlayer]. */
     private val gameplayPolicy: GameplayPolicyBridge? = null,
 ) {
     private val processor = ActionProcessor(registry)
     private val enumerator = LegalActionEnumerator.create(registry)
     private val initializer = GameInitializer(registry)
+    private val policySimulator = GameSimulator(registry)
 
     class Outcome(
         val winnerSeat: Int?,
@@ -135,6 +143,14 @@ class GameRunner(
         val policyFirstRejection: String? = null,
         /** Learned-policy family → frozen-pilot family on the same visited state, opt-in. */
         val policyTeacherFamilies: Map<String, Int> = emptyMap(),
+        val rankProbe: List<RankProbeEvent>? = null,
+        val landOpportunityTurns: Int = 0,
+        val landPlayedOpportunityTurns: Int = 0,
+        val landIncompleteOpportunityTurns: Int = 0,
+        val landPlayedIncompleteOpportunityTurns: Int = 0,
+        val stableManaCycles: Int = 0,
+        val fullyUntappedManaCycles: Int = 0,
+        val noManaSpentStableCycles: Int = 0,
         /** [StrandedProbe], zeroed unless a `probeSeat` was given. */
         val probe: StrandedProbe = StrandedProbe(),
     )
@@ -174,6 +190,8 @@ class GameRunner(
         probeSeat: Int? = null,
         /** Seat controlled by [gameplayPolicy] for priority actions and declarations. */
         policySeat: Int? = null,
+        /** Seat for the land/mana basics probe, independent of policy control. */
+        basicSeat: Int? = null,
         /** Compare each learned model decision with the frozen seat profile without playing it. */
         shadowPolicyTeacher: Boolean = false,
     ): Outcome {
@@ -192,6 +210,7 @@ class GameRunner(
         return playFrom(
             init.state, seatIds.indices.map { seatProfiles?.get(it) ?: profile }, decklists,
             probeSeat = probeSeat, policySeat = policySeat,
+            basicSeat = basicSeat,
             shadowPolicyTeacher = shadowPolicyTeacher,
         )
     }
@@ -207,8 +226,10 @@ class GameRunner(
         decklists: Map<EntityId, OpponentModel>,
         probeSeat: Int? = null,
         policySeat: Int? = null,
+        basicSeat: Int? = null,
         shadowPolicyTeacher: Boolean = false,
     ): Outcome {
+        require(!measureRank || shadowPolicyTeacher) { "rank probe requires a shadow teacher" }
         val seatIds = start.turnOrder
         val bySeat = seatIds.withIndex().associate { (seat, id) -> id to seat }
         val gaps = if (measureCards && System.getProperty("arena.gaps").toBoolean()) {
@@ -257,11 +278,18 @@ class GameRunner(
         var policyIllegal = 0
         var policyFirstRejection: String? = null
         val policyTeacherFamilies = mutableMapOf<String, Int>()
+        val rankEvents = if (measureRank) mutableListOf<RankProbeEvent>() else null
+        val availableWindows = if (measureRank) mutableMapOf<String, Int>() else null
         var lastActivePlayer: EntityId? = null
         var lastProgressAction = 0
         var reason = ""
         val holding = if (measureHolding) seatIds.map { IntArray(3) } else null
-        val cycle = if (measureHolding) seatIds.map { IntArray(6) } else null
+        val cycle = if (measureHolding || measureBasics) seatIds.map { IntArray(6) } else null
+        var stableManaCycles = 0
+        var fullyUntappedManaCycles = 0
+        var noManaSpentStableCycles = 0
+        var ownEndSources: Int? = null
+        var ownEndUntapped = 0
         val casts = if (measureHolding) seatIds.map { mutableMapOf<String, Int>() } else null
         val tappedOut = if (measureHolding) seatIds.map { IntArray(2) } else null
         val cards = if (measureCards) seatIds.map { HashMap<String, IntArray>() } else null
@@ -288,6 +316,29 @@ class GameRunner(
         val lastLands = IntArray(seatIds.size)
         val lastUntapped = IntArray(seatIds.size)
         var cycleActive: EntityId? = null
+        val basicId = basicSeat?.takeIf { measureBasics }?.let { seatIds[it] }
+        var manaSpentInCycle = 0
+        fun recordManaSpend(result: com.wingedsheep.engine.core.ExecutionResult) {
+            if (result.error == null && basicId != null) {
+                manaSpentInCycle += result.events.asSequence().filterIsInstance<ManaSpentEvent>()
+                    .filter { it.playerId == basicId }.sumOf { it.total }
+            }
+        }
+        var basicTurn = -1
+        var landAvailable = false
+        var landPlayed = false
+        var landOpportunityTurns = 0
+        var landPlayedOpportunityTurns = 0
+        var landIncompleteOpportunityTurns = 0
+        var landPlayedIncompleteOpportunityTurns = 0
+        fun finishCompletedBasicTurn() {
+            if (landAvailable) {
+                landOpportunityTurns++
+                if (landPlayed) landPlayedOpportunityTurns++
+            }
+            landAvailable = false
+            landPlayed = false
+        }
         var probeWindows = 0
         var probeAffordable = 0
         var probeStranded = 0
@@ -310,6 +361,10 @@ class GameRunner(
         val maxPlayerTurns = maxTurnsPerSeat * seatIds.size
         try {
             while (!state.gameOver && state.turnNumber < maxPlayerTurns && actionCount < maxActions) {
+                if (basicId != null && state.turnNumber != basicTurn) {
+                    if (basicTurn >= 0) finishCompletedBasicTurn()
+                    basicTurn = state.turnNumber
+                }
                 if (maxPermanents < Int.MAX_VALUE) {
                     val permanents = state.allBattlefieldEntities().size
                     if (permanents > maxPermanents) {
@@ -347,6 +402,23 @@ class GameRunner(
                             val o = if (id == cycleActive) 0 else 3
                             cycle[seat][o]++; cycle[seat][o + 1] += lastLands[seat]; cycle[seat][o + 2] += lastUntapped[seat]
                         }
+                        if (basicId != null) {
+                            if (cycleActive == basicId) {
+                                ownEndSources = lastLands[basicSeat]
+                                ownEndUntapped = lastUntapped[basicSeat]
+                            } else {
+                                val sources = ownEndSources
+                                if (sources != null && sources > 0 && sources == lastLands[basicSeat]) {
+                                    stableManaCycles++
+                                    if (manaSpentInCycle == 0) noManaSpentStableCycles++
+                                    if (ownEndUntapped == sources && lastUntapped[basicSeat] == sources) {
+                                        fullyUntappedManaCycles++
+                                    }
+                                }
+                                ownEndSources = null
+                                manaSpentInCycle = 0
+                            }
+                        }
                     }
                     cycleActive = active
                     for ((seat, id) in seatIds.withIndex()) {
@@ -364,6 +436,7 @@ class GameRunner(
                         reason = "decisionError(${r.error})"
                         break
                     }
+                    recordManaSpend(r)
                     state = r.state
                     continue
                 }
@@ -480,13 +553,83 @@ class GameRunner(
                         },
                     )
                 } else null
+                val needsBasicLandCheck = basicId == priorityPlayer && state.activePlayerId == priorityPlayer &&
+                    state.step.isMainPhase && state.stack.isEmpty()
+                val legalForProbe = if ((shadowPolicyTeacher && policyChoice?.modelDecision == true) || needsBasicLandCheck) {
+                    enumerator.enumerate(state, priorityPlayer, EnumerationMode.ACTIONS_ONLY)
+                } else null
+                if (needsBasicLandCheck && legalForProbe?.any { it.affordable && it.action is PlayLand } == true) {
+                    landAvailable = true
+                }
                 if (shadowPolicyTeacher && policyChoice?.modelDecision == true) {
                     // chooseFrom uses the same enumerated actions as chooseAction but does not stage
                     // Treasure mana. The independent AI instance isolates Strategist's memory.
-                    val legal = enumerator.enumerate(state, priorityPlayer, EnumerationMode.ACTIONS_ONLY)
-                    val teacher = shadowPlayers[bySeat.getValue(priorityPlayer)].chooseFrom(state, legal).action
+                    val legal = requireNotNull(legalForProbe)
+                    val policyLegal = PolicyActionBoundary.mask(legal, state, policySimulator)
+                    if (availableWindows != null) {
+                        policyLegal.asSequence().filter { it.affordable }
+                            .mapNotNull { opportunityKey(it.action) }.distinct()
+                            .forEach { key -> availableWindows.merge(key, 1, Int::plus) }
+                    }
+                    val teacherLegal = shadowPlayers[bySeat.getValue(priorityPlayer)].chooseFrom(state, legal)
+                    val teacher = teacherLegal.action
                     val pair = "${policyActionFamily(policyChoice.action)}>${policyActionFamily(teacher)}"
                     policyTeacherFamilies.merge(pair, 1, Int::plus)
+                    if (rankEvents != null && policyChoice.action is PassPriority) {
+                        val ranked = policyChoice.rankedNonPass
+                        val best = ranked.firstOrNull()?.action
+                        if (best != null || teacher !is PassPriority) {
+                            val rank = ranked.indexOfFirst { sameActionTemplate(it, teacherLegal) }
+                            val family = policyActionFamily(teacher)
+                            val familyRank = ranked.filter { policyActionFamily(it.action) == family }
+                                .indexOfFirst { sameActionTemplate(it, teacherLegal) }
+                            val bestSpend = ranked.firstOrNull { legalAction ->
+                                legalAction.action is CastSpell ||
+                                    (legalAction.action is ActivateAbility && !legalAction.isManaAbility)
+                            }?.action
+                            val teacherKey = opportunityKey(teacher)
+                            val teacherSource = actionSource(teacher)
+                            val sourceCandidates = legal.filter { candidate ->
+                                teacherSource != null && actionSource(candidate.action) == teacherSource &&
+                                    candidate.action::class == teacher::class &&
+                                    (teacher !is ActivateAbility ||
+                                        (candidate.action as ActivateAbility).abilityId == teacher.abilityId)
+                            }
+                            val affordableCandidates = sourceCandidates.filter { it.affordable }
+                            val policyCandidates = policyLegal.filter { candidate ->
+                                teacherSource != null && actionSource(candidate.action) == teacherSource &&
+                                    candidate.action::class == teacher::class &&
+                                    (teacher !is ActivateAbility ||
+                                        (candidate.action as ActivateAbility).abilityId == teacher.abilityId)
+                            }
+                            val candidateStatus = when {
+                                rank >= 0 -> "ranked"
+                                sourceCandidates.isEmpty() -> "not_listed"
+                                affordableCandidates.isEmpty() -> "unaffordable"
+                                policyCandidates.none { it.affordable } ->
+                                    unsupportedPolicyAction(affordableCandidates.first())
+                                else -> "callable_rank_mismatch"
+                            }
+                            rankEvents += RankProbeEvent(
+                                step = state.step.name,
+                                ownTurn = state.activePlayerId == priorityPlayer,
+                                teacherFamily = family,
+                                bestNonPassFamily = best?.let(::policyActionFamily) ?: "none",
+                                teacherRank = (rank + 1).takeIf { rank >= 0 },
+                                teacherFamilyRank = (familyRank + 1).takeIf { familyRank >= 0 },
+                                teacherManaAbility = teacherLegal.isManaAbility,
+                                bestNonPassManaAbility = ranked.firstOrNull()?.isManaAbility == true,
+                                bestSpendFamily = bestSpend?.let(::policyActionFamily) ?: "none",
+                                bestSpendSameSource = teacherSource != null && teacherSource == bestSpend?.let(::actionSource),
+                                bestSameSource = teacherSource != null && teacherSource == best?.let(::actionSource),
+                                teacherAvailableWindows = teacherKey?.let { availableWindows?.get(it) },
+                                teacherCandidateStatus = candidateStatus,
+                                teacherAdditionalCostType = teacherLegal.additionalCostInfo?.costType,
+                                passMargin = policyChoice.passMargin,
+                                spendMargin = policyChoice.spendMargin,
+                            )
+                        }
+                    }
                 }
                 val action = policyChoice?.action ?: aiFor(priorityPlayer).chooseAction(state)
                 if (probeId != null && priorityPlayer == probeId && action is PlayLand && turnLandPlayed == null) {
@@ -534,6 +677,8 @@ class GameRunner(
                     if (action is PassPriority) h[1]++ else if (action is CastSpell && action.cardId in instants) h[2]++
                 }
                 val r = processor.process(state, action).result
+                recordManaSpend(r)
+                if (r.error == null && basicId == priorityPlayer && action is PlayLand) landPlayed = true
                 val next = if (r.error != null) {
                     illegal++
                     if (policyChoice != null) {
@@ -543,6 +688,7 @@ class GameRunner(
                         }
                     }
                     val fallback = processor.process(state, safeFallbackAction(state, priorityPlayer)).result
+                    recordManaSpend(fallback)
                     if (fallback.error != null) {
                         reason = "error(${r.error}; fallback: ${fallback.error})"
                         null
@@ -561,6 +707,10 @@ class GameRunner(
         } catch (e: Throwable) {
             if (printTraces) e.printStackTrace()
             reason = "exception(${e::class.simpleName}: ${e.message?.take(200)})"
+        }
+        if (basicId != null && landAvailable) {
+            landIncompleteOpportunityTurns++
+            if (landPlayed) landPlayedIncompleteOpportunityTurns++
         }
         if (probeId != null) flushProbeTurn()
         if (cards != null) {
@@ -598,6 +748,14 @@ class GameRunner(
             policyIllegal = policyIllegal,
             policyFirstRejection = policyFirstRejection,
             policyTeacherFamilies = policyTeacherFamilies.toSortedMap(),
+            rankProbe = rankEvents,
+            landOpportunityTurns = landOpportunityTurns,
+            landPlayedOpportunityTurns = landPlayedOpportunityTurns,
+            landIncompleteOpportunityTurns = landIncompleteOpportunityTurns,
+            landPlayedIncompleteOpportunityTurns = landPlayedIncompleteOpportunityTurns,
+            stableManaCycles = stableManaCycles,
+            fullyUntappedManaCycles = fullyUntappedManaCycles,
+            noManaSpentStableCycles = noManaSpentStableCycles,
             probe = StrandedProbe(
                 probeWindows, probeAffordable, probeStranded, probeStrandedIds.size, probeFixable, probeFixMissed,
             ),
@@ -605,6 +763,37 @@ class GameRunner(
     }
 
     private val repeatableMana = HashMap<String, Boolean>()
+
+    private fun actionSource(action: GameAction): EntityId? = when (action) {
+        is CastSpell -> action.cardId
+        is ActivateAbility -> action.sourceId
+        is PlayLand -> action.cardId
+        else -> null
+    }
+
+    private fun opportunityKey(action: GameAction): String? = when (action) {
+        is CastSpell -> "cast:${action.cardId}"
+        is ActivateAbility -> "activate:${action.sourceId}:${action.abilityId}"
+        else -> null
+    }
+
+    /** The pilot materializes targets/X before returning; compare the legal-action template instead. */
+    private fun sameActionTemplate(a: com.wingedsheep.engine.legalactions.LegalAction, b: com.wingedsheep.engine.legalactions.LegalAction): Boolean =
+        a.actionType == b.actionType && a.description == b.description &&
+            actionSource(a.action) == actionSource(b.action) &&
+            ((a.action as? ActivateAbility)?.abilityId == (b.action as? ActivateAbility)?.abilityId)
+
+    private fun unsupportedPolicyAction(action: com.wingedsheep.engine.legalactions.LegalAction): String = when {
+        action.actionType in setOf("CrewVehicle", "SaddleMount") -> "unsupported_vehicle_mount"
+        action.additionalCostInfo != null -> "unsupported_additional_cost"
+        action.hasConvoke -> "unsupported_convoke"
+        action.hasDelve -> "unsupported_delve"
+        action.hasTapForGeneric -> "unsupported_tap_for_generic"
+        action.hasHarmonize -> "unsupported_harmonize"
+        action.requiresManaColorChoice -> "unsupported_mana_color_choice"
+        action.manaCostPerExtraTarget != null -> "unsupported_extra_target_cost"
+        else -> "callable_rank_mismatch"
+    }
 
     /**
      * A permanent that makes mana every turn: a land, or one with a mana ability whose cost doesn't sacrifice it (a

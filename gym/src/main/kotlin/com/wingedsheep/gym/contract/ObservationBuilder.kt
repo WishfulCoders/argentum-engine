@@ -481,6 +481,12 @@ class ObservationBuilder(
             totalDamageToDistribute = la.totalDamageToDistribute,
             minDamagePerTarget = la.minDamagePerTarget,
             isManaAbility = la.isManaAbility,
+            convokePaymentOptions = la.policyConvokePaymentOptions,
+            hasConvoke = la.hasConvoke,
+            canPayWithoutConvoke = la.canPayWithoutConvoke,
+            validConvokeCreatures = la.convokeCreatures.orEmpty().map { creature ->
+                ConvokeCreatureView(creature.entityId, creature.colors.map { it.name }.sorted())
+            },
             // Combat candidates. The enumerator offers one DeclareAttackers / DeclareBlockers action
             // carrying an empty map, so without these the caller has the action but no way to know
             // what it could declare — and `ActionParams` has nothing to be built from. The two

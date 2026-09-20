@@ -12,6 +12,7 @@ import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.gym.contract.ActionParameterizer
 import com.wingedsheep.gym.contract.ActionParams
 import com.wingedsheep.gym.contract.ObservationBuilder
+import com.wingedsheep.gym.contract.PolicyActionBoundary
 import com.wingedsheep.gym.contract.ResolvedAction
 import com.wingedsheep.gym.contract.TrainingObservation
 import com.wingedsheep.sdk.model.EntityId
@@ -30,6 +31,10 @@ data class GameplayPolicyAction(
     val declarationSize: Int,
     val combatOrderSize: Int,
     val combatOrderMatches: Boolean,
+    /** Opt-in action-template ranking with pass omitted; no alternate action is played. */
+    val rankedNonPass: List<LegalAction> = emptyList(),
+    val passMargin: Double? = null,
+    val spendMargin: Double? = null,
 )
 
 @Serializable
@@ -37,6 +42,8 @@ internal data class GameplayPolicyRequest(
     val observation: TrainingObservation,
     val deterministic: Boolean = true,
     val temperature: Double = 1.0,
+    @SerialName("rank_probe")
+    val rankProbe: Boolean = false,
 )
 
 @Serializable
@@ -48,6 +55,12 @@ internal data class GameplayPolicyResponse(
     val combatOrder: List<List<EntityId>> = emptyList(),
     @SerialName("log_probability")
     val logProbability: Double = 0.0,
+    @SerialName("ranked_nonpass_action_ids")
+    val rankedNonPassActionIds: List<Int>? = null,
+    @SerialName("pass_margin")
+    val passMargin: Double? = null,
+    @SerialName("spend_margin")
+    val spendMargin: Double? = null,
     val error: String? = null,
 )
 
@@ -68,6 +81,7 @@ class GameplayPolicyBridge(
     device: String = "cpu",
     private val deterministic: Boolean = true,
     private val temperature: Double = 1.0,
+    private val rankProbe: Boolean = false,
 ) : AutoCloseable {
     private val enumerator = LegalActionEnumerator.create(registry)
     private val observations = ObservationBuilder(registry)
@@ -110,14 +124,14 @@ class GameplayPolicyBridge(
             }
         }
         // Keep unsupported actions as observation context but hard-mask them exactly like an
-        // unaffordable action. ActionParams cannot carry these payment/crew selections yet; the
-        // old path let the network pick one and the engine correctly rejected the incomplete cast.
-        val legal = enumerator.enumerate(state, playerId, EnumerationMode.ACTIONS_ONLY).map {
-            if (policyCallable(it)) it else it.copy(affordable = false)
-        }
+        // unaffordable action. The shared boundary admits only payment shapes ActionParams can
+        // materialize (including automatic self-sacrifice), preventing incomplete submissions.
+        val legal = PolicyActionBoundary.mask(
+            enumerator.enumerate(state, playerId, EnumerationMode.ACTIONS_ONLY), state, simulator
+        )
         val built = observations.build(state, playerId, legal)
         val observation = built.observation as TrainingObservation
-        input.write(policyJson.encodeToString(GameplayPolicyRequest(observation, deterministic, temperature)))
+        input.write(policyJson.encodeToString(GameplayPolicyRequest(observation, deterministic, temperature, rankProbe)))
         input.newLine()
         input.flush()
         val line = output.readLine() ?: error(
@@ -125,6 +139,20 @@ class GameplayPolicyBridge(
         )
         val response = policyJson.decodeFromString<GameplayPolicyResponse>(line)
         response.error?.let { error("gameplay policy: $it") }
+        val rankedNonPass = if (rankProbe) {
+            val ids = requireNotNull(response.rankedNonPassActionIds) {
+                "gameplay policy rank probe response has no ranked_nonpass_action_ids"
+            }
+            require(ids.distinct().size == ids.size) { "gameplay policy rank probe repeated an action ID" }
+            ids.map { id ->
+                val ranked = built.registry.resolve(id) as? ResolvedAction.Legal
+                    ?: error("gameplay policy ranked unknown/non-legal action ID $id")
+                require(ranked.action !is com.wingedsheep.engine.core.PassPriority) {
+                    "gameplay policy included pass in non-pass ranking"
+                }
+                ranked.legalAction
+            }
+        } else emptyList()
         val actionId = requireNotNull(response.actionId) { "gameplay policy response has no action_id" }
         val view = observation.legalActions.singleOrNull { it.actionId == actionId }
             ?: error("gameplay policy returned action ID $actionId absent from its observation")
@@ -149,7 +177,11 @@ class GameplayPolicyBridge(
                 mana.activations.first(), "staged mana payment; $diagnostic", modelDecision = false,
             )
         }
-        return wrapped(action, diagnostic, response.combatOrder, declarationSize)
+        return wrapped(
+            action, diagnostic, response.combatOrder, declarationSize,
+            rankedNonPass = rankedNonPass, passMargin = response.passMargin,
+            spendMargin = response.spendMargin,
+        )
     }
 
     private fun wrapped(
@@ -158,6 +190,9 @@ class GameplayPolicyBridge(
         combatOrder: List<List<EntityId>> = emptyList(),
         declarationSize: Int = 0,
         modelDecision: Boolean = true,
+        rankedNonPass: List<LegalAction> = emptyList(),
+        passMargin: Double? = null,
+        spendMargin: Double? = null,
     ) = GameplayPolicyAction(
         action = action,
         modelDecision = modelDecision,
@@ -166,6 +201,9 @@ class GameplayPolicyBridge(
         declarationSize = declarationSize,
         combatOrderSize = combatOrder.size,
         combatOrderMatches = combatOrderMatches(action, combatOrder),
+        rankedNonPass = rankedNonPass,
+        passMargin = passMargin,
+        spendMargin = spendMargin,
     )
 
     override fun close() {
@@ -175,15 +213,7 @@ class GameplayPolicyBridge(
     }
 
     companion object {
-        internal fun policyCallable(action: LegalAction): Boolean =
-            action.actionType !in setOf("CrewVehicle", "SaddleMount") &&
-                action.additionalCostInfo == null &&
-                !action.hasConvoke &&
-                !action.hasDelve &&
-                !action.hasTapForGeneric &&
-                !action.hasHarmonize &&
-                !action.requiresManaColorChoice &&
-                action.manaCostPerExtraTarget == null
+        internal fun policyCallable(action: LegalAction): Boolean = PolicyActionBoundary.callable(action)
 
         internal fun combatOrderMatches(action: GameAction, order: List<List<EntityId>>): Boolean {
             val pairs = order.map {

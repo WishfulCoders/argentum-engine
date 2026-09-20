@@ -2,8 +2,12 @@ package com.wingedsheep.arena
 
 import com.wingedsheep.engine.core.DeclareAttackers
 import com.wingedsheep.engine.core.DeclareBlockers
+import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.core.PassPriority
+import com.wingedsheep.engine.legalactions.AdditionalCostData
+import com.wingedsheep.engine.legalactions.CounterRemovalCreatureData
 import com.wingedsheep.engine.legalactions.LegalAction
+import com.wingedsheep.sdk.scripting.AbilityId
 import com.wingedsheep.sdk.model.EntityId
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
@@ -68,6 +72,35 @@ class GameplayPolicyBridgeTest : FunSpec({
         GameplayPolicyBridge.policyCallable(
             LegalAction(PassPriority(player), "CrewVehicle", "Crew"),
         ) shouldBe false
+    }
+
+    test("only automatic self-sacrifice additional costs enter the policy boundary") {
+        val source = EntityId("source")
+        val ability = ActivateAbility(player, source, AbilityId("activated"))
+        val selfPayment = AdditionalCostData(
+            "Sacrifice this", "SacrificeSelf", validSacrificeTargets = listOf(source),
+        )
+        val selfCost = LegalAction(
+            ability, "ActivateAbility", "Sacrifice this",
+            additionalCostInfo = selfPayment,
+        )
+        GameplayPolicyBridge.policyCallable(selfCost) shouldBe true
+        GameplayPolicyBridge.policyCallable(
+            selfCost.copy(additionalCostInfo = selfPayment.copy(
+                costType = "TapPermanents", validTapTargets = listOf(source), tapCount = 1,
+            )),
+        ) shouldBe false
+        GameplayPolicyBridge.policyCallable(
+            selfCost.copy(additionalCostInfo = selfPayment.copy(
+                validSacrificeTargets = listOf(EntityId("other")),
+            )),
+        ) shouldBe false
+        GameplayPolicyBridge.policyCallable(
+            selfCost.copy(additionalCostInfo = selfPayment.copy(
+                counterRemovalCreatures = listOf(CounterRemovalCreatureData(source, "Source", 1)),
+            )),
+        ) shouldBe false
+        GameplayPolicyBridge.policyCallable(selfCost.copy(hasConvoke = true)) shouldBe false
     }
 
     test("shadow-teacher telemetry uses stable coarse action families") {

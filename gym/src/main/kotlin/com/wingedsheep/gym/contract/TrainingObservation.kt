@@ -320,6 +320,12 @@ data class LegalActionView(
     val totalDamageToDistribute: Int? = null,
     val minDamagePerTarget: Int? = null,
     val isManaAbility: Boolean = false,
+    /** Payment choices verified on this state by the engine. A convoke-dependent cast is
+     * callable by the flat policy only when this list is nonempty. */
+    val convokePaymentOptions: List<Map<EntityId, com.wingedsheep.sdk.scripting.ConvokePayment>> = emptyList(),
+    val hasConvoke: Boolean = false,
+    val canPayWithoutConvoke: Boolean = false,
+    val validConvokeCreatures: List<ConvokeCreatureView> = emptyList(),
     /**
      * Creatures that may be declared as attackers (`kind == "DeclareAttackers"`), empty otherwise.
      * Pair each with one of [validAttackTargets] in `ActionParams.attackers` when stepping; step it
@@ -356,6 +362,12 @@ data class LegalActionView(
     val blockDeclarationConstraints: BlockDeclarationConstraintsView? = null,
     /** True when this entry was generated from [PendingDecisionView], not a GameAction. */
     val isDecisionOption: Boolean = false
+)
+
+@Serializable
+data class ConvokeCreatureView(
+    val entityId: EntityId,
+    val colors: List<String>,
 )
 
 /**

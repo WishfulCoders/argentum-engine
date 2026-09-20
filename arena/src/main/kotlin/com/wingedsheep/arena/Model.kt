@@ -18,6 +18,35 @@ data class DeckSpec(
     val cards: List<String>,
 )
 
+/** One opt-in comparison at a BC pass, including whether the pilot's action was callable. */
+@Serializable
+data class RankProbeEvent(
+    val step: String,
+    val ownTurn: Boolean,
+    val teacherFamily: String,
+    val bestNonPassFamily: String,
+    /** One-based rank of the pilot's action-type/source/description template; null if absent. */
+    val teacherRank: Int? = null,
+    /** One-based rank within the pilot action's family (casts vs casts, activations vs activations). */
+    val teacherFamilyRank: Int? = null,
+    val teacherManaAbility: Boolean = false,
+    val bestNonPassManaAbility: Boolean = false,
+    /** Highest non-mana cast/activation, ignoring land drops and mana abilities. */
+    val bestSpendFamily: String = "none",
+    val bestSpendSameSource: Boolean = false,
+    /** Same source permanent/card, even if the action variant differs. */
+    val bestSameSource: Boolean = false,
+    /** Number of earlier/current BC decisions at which this spell or ability was callable. */
+    val teacherAvailableWindows: Int? = null,
+    /** Why the pilot's source/ability was absent from (or present in) the callable ranking. */
+    val teacherCandidateStatus: String = "unknown",
+    val teacherAdditionalCostType: String? = null,
+    /** Logit(pass) minus logit(best callable non-pass); diagnostic, not a calibrated value. */
+    val passMargin: Double? = null,
+    /** Logit(pass) minus best cast/non-mana-activation, excluding land and payment setup. */
+    val spendMargin: Double? = null,
+)
+
 /** One game. [game] indexes the games of a (target, opponent) pair; even games seat the target first. */
 @Serializable
 data class GameRecord(
@@ -79,6 +108,19 @@ data class GameRecord(
     val policyFirstRejection: String? = null,
     /** Policy-family → frozen-pilot-family counts with `-Darena.policyShadowTeacher=true`. */
     val policyTeacherFamilies: Map<String, Int> = emptyMap(),
+    /** BC pass/ranking comparisons with `-Darena.policyRankProbe=true`; null when disabled. */
+    val rankProbe: List<RankProbeEvent>? = null,
+    /** Completed target turns with a legal land play, and how many took one by turn end. */
+    val landOpportunityTurns: Int = 0,
+    val landPlayedOpportunityTurns: Int = 0,
+    /** Terminal/incomplete target turns kept separate from the completed-turn rate. */
+    val landIncompleteOpportunityTurns: Int = 0,
+    val landPlayedIncompleteOpportunityTurns: Int = 0,
+    /** Complete cycles with an unchanged positive mana-source count, and all sources untapped at both ends. */
+    val stableManaCycles: Int = 0,
+    val fullyUntappedManaCycles: Int = 0,
+    /** Stable-source cycles with zero target-seat ManaSpentEvent mana, not merely untapped endpoints. */
+    val noManaSpentStableCycles: Int = 0,
 ) {
     val key: String get() = "$target|$opponent|$game"
 }

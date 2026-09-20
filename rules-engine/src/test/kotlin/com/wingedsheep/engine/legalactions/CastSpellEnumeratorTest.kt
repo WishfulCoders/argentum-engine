@@ -381,6 +381,7 @@ class CastSpellEnumeratorTest : FunSpec({
         val cast = driver.enumerateFor(driver.player1).castActionsFor("Stoke the Flames").first()
 
         cast.hasConvoke shouldBe true
+        cast.canPayWithoutConvoke shouldBe true
         val creatures = cast.convokeCreatures.shouldNotBeNull()
         creatures shouldHaveSize 1  // just the Grizzly Bears
         creatures.single().name shouldBe "Grizzly Bears"
@@ -394,7 +395,9 @@ class CastSpellEnumeratorTest : FunSpec({
             battlefield = listOf("Mountain", "Mountain", "Mountain", "Grizzly Bears")
         )
 
-        driver.enumerateFor(driver.player1) shouldContainAffordableCastOf "Stoke the Flames"
+        val cast = driver.enumerateFor(driver.player1).castActionsFor("Stoke the Flames").first()
+        cast.affordable shouldBe true
+        cast.canPayWithoutConvoke shouldBe false
     }
 
     // -------------------------------------------------------------------------

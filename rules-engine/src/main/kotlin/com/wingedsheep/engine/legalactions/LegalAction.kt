@@ -120,7 +120,13 @@ data class LegalAction(
 
     // Convoke / Delve
     val hasConvoke: Boolean = false,
+    /** This cast can be submitted without selecting creatures for convoke. Set only for ordinary
+     * cast templates whose full cost the mana solver can pay without convoke. */
+    val canPayWithoutConvoke: Boolean = false,
     val convokeCreatures: List<ConvokeCreatureData>? = null,
+    /** Engine-preflighted payment choices offered to the flat gameplay policy. Populated only
+     * by the shared gym/arena boundary, never by general legal-action enumeration. */
+    val policyConvokePaymentOptions: List<Map<EntityId, com.wingedsheep.sdk.scripting.ConvokePayment>> = emptyList(),
     val hasDelve: Boolean = false,
     val delveCards: List<DelveCardData>? = null,
     val minDelveNeeded: Int? = null,

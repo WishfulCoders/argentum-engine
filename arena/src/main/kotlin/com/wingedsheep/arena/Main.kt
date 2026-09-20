@@ -50,11 +50,16 @@ fun main(args: Array<String>) {
     val targetProfile = System.getProperty("arena.targetProfile")?.let(::arenaProfile) ?: profile
     val policyCheckpoint = System.getProperty("arena.policyCheckpoint")?.let(::File)
     val shadowPolicyTeacher = System.getProperty("arena.policyShadowTeacher").toBoolean()
+    val policyRankProbe = System.getProperty("arena.policyRankProbe").toBoolean()
+    val measureBasics = System.getProperty("arena.probeBasics").toBoolean()
     require(policyCheckpoint == null || policyCheckpoint.isFile) {
         "-Darena.policyCheckpoint is not a file: $policyCheckpoint"
     }
     require(!shadowPolicyTeacher || policyCheckpoint != null) {
         "-Darena.policyShadowTeacher=true requires -Darena.policyCheckpoint"
+    }
+    require(!policyRankProbe || shadowPolicyTeacher) {
+        "-Darena.policyRankProbe=true requires -Darena.policyShadowTeacher=true"
     }
 
     val decks = input.readLines().filter { it.isNotBlank() }.map { arenaJson.decodeFromString<DeckSpec>(it) }
@@ -102,10 +107,12 @@ fun main(args: Array<String>) {
                 device = System.getProperty("arena.policyDevice") ?: "cpu",
                 deterministic = System.getProperty("arena.policyDeterministic", "true").toBoolean(),
                 temperature = System.getProperty("arena.policyTemperature")?.toDouble() ?: 1.0,
+                rankProbe = policyRankProbe,
             ).also(policyBridges::add)
         }
         GameRunner(
             registry, profile, measureHolding = measureHolding, measureCards = measureCards,
+            measureBasics = measureBasics, measureRank = policyRankProbe,
             gameplayPolicy = bridge,
         )
     }
@@ -129,6 +136,7 @@ fun main(args: Array<String>) {
                     if (targetSeat == 0) listOf(targetProfile, profile) else listOf(profile, targetProfile),
                     probeSeat = if (probeStranded) targetSeat else null,
                     policySeat = targetSeat.takeIf { policyCheckpoint != null },
+                    basicSeat = targetSeat.takeIf { measureBasics },
                     shadowPolicyTeacher = shadowPolicyTeacher,
                 )
                 base.copy(
@@ -153,6 +161,14 @@ fun main(args: Array<String>) {
                     policyIllegal = o.policyIllegal,
                     policyFirstRejection = o.policyFirstRejection,
                     policyTeacherFamilies = o.policyTeacherFamilies,
+                    rankProbe = o.rankProbe,
+                    landOpportunityTurns = o.landOpportunityTurns,
+                    landPlayedOpportunityTurns = o.landPlayedOpportunityTurns,
+                    landIncompleteOpportunityTurns = o.landIncompleteOpportunityTurns,
+                    landPlayedIncompleteOpportunityTurns = o.landPlayedIncompleteOpportunityTurns,
+                    stableManaCycles = o.stableManaCycles,
+                    fullyUntappedManaCycles = o.fullyUntappedManaCycles,
+                    noManaSpentStableCycles = o.noManaSpentStableCycles,
                 )
             } catch (e: Throwable) {
                 base.copy(reason = "init(${e::class.simpleName}: ${e.message?.take(200)})", millis = System.currentTimeMillis() - t0)

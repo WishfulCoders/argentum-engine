@@ -562,8 +562,12 @@ class CastSpellEnumerator : ActionEnumerator {
             // (Arc Reactor) is worth more as a mana source than as an improvise tap, so the
             // no-taps configuration has to stay reachable on its own.
             val improviseHelp = improviseArtifacts.takeIf { hasImprovise && it.isNotEmpty() }.orEmpty()
+            val canPayWithManaAlone = context.manaSolver.canPay(
+                state, playerId, payableCost, spellContext = spellContext,
+                precomputedSources = cachedSources
+            )
             val canAfford = if (hasConvoke && convokeCreatures != null && convokeCreatures.isNotEmpty()) {
-                context.manaSolver.canPay(state, playerId, payableCost, spellContext = spellContext, precomputedSources = cachedSources) ||
+                canPayWithManaAlone ||
                     context.costUtils.canAffordWithConvoke(
                         state, playerId, payableCost, convokeCreatures,
                         precomputedSources = cachedSources, spellContext = spellContext
@@ -574,7 +578,7 @@ class CastSpellEnumerator : ActionEnumerator {
                         tapForGenericPermanents = improviseHelp
                     ))
             } else if (hasDelve && delveCards != null && delveCards.isNotEmpty()) {
-                context.manaSolver.canPay(state, playerId, payableCost, spellContext = spellContext, precomputedSources = cachedSources) ||
+                canPayWithManaAlone ||
                     context.costUtils.canAffordWithDelve(
                         state, playerId, payableCost, delveCards,
                         precomputedSources = cachedSources, spellContext = spellContext
@@ -586,7 +590,7 @@ class CastSpellEnumerator : ActionEnumerator {
                     ))
             } else if (mandatoryWaterbend) {
                 // payableCost already includes the mandatory waterbend {N}; taps can cover up to {N}.
-                context.manaSolver.canPay(state, playerId, payableCost, spellContext = spellContext, precomputedSources = cachedSources) ||
+                canPayWithManaAlone ||
                     context.costUtils.canAffordWithTapForGeneric(
                         state, playerId, payableCost,
                         waterbendPermanents.take(spellWaterbend.amount),
@@ -595,13 +599,13 @@ class CastSpellEnumerator : ActionEnumerator {
             } else if (improviseHelp.isNotEmpty()) {
                 // CR 702.126a: each tapped artifact pays {1} of the *generic* in the total cost,
                 // so the colored pips still have to come from mana.
-                context.manaSolver.canPay(state, playerId, payableCost, spellContext = spellContext, precomputedSources = cachedSources) ||
+                canPayWithManaAlone ||
                     context.costUtils.canAffordWithTapForGeneric(
                         state, playerId, payableCost, improviseHelp,
                         precomputedSources = cachedSources, spellContext = spellContext
                     )
             } else {
-                context.manaSolver.canPay(state, playerId, payableCost, spellContext = spellContext, precomputedSources = cachedSources)
+                canPayWithManaAlone
             }
 
             // Check alternative casting cost affordability (e.g., Jodah's {W}{U}{B}{R}{G}, or
@@ -1225,6 +1229,7 @@ class CastSpellEnumerator : ActionEnumerator {
                                 maxAffordableX = maxAffordableX,
                                 additionalCostInfo = costInfo,
                                 hasConvoke = hasConvoke,
+                                canPayWithoutConvoke = hasConvoke && canPayWithManaAlone,
                                 convokeCreatures = convokeCreatures,
                                 hasDelve = hasDelve,
                                 delveCards = delveCards,
@@ -1334,6 +1339,7 @@ class CastSpellEnumerator : ActionEnumerator {
                                 maxAffordableX = maxAffordableX,
                                 additionalCostInfo = costInfo,
                                 hasConvoke = hasConvoke,
+                                canPayWithoutConvoke = hasConvoke && canPayWithManaAlone,
                                 convokeCreatures = convokeCreatures,
                                 hasDelve = hasDelve,
                                 delveCards = delveCards,
@@ -1507,6 +1513,7 @@ class CastSpellEnumerator : ActionEnumerator {
                         maxAffordableX = maxAffordableX,
                         additionalCostInfo = costInfo,
                         hasConvoke = hasConvoke,
+                        canPayWithoutConvoke = hasConvoke && canPayWithManaAlone,
                         convokeCreatures = convokeCreatures,
                         hasDelve = hasDelve,
                         delveCards = delveCards,

@@ -8,6 +8,8 @@ import com.wingedsheep.engine.core.GameAction
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
 import com.wingedsheep.sdk.model.EntityId
+import com.wingedsheep.sdk.scripting.AlternativePaymentChoice
+import com.wingedsheep.sdk.scripting.ConvokePayment
 import kotlinx.serialization.Serializable
 
 /**
@@ -29,8 +31,8 @@ import kotlinx.serialization.Serializable
  * Not expressible here, deliberately — each has its own channel:
  * - Complex decisions (target-selection pauses, damage assignment, ordering, …) → `POST
  *   /envs/{id}/decision` with a typed `DecisionResponse`.
- * - Attacking bands (CR 702.22), alternative/additional cost payments, convoke/delve/improvise
- *   selections. A step carrying params for an action that can't use them is rejected with a
+ * - Attacking bands (CR 702.22), additional costs and alternative payments other than convoke.
+ *   A step carrying params for an action that can't use them is rejected with a
  *   message naming the action, never ignored.
  *
  * @property attackers attacker entity id → the player, planeswalker or battle it attacks.
@@ -41,6 +43,8 @@ import kotlinx.serialization.Serializable
  * @property xValue The value chosen for X.
  * @property damageDistribution Target entity id → damage assigned to it for a spell or activated
  *   ability whose legal-action view has `requiresDamageDistribution = true`.
+ * @property convokePayments Creature entity id → how it pays (a color or generic). This is an
+ *   explicit cast-time choice; omitting it never silently taps a creature.
  */
 @Serializable
 data class ActionParams(
@@ -48,7 +52,8 @@ data class ActionParams(
     val blockers: Map<EntityId, List<EntityId>> = emptyMap(),
     val targets: List<EntityId> = emptyList(),
     val xValue: Int? = null,
-    val damageDistribution: Map<EntityId, Int> = emptyMap()
+    val damageDistribution: Map<EntityId, Int> = emptyMap(),
+    val convokePayments: Map<EntityId, ConvokePayment> = emptyMap()
 ) {
     val isEmpty: Boolean
         get() = populatedFields.isEmpty()
@@ -61,6 +66,7 @@ data class ActionParams(
             if (targets.isNotEmpty()) add("targets")
             if (xValue != null) add("xValue")
             if (damageDistribution.isNotEmpty()) add("damageDistribution")
+            if (convokePayments.isNotEmpty()) add("convokePayments")
         }
 
     companion object {
@@ -92,13 +98,18 @@ object ActionParameterizer {
             }
 
             is CastSpell -> {
-                params.allowOnly(action, "targets", "xValue", "damageDistribution")
+                params.allowOnly(action, "targets", "xValue", "damageDistribution", "convokePayments")
                 action.copy(
                     targets = params.targets.map { resolveTarget(it, state) }
                         .ifEmpty { action.targets },
                     xValue = params.xValue ?: action.xValue,
                     damageDistribution = params.damageDistribution.takeIf { it.isNotEmpty() }
-                        ?: action.damageDistribution
+                        ?: action.damageDistribution,
+                    alternativePayment = if (params.convokePayments.isNotEmpty()) {
+                        (action.alternativePayment ?: AlternativePaymentChoice.NONE).copy(
+                            convokedCreatures = params.convokePayments
+                        )
+                    } else action.alternativePayment
                 )
             }
 

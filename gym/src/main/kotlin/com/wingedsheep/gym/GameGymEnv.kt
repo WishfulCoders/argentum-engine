@@ -2,6 +2,7 @@ package com.wingedsheep.gym
 
 import com.wingedsheep.ai.engine.AIPlayer
 import com.wingedsheep.ai.engine.AiProfiles
+import com.wingedsheep.ai.engine.GameSimulator
 import com.wingedsheep.engine.core.DecisionResponse
 import com.wingedsheep.engine.core.GameConfig
 import com.wingedsheep.engine.core.SubmitDecision
@@ -10,6 +11,7 @@ import com.wingedsheep.gym.contract.ActionParams
 import com.wingedsheep.gym.contract.ActionRegistry
 import com.wingedsheep.gym.contract.ObservationBuilder
 import com.wingedsheep.gym.contract.ObservationResult
+import com.wingedsheep.gym.contract.PolicyActionBoundary
 import com.wingedsheep.gym.contract.ResolvedAction
 import com.wingedsheep.gym.service.AgentSpec
 import com.wingedsheep.gym.service.EnvLimits
@@ -51,6 +53,7 @@ class GameGymEnv(
 
     /** The engine's AI for each seat that needs one: every pilot, and every learner's decisions. */
     private val players = mutableMapOf<EntityId, AIPlayer>()
+    private val policySimulator = GameSimulator(environment.cardRegistry)
 
     /** Pilot actions and delegated learner decisions so far this episode. */
     private var autoAdvanced: Int = 0
@@ -233,8 +236,12 @@ class GameGymEnv(
     private fun build(revealAll: Boolean): ObservationResult {
         val perspective = environment.playerIds.getOrNull(perspectivePlayerIndex)
             ?: throw IllegalStateException("Env has no player at index $perspectivePlayerIndex")
+        val legal = environment.legalActions()
+        val learnerActions = if (agents.isNotEmpty() && environment.agentToAct?.let(::isLearner) == true) {
+            PolicyActionBoundary.mask(legal, environment.state, policySimulator)
+        } else legal
         val result = observationBuilder.build(
-            environment.state, perspective, environment.legalActions(), revealAll
+            environment.state, perspective, learnerActions, revealAll
         )
         registry = result.registry
         return result
@@ -243,6 +250,11 @@ class GameGymEnv(
     private fun executeResolved(resolved: ResolvedAction, actionId: Int, params: ActionParams) {
         when (resolved) {
             is ResolvedAction.Legal -> {
+                if (agents.isNotEmpty()) {
+                    require(resolved.legalAction.affordable) {
+                        "Action $actionId is not callable by the learner policy"
+                    }
+                }
                 // The enumerated action is a template for the action types that need a choice the
                 // ID can't carry (attackers, blockers, targets, X); params complete it.
                 val action = ActionParameterizer.apply(resolved.action, params, environment.state)
