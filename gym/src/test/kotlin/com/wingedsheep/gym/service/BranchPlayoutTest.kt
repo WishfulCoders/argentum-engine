@@ -100,6 +100,52 @@ class BranchPlayoutTest : FunSpec({
         svc.status(created.envId).done.shouldBeFalse()
     }
 
+    test("determinizing is what makes a repeated branch a different world") {
+        val svc = MultiEnvService(registry())
+        val created = svc.create(pilotAnchored(seed = 15L))
+        svc.playout(created.envId, maxLearnerActions = 6)
+
+        // Without a resample, repeating a branch replays one game: the deal was fixed at setup.
+        val (plainA, plainB) = svc.fork(created.envId, 2)
+        svc.playout(plainA)
+        svc.playout(plainB)
+        svc.status(plainA).stepCount shouldBe svc.status(plainB).stepCount
+
+        // With one, each repetition is a world the learner could not have ruled out.
+        val worlds = (1..8).map { rep ->
+            val branch = svc.fork(created.envId, 1).single()
+            svc.determinize(branch, seed = 1_000L + rep)
+            svc.playout(branch)
+            val status = svc.status(branch)
+            Triple(status.stepCount, status.terminated, outcome(svc, branch))
+        }
+
+        // The point of the whole exercise: repetitions must not all agree by construction.
+        worlds.map { it.first }.distinct().size shouldBeGreaterThan 1
+        // ...and every one of them still has to be a real, finishable game.
+        worlds.all { it.second }.shouldBeTrue()
+        worlds.all { it.third.map { reward -> reward.second }.sorted() == listOf(-1.0, 1.0) }
+            .shouldBeTrue()
+    }
+
+    test("a determinized world is the same world for every action compared in it") {
+        val svc = MultiEnvService(registry())
+        val created = svc.create(pilotAnchored(seed = 16L))
+        svc.playout(created.envId, maxLearnerActions = 5)
+
+        // Two branches determinized with the *same* seed are the same world, so a difference
+        // between them is attributable to the action rather than to the deal. That is the
+        // pairing the experiment rests on.
+        val (left, right) = svc.fork(created.envId, 2)
+        svc.determinize(left, seed = 4_242L)
+        svc.determinize(right, seed = 4_242L)
+        svc.playout(left)
+        svc.playout(right)
+
+        outcome(svc, left) shouldBe outcome(svc, right)
+        svc.status(left).stepCount shouldBe svc.status(right).stepCount
+    }
+
     test("branches that take different first actions still both reach a decided terminal") {
         val svc = MultiEnvService(registry())
         val created = svc.create(pilotAnchored(seed = 14L))

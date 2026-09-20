@@ -131,6 +131,16 @@ class MultiEnvService(
         requireGameEnv(envId).playout(maxLearnerActions)
 
     /**
+     * Resample [envId]'s hidden world from the perspective seat's information set.
+     *
+     * A branch repeated without this is the same game twice: the deal is fixed in state from
+     * setup. Varying [seed] between repetitions and holding it fixed across the actions being
+     * compared is what makes a set of branches a measurement rather than a replay.
+     */
+    fun determinize(envId: EnvId, seed: Long): ObservationResult =
+        requireGameEnv(envId).determinize(seed)
+
+    /**
      * Submit a raw `DecisionResponse` for a game env paused on a complex pending
      * decision. Simple decisions are driven via [step] with a folded action ID.
      */

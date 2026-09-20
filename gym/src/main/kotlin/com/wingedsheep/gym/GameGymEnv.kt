@@ -1,6 +1,7 @@
 package com.wingedsheep.gym
 
 import com.wingedsheep.ai.engine.AIPlayer
+import com.wingedsheep.ai.engine.hidden.Determinizer
 import com.wingedsheep.ai.engine.AiProfiles
 import com.wingedsheep.ai.engine.GameSimulator
 import com.wingedsheep.engine.core.DecisionResponse
@@ -18,6 +19,7 @@ import com.wingedsheep.gym.service.EnvLimits
 import com.wingedsheep.gym.service.SnapshotCodec
 import com.wingedsheep.gym.service.SnapshotHandle
 import com.wingedsheep.sdk.model.EntityId
+import com.wingedsheep.sdk.model.GameRng
 
 /**
  * [GymEnv] adapter over a [GameEnvironment] — a game of Magic.
@@ -54,6 +56,7 @@ class GameGymEnv(
     /** The engine's AI for each seat that needs one: every pilot, and every learner's decisions. */
     private val players = mutableMapOf<EntityId, AIPlayer>()
     private val policySimulator = GameSimulator(environment.cardRegistry)
+    private val determinizer = Determinizer(environment.cardRegistry)
 
     /** Pilot actions and delegated learner decisions so far this episode. */
     private var autoAdvanced: Int = 0
@@ -243,6 +246,39 @@ class GameGymEnv(
             "Decision ID mismatch: response=${response.decisionId}, pending=${pending.id}"
         }
         environment.step(SubmitDecision(pending.playerId, response))
+        return build(defaultRevealAll)
+    }
+
+    /**
+     * Resample everything the learner seat cannot see, consistent with what it can.
+     *
+     * Two branches forked from one state and played out are *identical*, because the library was
+     * shuffled once into immutable state at setup — the deal is already fixed at the fork point.
+     * That is what makes a branch comparison paired, and it is also why repeating a branch measures
+     * nothing on its own: the repeat is the same game.
+     *
+     * A repeat has to vary what the player does not know. Determinizing first gives each repetition
+     * a different hidden world drawn from the same information set, so a set of branches answers
+     * "is this action better over the deals I cannot rule out" rather than "was it better in this
+     * one deal". Hold [seed] fixed across the actions being compared and vary it between
+     * repetitions, and the comparison is paired within a world and independent across worlds.
+     *
+     * Entities and zone membership are untouched; only hidden identities and opponent library
+     * order are sampled, so pending decisions and continuations stay valid. The seats' AIs are
+     * rebuilt, because their short-lived memory is of a world that no longer exists.
+     */
+    fun determinize(seed: Long): ObservationResult {
+        check(truncation == null) { "Env was truncated ($truncation); reset it before determinizing" }
+        check(!isTerminal) { "Env is terminal; there is no hidden world left to sample" }
+        val viewer = environment.playerIds[perspectivePlayerIndex]
+        val sampled = determinizer.sample(
+            environment.state,
+            viewer,
+            emptyMap(),
+            GameRng.seeded(seed),
+        )
+        environment.restore(sampled, environment.playerIds, environment.stepCount)
+        players.clear()
         return build(defaultRevealAll)
     }
 

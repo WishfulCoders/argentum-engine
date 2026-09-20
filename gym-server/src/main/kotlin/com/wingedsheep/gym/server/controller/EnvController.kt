@@ -328,6 +328,25 @@ class EnvController(
         return PlayoutResult(result.observation, multiEnvService.status(EnvId(id)))
     }
 
+    @Operation(
+        summary = "Resample the hidden world from the perspective seat's information set",
+        description = """
+            Only hidden card identities and opponent library order change; entities, zone
+            membership and pending decisions are preserved.
+
+            Two branches forked from one state play out identically, because the deal was fixed
+            when the game was set up. Determinizing with a different `seed` is what makes a repeated
+            branch a different world rather than the same game again -- hold the seed fixed across
+            the actions being compared, vary it between repetitions.
+        """
+    )
+    @PostMapping("/{id}/determinize")
+    fun determinize(
+        @PathVariable id: String,
+        @RequestParam seed: Long,
+    ): Observation =
+        multiEnvService.determinize(EnvId(id), seed).observation
+
     // =========================================================================
     // Fork / snapshot / restore
     // =========================================================================
