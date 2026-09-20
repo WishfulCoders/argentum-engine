@@ -452,9 +452,13 @@ server:
 # `determinize` is on because a human is in the other seat: without it the evaluator reads card names
 # out of BOTH hands for removalInHandDifference (docs/44 §4). Drop that token to reproduce the seat
 # docs/28 §9 measured. A correction that fails to load fails the boot.
+# `fixing` is on because this is the collection profile (docs/46 §12.2): it makes the AI see mana
+# colours, worth +2.7 pp of play strength, and the games recorded here are supposed to be played by
+# the strongest pilot we have. It makes the engine a WORSE grader, so never assume it into a docs/33
+# grading run. Games recorded under different tokens are not one corpus — check the startup line.
 # Pair with `just client`, or use `just dev-pilot` for both.
 [group: 'dev']
-pilot PROFILE="raceclock+timing+correction-actions+determinize" DIR="$HOME/mtg/models/rc2_actions":
+pilot PROFILE="raceclock+timing+correction-actions+determinize+fixing" DIR="$HOME/mtg/models/rc2_actions":
     @if [ -f .env ]; then set -a && . ./.env && set +a; fi && \
       GAME_AI_PROFILE="{{PROFILE}}" \
       GAME_REPLAY_EXPORT_DIR="${GAME_REPLAY_EXPORT_DIR:-$HOME/mtg/artifacts/engine_games/$(date +%Y-%m-%d)/replays}" \
@@ -465,7 +469,7 @@ pilot PROFILE="raceclock+timing+correction-actions+determinize" DIR="$HOME/mtg/m
 
 # `just pilot` and the web client together
 [group: 'dev']
-dev-pilot PROFILE="raceclock+timing+correction-actions+determinize":
+dev-pilot PROFILE="raceclock+timing+correction-actions+determinize+fixing":
     #!/usr/bin/env bash
     set -euo pipefail
     just pilot "{{PROFILE}}" &
