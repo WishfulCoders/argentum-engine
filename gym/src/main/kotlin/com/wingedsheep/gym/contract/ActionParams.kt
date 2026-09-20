@@ -32,7 +32,7 @@ import kotlinx.serialization.Serializable
  * Not expressible here, deliberately — each has its own channel:
  * - Complex decisions (target-selection pauses, damage assignment, ordering, …) → `POST
  *   /envs/{id}/decision` with a typed `DecisionResponse`.
- * - Attacking bands and additional cost selections other than the bounded Blight recipient;
+ * - Attacking bands and additional cost selections other than the bounded Blight and tap payments;
  *   alternative payments other than convoke.
  *   A step carrying params for an action that can't use them is rejected with a
  *   message naming the action, never ignored.
@@ -48,6 +48,7 @@ import kotlinx.serialization.Serializable
  * @property convokePayments Creature entity id → how it pays (a color or generic). This is an
  *   explicit cast-time choice; omitting it never silently taps a creature.
  * @property blightTarget Creature chosen to receive the activation cost's -1/-1 counters.
+ * @property tappedPermanents Permanents chosen to pay a TapPermanents activation cost.
  */
 @Serializable
 data class ActionParams(
@@ -58,6 +59,7 @@ data class ActionParams(
     val damageDistribution: Map<EntityId, Int> = emptyMap(),
     val convokePayments: Map<EntityId, ConvokePayment> = emptyMap(),
     val blightTarget: EntityId? = null,
+    val tappedPermanents: List<EntityId> = emptyList(),
 ) {
     val isEmpty: Boolean
         get() = populatedFields.isEmpty()
@@ -72,6 +74,7 @@ data class ActionParams(
             if (damageDistribution.isNotEmpty()) add("damageDistribution")
             if (convokePayments.isNotEmpty()) add("convokePayments")
             if (blightTarget != null) add("blightTarget")
+            if (tappedPermanents.isNotEmpty()) add("tappedPermanents")
         }
 
     companion object {
@@ -119,16 +122,22 @@ object ActionParameterizer {
             }
 
             is ActivateAbility -> {
-                params.allowOnly(action, "targets", "xValue", "damageDistribution", "blightTarget")
+                params.allowOnly(action, "targets", "xValue", "damageDistribution", "blightTarget", "tappedPermanents")
                 action.copy(
                     targets = params.targets.map { resolveTarget(it, state) }
                         .ifEmpty { action.targets },
                     xValue = params.xValue ?: action.xValue,
                     damageDistribution = params.damageDistribution.takeIf { it.isNotEmpty() }
                         ?: action.damageDistribution,
-                    costPayment = params.blightTarget?.let { target ->
-                        (action.costPayment ?: AdditionalCostPayment()).copy(blightTargets = listOf(target))
-                    } ?: action.costPayment,
+                    costPayment = if (params.blightTarget != null || params.tappedPermanents.isNotEmpty()) {
+                        (action.costPayment ?: AdditionalCostPayment()).copy(
+                            blightTargets = params.blightTarget?.let { listOf(it) }
+                                ?: action.costPayment?.blightTargets.orEmpty(),
+                            tappedPermanents = params.tappedPermanents.ifEmpty {
+                                action.costPayment?.tappedPermanents.orEmpty()
+                            },
+                        )
+                    } else action.costPayment,
                 )
             }
 

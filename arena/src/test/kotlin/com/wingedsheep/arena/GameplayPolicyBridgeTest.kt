@@ -91,6 +91,14 @@ class GameplayPolicyBridgeTest : FunSpec({
             )),
         ) shouldBe false
         GameplayPolicyBridge.policyCallable(
+            selfCost.copy(
+                additionalCostInfo = selfPayment.copy(
+                    costType = "TapPermanents", validTapTargets = listOf(source), tapCount = 1,
+                ),
+                policyTapPaymentOptions = listOf(listOf(source)),
+            ),
+        ) shouldBe true
+        GameplayPolicyBridge.policyCallable(
             selfCost.copy(additionalCostInfo = selfPayment.copy(
                 validSacrificeTargets = listOf(EntityId("other")),
             )),

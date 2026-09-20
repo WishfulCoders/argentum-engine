@@ -12,6 +12,7 @@ import com.wingedsheep.engine.legalactions.AdditionalCostData
 import com.wingedsheep.engine.legalactions.LegalAction
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.components.battlefield.CountersComponent
+import com.wingedsheep.engine.state.components.battlefield.TappedComponent
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
 import com.wingedsheep.gym.GameEnvironment
@@ -19,6 +20,7 @@ import com.wingedsheep.gym.GameGymEnv
 import com.wingedsheep.gym.service.AgentSpec
 import com.wingedsheep.mtg.sets.definitions.por.PortalSet
 import com.wingedsheep.mtg.sets.definitions.ecl.cards.GristleGlutton
+import com.wingedsheep.mtg.sets.definitions.lci.cards.AdaptiveGemguard
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Step
@@ -214,6 +216,58 @@ class PolicyActionBoundaryTest : FunSpec({
         environment.lastRejection shouldBe null
         environment.state.getEntity(bear)?.get<CountersComponent>()
             ?.getCount(CounterType.MINUS_ONE_MINUS_ONE) shouldBe 1
+    }
+
+    test("bounded TapPermanents selections preflight and match the learner gym") {
+        val driver = GameTestDriver()
+        driver.registerCards(TestCards.all)
+        driver.registerCard(AdaptiveGemguard)
+        driver.initMirrorMatch(deck = Deck.of("Plains" to 40), skipMulligans = true)
+        val player = driver.activePlayer!!
+        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
+        val gemguard = driver.putCreatureOnBattlefield(player, "Adaptive Gemguard")
+        val first = driver.putCreatureOnBattlefield(player, "Grizzly Bears")
+        val second = driver.putCreatureOnBattlefield(player, "Grizzly Bears")
+        listOf(gemguard, first, second).forEach(driver::removeSummoningSickness)
+        val simulator = GameSimulator(driver.cardRegistry)
+        val legal = LegalActionEnumerator.create(driver.cardRegistry)
+            .enumerate(driver.state, player, EnumerationMode.ACTIONS_ONLY)
+        val bare = legal.first { (it.action as? ActivateAbility)?.sourceId == gemguard }
+        PolicyActionBoundary.callable(bare) shouldBe false
+
+        val masked = PolicyActionBoundary.mask(legal, driver.state, simulator)
+        val ability = masked.first { (it.action as? ActivateAbility)?.sourceId == gemguard }
+        ability.affordable shouldBe true
+        ability.policyTapPaymentOptions.any { it.toSet() == setOf(first, second) } shouldBe true
+        ability.policyTapPaymentOptions.forEach { selection ->
+            selection.size shouldBe 2
+            val completed = ActionParameterizer.apply(
+                ability.action, ActionParams(tappedPermanents = selection), driver.state,
+            )
+            simulator.accepts(driver.state, completed) shouldBe true
+        }
+        val view = ObservationBuilder(driver.cardRegistry).build(driver.state, player, masked)
+            .observation as TrainingObservation
+        val option = view.legalActions.first { it.sourceEntityId == gemguard && it.kind == "ActivateAbility" }
+        option.tapCount shouldBe 2
+        option.tapPaymentOptions shouldBe ability.policyTapPaymentOptions
+
+        val environment = GameEnvironment.create(driver.cardRegistry)
+        environment.restore(driver.state, listOf(driver.player1, driver.player2))
+        val gym = GameGymEnv(
+            environment, perspectivePlayerIndex = 0, defaultRevealAll = false,
+            agents = listOf(AgentSpec.Learner(), AgentSpec.Learner()),
+        )
+        (gym.observe().observation as TrainingObservation).legalActions shouldBe view.legalActions
+        shouldThrow<IllegalArgumentException> { gym.step(option.actionId) }
+        shouldThrow<IllegalArgumentException> {
+            gym.step(option.actionId, ActionParams(tappedPermanents = listOf(first)))
+        }
+        val selection = option.tapPaymentOptions.first { it.toSet() == setOf(first, second) }
+        gym.step(option.actionId, ActionParams(tappedPermanents = selection))
+        environment.lastRejection shouldBe null
+        environment.state.getEntity(first)?.has<TappedComponent>() shouldBe true
+        environment.state.getEntity(second)?.has<TappedComponent>() shouldBe true
     }
 
     test("learner gym action views match the arena-style mask entry by entry") {

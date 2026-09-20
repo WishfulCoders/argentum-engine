@@ -483,6 +483,8 @@ class ObservationBuilder(
             isManaAbility = la.isManaAbility,
             blightTargetOptions = la.policyBlightTargetOptions,
             blightAmount = la.additionalCostInfo?.takeIf { it.costType == "Blight" }?.blightAmount ?: 0,
+            tapPaymentOptions = la.policyTapPaymentOptions,
+            tapCount = la.additionalCostInfo?.takeIf { it.costType == "TapPermanents" }?.tapCount ?: 0,
             convokePaymentOptions = la.policyConvokePaymentOptions,
             hasConvoke = la.hasConvoke,
             canPayWithoutConvoke = la.canPayWithoutConvoke,

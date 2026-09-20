@@ -23,6 +23,13 @@ object PolicyActionBoundary {
         require(options.isEmpty() || params.blightTarget != null) {
             "Blight activation requires blightTarget"
         }
+        val tapOptions = action.policyTapPaymentOptions
+        require(params.tappedPermanents.isEmpty() || params.tappedPermanents in tapOptions) {
+            "tappedPermanents is not an engine-checked option for this action"
+        }
+        require(tapOptions.isEmpty() || params.tappedPermanents.isNotEmpty()) {
+            "TapPermanents activation requires tappedPermanents"
+        }
     }
 
     fun callable(action: LegalAction): Boolean =
@@ -49,8 +56,40 @@ object PolicyActionBoundary {
             if (action.additionalCostInfo?.costType == "Blight") {
                 prepared = prepared.copy(policyBlightTargetOptions = blightOptions(action, state, simulator))
             }
+            if (action.additionalCostInfo?.costType == "TapPermanents") {
+                prepared = prepared.copy(policyTapPaymentOptions = tapOptions(action, state, simulator))
+            }
             prepared
         })
+
+    /** At most 56 selections: eight candidates choose up to three permanents. */
+    private fun tapOptions(
+        action: LegalAction, state: GameState, simulator: GameSimulator,
+    ): List<List<EntityId>> {
+        val activation = action.action as? ActivateAbility ?: return emptyList()
+        val info = action.additionalCostInfo ?: return emptyList()
+        if (!action.affordable || action.hasXCost || action.requiresTargets ||
+            action.targetRequirements.orEmpty().isNotEmpty() || action.hasConvoke || action.hasDelve ||
+            action.hasTapForGeneric || action.hasHarmonize || action.requiresManaColorChoice ||
+            info.costType != "TapPermanents" || info.tapCount !in 1..MAX_TAP_COUNT ||
+            info.tapBatchMaxActivations != 1 || info.validTapTargets.size > MAX_TAP_CANDIDATES
+        ) return emptyList()
+        val candidates = info.validTapTargets.distinct().sortedBy { it.value }
+        val accepted = mutableListOf<List<EntityId>>()
+        fun visit(start: Int, chosen: List<EntityId>) {
+            if (chosen.size == info.tapCount) {
+                val payment = (activation.costPayment ?: AdditionalCostPayment())
+                    .copy(tappedPermanents = chosen)
+                if (simulator.accepts(state, activation.copy(costPayment = payment))) {
+                    accepted.add(chosen)
+                }
+                return
+            }
+            for (index in start until candidates.size) visit(index + 1, chosen + candidates[index])
+        }
+        visit(0, emptyList())
+        return accepted
+    }
 
     /** Only a simple, untargeted activation can be preflighted as a complete move here. */
     private fun blightOptions(
@@ -158,6 +197,8 @@ object PolicyActionBoundary {
     private const val MAX_PREFLIGHTS = 128
     private const val MAX_OPTIONS = 4
     private const val MAX_BLIGHT_CANDIDATES = 8
+    private const val MAX_TAP_CANDIDATES = 8
+    private const val MAX_TAP_COUNT = 3
 
     private fun additionalCostCallable(action: LegalAction): Boolean {
         val info = action.additionalCostInfo ?: return true
@@ -166,6 +207,7 @@ object PolicyActionBoundary {
         val activation = action.action as? ActivateAbility ?: return false
         return when (info.costType) {
             "Blight" -> action.policyBlightTargetOptions.isNotEmpty()
+            "TapPermanents" -> action.policyTapPaymentOptions.isNotEmpty()
             "SacrificeSelf" -> info.sacrificeCount == 1 &&
                 info.validSacrificeTargets == listOf(activation.sourceId) &&
                 info.counterRemovalCreatures.isEmpty()
