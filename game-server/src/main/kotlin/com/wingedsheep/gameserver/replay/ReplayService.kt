@@ -188,7 +188,7 @@ class ReplayService(
         runCatching {
             val dir = Path.of(exportDir)
             Files.createDirectories(dir)
-            val file = dir.resolve("\${replay.gameId}.json")
+            val file = dir.resolve("${replay.gameId}.json")
             Files.writeString(file, persistenceJson.encodeToString(CompactReplay.serializer(), replay))
             logger.info("Exported replay {} ({} actions) to {}", replay.gameId, replay.actions.size, file)
         }.onFailure { logger.error("Could not export replay {}: {}", replay.gameId, it.message) }
