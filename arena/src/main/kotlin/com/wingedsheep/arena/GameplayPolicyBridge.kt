@@ -150,6 +150,9 @@ class GameplayPolicyBridge(
                 require(ranked.action !is com.wingedsheep.engine.core.PassPriority) {
                     "gameplay policy included pass in non-pass ranking"
                 }
+                require(ranked.legalAction.affordable) {
+                    "gameplay policy ranked masked action ID $id"
+                }
                 ranked.legalAction
             }
         } else emptyList()
@@ -159,6 +162,9 @@ class GameplayPolicyBridge(
         val resolved = built.registry.resolve(actionId)
         val action = when (resolved) {
             is ResolvedAction.Legal -> {
+                require(resolved.legalAction.affordable) {
+                    "gameplay policy returned masked action ID $actionId"
+                }
                 PolicyActionBoundary.requirePolicyPayment(resolved.legalAction, response.params)
                 ActionParameterizer.apply(resolved.action, response.params, state)
             }
