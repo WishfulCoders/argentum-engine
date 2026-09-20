@@ -19,6 +19,7 @@ import com.wingedsheep.gym.GameEnvironment
 import com.wingedsheep.gym.GameGymEnv
 import com.wingedsheep.gym.service.AgentSpec
 import com.wingedsheep.mtg.sets.definitions.por.PortalSet
+import com.wingedsheep.mtg.sets.tokens.PredefinedTokens
 import com.wingedsheep.mtg.sets.definitions.ecl.cards.GristleGlutton
 import com.wingedsheep.mtg.sets.definitions.lci.cards.AdaptiveGemguard
 import com.wingedsheep.mtg.sets.definitions.tdm.cards.MoltenExhale
@@ -30,6 +31,7 @@ import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.model.CardDefinition
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
+import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.scripting.AbilityId
 import com.wingedsheep.sdk.scripting.ChoiceSlot
 import com.wingedsheep.sdk.scripting.ConvokePayment
@@ -170,6 +172,55 @@ class PolicyActionBoundaryTest : FunSpec({
         gymView.legalActions shouldBe view.legalActions
         gym.step(option.actionId, ActionParams(convokePayments = option.convokePaymentOptions.first()))
         environment.lastRejection shouldBe null
+    }
+
+    test("Treasure-only casts match arena staging and complete in the learner gym") {
+        val ogre = card("Policy Treasure Ogre") {
+            manaCost = "{2}{R}"
+            typeLine = "Creature — Ogre"
+            power = 3
+            toughness = 3
+        }
+        val driver = GameTestDriver()
+        driver.registerCards(TestCards.all + listOf(ogre, PredefinedTokens.Treasure))
+        driver.initMirrorMatch(Deck.of(ogre.name to 40), skipMulligans = true)
+        val player = driver.activePlayer!!
+        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
+        repeat(2) { driver.putLandOnBattlefield(player, "Mountain") }
+        val treasure = driver.putPermanentOnBattlefield(player, "Treasure")
+        driver.untapPermanent(treasure)
+        val spell = driver.putCardInHand(player, ogre.name)
+
+        val simulator = GameSimulator(driver.cardRegistry)
+        val legal = LegalActionEnumerator.create(driver.cardRegistry)
+            .enumerate(driver.state, player, EnumerationMode.ACTIONS_ONLY)
+        val cast = PolicyActionBoundary.mask(legal, driver.state, simulator)
+            .first { (it.action as? CastSpell)?.cardId == spell }
+        cast.affordable shouldBe true
+        val completed = cast.action
+        simulator.accepts(driver.state, completed) shouldBe false
+        val staged = requireNotNull(simulator.floatSacrificeMana(driver.state, completed))
+        staged.activations.size shouldBe 1
+        staged.activations.single().sourceId shouldBe treasure
+
+        val arenaView = ObservationBuilder(driver.cardRegistry)
+            .build(driver.state, player, PolicyActionBoundary.mask(legal, driver.state, simulator))
+        val environment = GameEnvironment.create(driver.cardRegistry)
+        environment.restore(driver.state, listOf(driver.player1, driver.player2))
+        val gym = GameGymEnv(
+            environment, perspectivePlayerIndex = 0, defaultRevealAll = false,
+            agents = listOf(AgentSpec.Learner(), AgentSpec.Learner()),
+        )
+        val gymView = gym.observe()
+        (gymView.observation as TrainingObservation).legalActions shouldBe
+            (arenaView.observation as TrainingObservation).legalActions
+        gymView.registry.legalActions shouldBe arenaView.registry.legalActions
+        val actionId = gymView.observation.legalActions
+            .single { it.sourceEntityId == spell && it.kind == "CastSpell" }.actionId
+        gym.step(actionId)
+        environment.lastRejection shouldBe null
+        (treasure in environment.state.getBattlefield()) shouldBe false
+        (spell in environment.state.getHand(player)) shouldBe false
     }
 
     test("Blight options match the arena and learner gym and pay the chosen creature") {
