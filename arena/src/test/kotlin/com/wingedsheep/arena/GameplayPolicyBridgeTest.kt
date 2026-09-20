@@ -74,7 +74,7 @@ class GameplayPolicyBridgeTest : FunSpec({
         ) shouldBe false
     }
 
-    test("only automatic self-sacrifice additional costs enter the policy boundary") {
+    test("additional costs enter only with automatic or preflighted payment") {
         val source = EntityId("source")
         val ability = ActivateAbility(player, source, AbilityId("activated"))
         val selfPayment = AdditionalCostData(
@@ -101,6 +101,13 @@ class GameplayPolicyBridgeTest : FunSpec({
             )),
         ) shouldBe false
         GameplayPolicyBridge.policyCallable(selfCost.copy(hasConvoke = true)) shouldBe false
+        val blight = selfCost.copy(additionalCostInfo = AdditionalCostData(
+            "Blight one", "Blight", validBlightTargets = listOf(source), blightAmount = 1,
+        ))
+        GameplayPolicyBridge.policyCallable(blight) shouldBe false
+        GameplayPolicyBridge.policyCallable(
+            blight.copy(policyBlightTargetOptions = listOf(source)),
+        ) shouldBe true
     }
 
     test("shadow-teacher telemetry uses stable coarse action families") {

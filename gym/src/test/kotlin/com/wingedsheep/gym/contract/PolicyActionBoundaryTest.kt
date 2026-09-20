@@ -11,13 +11,16 @@ import com.wingedsheep.engine.legalactions.LegalActionEnumerator
 import com.wingedsheep.engine.legalactions.AdditionalCostData
 import com.wingedsheep.engine.legalactions.LegalAction
 import com.wingedsheep.engine.registry.CardRegistry
+import com.wingedsheep.engine.state.components.battlefield.CountersComponent
 import com.wingedsheep.engine.support.GameTestDriver
 import com.wingedsheep.engine.support.TestCards
 import com.wingedsheep.gym.GameEnvironment
 import com.wingedsheep.gym.GameGymEnv
 import com.wingedsheep.gym.service.AgentSpec
 import com.wingedsheep.mtg.sets.definitions.por.PortalSet
+import com.wingedsheep.mtg.sets.definitions.ecl.cards.GristleGlutton
 import com.wingedsheep.sdk.core.Color
+import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Step
 import com.wingedsheep.sdk.model.Deck
 import com.wingedsheep.sdk.model.EntityId
@@ -161,6 +164,56 @@ class PolicyActionBoundaryTest : FunSpec({
         gymView.legalActions shouldBe view.legalActions
         gym.step(option.actionId, ActionParams(convokePayments = option.convokePaymentOptions.first()))
         environment.lastRejection shouldBe null
+    }
+
+    test("Blight options match the arena and learner gym and pay the chosen creature") {
+        val driver = GameTestDriver()
+        driver.registerCards(TestCards.all)
+        driver.registerCard(GristleGlutton)
+        driver.initMirrorMatch(deck = Deck.of("Mountain" to 40), skipMulligans = true)
+        val player = driver.activePlayer!!
+        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
+        val glutton = driver.putCreatureOnBattlefield(player, "Gristle Glutton")
+        val bear = driver.putCreatureOnBattlefield(player, "Grizzly Bears")
+        driver.removeSummoningSickness(glutton)
+        val simulator = GameSimulator(driver.cardRegistry)
+        val legal = LegalActionEnumerator.create(driver.cardRegistry)
+            .enumerate(driver.state, player, EnumerationMode.ACTIONS_ONLY)
+        val bare = legal.first { (it.action as? ActivateAbility)?.sourceId == glutton }
+        PolicyActionBoundary.callable(bare) shouldBe false
+
+        val masked = PolicyActionBoundary.mask(legal, driver.state, simulator)
+        val ability = masked.first { (it.action as? ActivateAbility)?.sourceId == glutton }
+        ability.affordable shouldBe true
+        ability.policyBlightTargetOptions shouldBe listOf(bear, glutton).sortedBy { it.value }
+        ability.policyBlightTargetOptions.forEach { target ->
+            val completed = ActionParameterizer.apply(
+                ability.action, ActionParams(blightTarget = target), driver.state,
+            )
+            simulator.accepts(driver.state, completed) shouldBe true
+        }
+        val view = ObservationBuilder(driver.cardRegistry).build(driver.state, player, masked)
+            .observation as TrainingObservation
+        val option = view.legalActions.first { it.sourceEntityId == glutton && it.kind == "ActivateAbility" }
+        option.blightTargetOptions shouldBe ability.policyBlightTargetOptions
+        option.blightAmount shouldBe 1
+
+        val environment = GameEnvironment.create(driver.cardRegistry)
+        environment.restore(driver.state, listOf(driver.player1, driver.player2))
+        val gym = GameGymEnv(
+            environment, perspectivePlayerIndex = 0, defaultRevealAll = false,
+            agents = listOf(AgentSpec.Learner(), AgentSpec.Learner()),
+        )
+        val gymView = gym.observe().observation as TrainingObservation
+        gymView.legalActions shouldBe view.legalActions
+        shouldThrow<IllegalArgumentException> { gym.step(option.actionId) }
+        shouldThrow<IllegalArgumentException> {
+            gym.step(option.actionId, ActionParams(blightTarget = EntityId("not-a-candidate")))
+        }
+        gym.step(option.actionId, ActionParams(blightTarget = bear))
+        environment.lastRejection shouldBe null
+        environment.state.getEntity(bear)?.get<CountersComponent>()
+            ?.getCount(CounterType.MINUS_ONE_MINUS_ONE) shouldBe 1
     }
 
     test("learner gym action views match the arena-style mask entry by entry") {

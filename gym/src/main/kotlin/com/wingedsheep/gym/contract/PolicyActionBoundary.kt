@@ -9,11 +9,22 @@ import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.ManaSymbol
 import com.wingedsheep.sdk.model.EntityId
+import com.wingedsheep.sdk.scripting.AdditionalCostPayment
 import com.wingedsheep.sdk.scripting.AlternativePaymentChoice
 import com.wingedsheep.sdk.scripting.ConvokePayment
 
 /** The action mask shared by the arena BC bridge and learner-seat gym observations. */
 object PolicyActionBoundary {
+    fun requirePolicyPayment(action: LegalAction, params: ActionParams) {
+        val options = action.policyBlightTargetOptions
+        require(params.blightTarget == null || params.blightTarget in options) {
+            "blightTarget is not an engine-checked option for this action"
+        }
+        require(options.isEmpty() || params.blightTarget != null) {
+            "Blight activation requires blightTarget"
+        }
+    }
+
     fun callable(action: LegalAction): Boolean =
         action.actionType !in setOf("CrewVehicle", "SaddleMount") &&
             additionalCostCallable(action) &&
@@ -31,10 +42,33 @@ object PolicyActionBoundary {
     /** Share the same bounded, engine-checked convoke choices with arena and learner gym. */
     fun mask(actions: List<LegalAction>, state: GameState, simulator: GameSimulator): List<LegalAction> =
         mask(actions.map { action ->
+            var prepared = action
             if (action.hasConvoke && !action.canPayWithoutConvoke) {
-                action.copy(policyConvokePaymentOptions = convokeOptions(action, state, simulator))
-            } else action
+                prepared = prepared.copy(policyConvokePaymentOptions = convokeOptions(action, state, simulator))
+            }
+            if (action.additionalCostInfo?.costType == "Blight") {
+                prepared = prepared.copy(policyBlightTargetOptions = blightOptions(action, state, simulator))
+            }
+            prepared
         })
+
+    /** Only a simple, untargeted activation can be preflighted as a complete move here. */
+    private fun blightOptions(
+        action: LegalAction, state: GameState, simulator: GameSimulator,
+    ): List<EntityId> {
+        val activation = action.action as? ActivateAbility ?: return emptyList()
+        val info = action.additionalCostInfo ?: return emptyList()
+        if (!action.affordable || action.hasXCost || action.requiresTargets ||
+            action.targetRequirements.orEmpty().isNotEmpty() ||
+            action.hasConvoke || action.hasDelve || action.hasTapForGeneric || action.hasHarmonize ||
+            action.requiresManaColorChoice || info.costType != "Blight" || info.blightAmount <= 0 ||
+            info.validBlightTargets.size > MAX_BLIGHT_CANDIDATES
+        ) return emptyList()
+        return info.validBlightTargets.sortedBy { it.value }.filter { target ->
+            simulator.accepts(state, activation.copy(costPayment =
+                (activation.costPayment ?: AdditionalCostPayment()).copy(blightTargets = listOf(target))))
+        }
+    }
 
     private fun convokeCallable(action: LegalAction): Boolean = !action.hasConvoke ||
         (action.actionType == "CastSpell" && !action.hasXCost &&
@@ -123,15 +157,19 @@ object PolicyActionBoundary {
     private const val MAX_CREATURES = 7
     private const val MAX_PREFLIGHTS = 128
     private const val MAX_OPTIONS = 4
+    private const val MAX_BLIGHT_CANDIDATES = 8
 
     private fun additionalCostCallable(action: LegalAction): Boolean {
         val info = action.additionalCostInfo ?: return true
-        // The source is the only possible payment and CostHandler performs it itself. No
-        // ActionParams selection is missing, unlike tap/discard/sacrifice-another choices.
+        // SacrificeSelf needs no parameter only when the source is its sole payment; Blight
+        // needs an engine-checked recipient before the policy may submit it.
         val activation = action.action as? ActivateAbility ?: return false
-        return info.costType == "SacrificeSelf" &&
-            info.sacrificeCount == 1 &&
-            info.validSacrificeTargets == listOf(activation.sourceId) &&
-            info.counterRemovalCreatures.isEmpty()
+        return when (info.costType) {
+            "Blight" -> action.policyBlightTargetOptions.isNotEmpty()
+            "SacrificeSelf" -> info.sacrificeCount == 1 &&
+                info.validSacrificeTargets == listOf(activation.sourceId) &&
+                info.counterRemovalCreatures.isEmpty()
+            else -> false
+        }
     }
 }

@@ -8,6 +8,7 @@ import com.wingedsheep.engine.core.GameAction
 import com.wingedsheep.engine.state.GameState
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
 import com.wingedsheep.sdk.model.EntityId
+import com.wingedsheep.sdk.scripting.AdditionalCostPayment
 import com.wingedsheep.sdk.scripting.AlternativePaymentChoice
 import com.wingedsheep.sdk.scripting.ConvokePayment
 import kotlinx.serialization.Serializable
@@ -31,7 +32,8 @@ import kotlinx.serialization.Serializable
  * Not expressible here, deliberately — each has its own channel:
  * - Complex decisions (target-selection pauses, damage assignment, ordering, …) → `POST
  *   /envs/{id}/decision` with a typed `DecisionResponse`.
- * - Attacking bands (CR 702.22), additional costs and alternative payments other than convoke.
+ * - Attacking bands and additional cost selections other than the bounded Blight recipient;
+ *   alternative payments other than convoke.
  *   A step carrying params for an action that can't use them is rejected with a
  *   message naming the action, never ignored.
  *
@@ -45,6 +47,7 @@ import kotlinx.serialization.Serializable
  *   ability whose legal-action view has `requiresDamageDistribution = true`.
  * @property convokePayments Creature entity id → how it pays (a color or generic). This is an
  *   explicit cast-time choice; omitting it never silently taps a creature.
+ * @property blightTarget Creature chosen to receive the activation cost's -1/-1 counters.
  */
 @Serializable
 data class ActionParams(
@@ -53,7 +56,8 @@ data class ActionParams(
     val targets: List<EntityId> = emptyList(),
     val xValue: Int? = null,
     val damageDistribution: Map<EntityId, Int> = emptyMap(),
-    val convokePayments: Map<EntityId, ConvokePayment> = emptyMap()
+    val convokePayments: Map<EntityId, ConvokePayment> = emptyMap(),
+    val blightTarget: EntityId? = null,
 ) {
     val isEmpty: Boolean
         get() = populatedFields.isEmpty()
@@ -67,6 +71,7 @@ data class ActionParams(
             if (xValue != null) add("xValue")
             if (damageDistribution.isNotEmpty()) add("damageDistribution")
             if (convokePayments.isNotEmpty()) add("convokePayments")
+            if (blightTarget != null) add("blightTarget")
         }
 
     companion object {
@@ -114,13 +119,16 @@ object ActionParameterizer {
             }
 
             is ActivateAbility -> {
-                params.allowOnly(action, "targets", "xValue", "damageDistribution")
+                params.allowOnly(action, "targets", "xValue", "damageDistribution", "blightTarget")
                 action.copy(
                     targets = params.targets.map { resolveTarget(it, state) }
                         .ifEmpty { action.targets },
                     xValue = params.xValue ?: action.xValue,
                     damageDistribution = params.damageDistribution.takeIf { it.isNotEmpty() }
-                        ?: action.damageDistribution
+                        ?: action.damageDistribution,
+                    costPayment = params.blightTarget?.let { target ->
+                        (action.costPayment ?: AdditionalCostPayment()).copy(blightTargets = listOf(target))
+                    } ?: action.costPayment,
                 )
             }
 

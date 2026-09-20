@@ -481,6 +481,8 @@ class ObservationBuilder(
             totalDamageToDistribute = la.totalDamageToDistribute,
             minDamagePerTarget = la.minDamagePerTarget,
             isManaAbility = la.isManaAbility,
+            blightTargetOptions = la.policyBlightTargetOptions,
+            blightAmount = la.additionalCostInfo?.takeIf { it.costType == "Blight" }?.blightAmount ?: 0,
             convokePaymentOptions = la.policyConvokePaymentOptions,
             hasConvoke = la.hasConvoke,
             canPayWithoutConvoke = la.canPayWithoutConvoke,

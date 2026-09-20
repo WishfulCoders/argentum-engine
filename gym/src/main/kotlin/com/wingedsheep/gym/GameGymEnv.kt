@@ -336,6 +336,7 @@ class GameGymEnv(
                     require(resolved.legalAction.affordable) {
                         "Action $actionId is not callable by the learner policy"
                     }
+                    PolicyActionBoundary.requirePolicyPayment(resolved.legalAction, params)
                 }
                 // The enumerated action is a template for the action types that need a choice the
                 // ID can't carry (attackers, blockers, targets, X); params complete it.

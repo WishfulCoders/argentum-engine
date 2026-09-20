@@ -320,6 +320,9 @@ data class LegalActionView(
     val totalDamageToDistribute: Int? = null,
     val minDamagePerTarget: Int? = null,
     val isManaAbility: Boolean = false,
+    /** Blight recipients accepted by the engine for this exact activation state. */
+    val blightTargetOptions: List<EntityId> = emptyList(),
+    val blightAmount: Int = 0,
     /** Payment choices verified on this state by the engine. A convoke-dependent cast is
      * callable by the flat policy only when this list is nonempty. */
     val convokePaymentOptions: List<Map<EntityId, com.wingedsheep.sdk.scripting.ConvokePayment>> = emptyList(),

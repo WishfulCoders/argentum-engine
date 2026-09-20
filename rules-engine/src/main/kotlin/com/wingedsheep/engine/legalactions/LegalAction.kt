@@ -117,6 +117,8 @@ data class LegalAction(
     val maxAffordableX: Int? = null,
     val minX: Int = 0,
     val additionalCostInfo: AdditionalCostData? = null,
+    /** Engine-preflighted Blight recipients for the flat policy. Empty for unsupported shapes. */
+    val policyBlightTargetOptions: List<EntityId> = emptyList(),
 
     // Convoke / Delve
     val hasConvoke: Boolean = false,

@@ -158,7 +158,10 @@ class GameplayPolicyBridge(
             ?: error("gameplay policy returned action ID $actionId absent from its observation")
         val resolved = built.registry.resolve(actionId)
         val action = when (resolved) {
-            is ResolvedAction.Legal -> ActionParameterizer.apply(resolved.action, response.params, state)
+            is ResolvedAction.Legal -> {
+                PolicyActionBoundary.requirePolicyPayment(resolved.legalAction, response.params)
+                ActionParameterizer.apply(resolved.action, response.params, state)
+            }
             is ResolvedAction.Decision -> error("gameplay policy returned folded decision $actionId on a priority step")
             ResolvedAction.Unknown -> error("gameplay policy returned unknown action ID $actionId")
         }
