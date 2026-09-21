@@ -4,6 +4,7 @@ import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.core.CastSpell
 import com.wingedsheep.engine.core.GameConfig
 import com.wingedsheep.engine.core.PassPriority
+import com.wingedsheep.engine.core.PlayLand
 import com.wingedsheep.engine.core.PlayerConfig
 import com.wingedsheep.ai.engine.GameSimulator
 import com.wingedsheep.engine.legalactions.EnumerationMode
@@ -246,6 +247,34 @@ class PolicyActionBoundaryTest : FunSpec({
         direct.staged shouldBe false
         direct.action shouldBe completed
         stager.continuePending(driver.state) shouldBe null
+    }
+
+    test("learner gym applies the arena preflight before changing a stale episode") {
+        val driver = GameTestDriver()
+        driver.registerCards(TestCards.all)
+        driver.initMirrorMatch(Deck.of("Mountain" to 40), skipMulligans = true)
+        val player = driver.activePlayer!!
+        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
+        val land = driver.putCardInHand(player, "Mountain")
+        val environment = GameEnvironment.create(driver.cardRegistry)
+        environment.restore(driver.state, listOf(driver.player1, driver.player2))
+        val gym = GameGymEnv(
+            environment, perspectivePlayerIndex = 0, defaultRevealAll = false,
+            agents = listOf(AgentSpec.Learner(), AgentSpec.Learner()),
+        )
+        val view = gym.observe().observation as TrainingObservation
+        val actionId = view.legalActions.single {
+            it.kind == "PlayLand" && it.sourceEntityId == land
+        }.actionId
+
+        environment.stepExactlyOne(PlayLand(player, land))
+        environment.lastRejection shouldBe null
+        val before = environment.state
+        val steps = environment.stepCount
+        shouldThrow<IllegalArgumentException> { gym.step(actionId) }
+        environment.state shouldBe before
+        environment.stepCount shouldBe steps
+        environment.lastRejection shouldBe null
     }
 
     test("Blight options match the arena and learner gym and pay the chosen creature") {

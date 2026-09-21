@@ -13,6 +13,7 @@ import com.wingedsheep.gym.contract.ActionRegistry
 import com.wingedsheep.gym.contract.ObservationBuilder
 import com.wingedsheep.gym.contract.ObservationResult
 import com.wingedsheep.gym.contract.PolicyActionBoundary
+import com.wingedsheep.gym.contract.PolicyActionStager
 import com.wingedsheep.gym.contract.ResolvedAction
 import com.wingedsheep.gym.service.AgentSpec
 import com.wingedsheep.gym.service.EnvLimits
@@ -341,6 +342,11 @@ class GameGymEnv(
                 // The enumerated action is a template for the action types that need a choice the
                 // ID can't carry (attackers, blockers, targets, X); params complete it.
                 val action = ActionParameterizer.apply(resolved.action, params, environment.state)
+                if (agents.isNotEmpty()) {
+                    require(PolicyActionStager(policySimulator).begin(environment.state, action) != null) {
+                        "Action $actionId failed policy engine preflight"
+                    }
+                }
                 environment.step(action)
                 failOnRejection(actionId)
             }
