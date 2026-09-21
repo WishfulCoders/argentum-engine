@@ -8,6 +8,7 @@ import com.wingedsheep.ai.llm.CardSummary
 import com.wingedsheep.ai.llm.MulliganInfo
 import com.wingedsheep.engine.core.DeclareBlockers
 import com.wingedsheep.engine.core.GameAction
+import com.wingedsheep.engine.core.PassPriority
 import com.wingedsheep.engine.core.PendingDecision
 import com.wingedsheep.engine.core.SubmitDecision
 import com.wingedsheep.engine.core.engineSerializersModule
@@ -306,13 +307,22 @@ class AiWebSocketSession(
             logger.info("AI has pending decision: {} — {}", pendingDecision::class.simpleName, pendingDecision.prompt)
         }
 
-        delay(thinkingDelayMs)
-
+        val startedNs = System.nanoTime()
         val response = controller.chooseAction(state, legalActions, pendingDecision, getRecentGameLog())
-        logger.info("AI chose response: {}", when (response) {
+        val thinkMs = (System.nanoTime() - startedNs) / 1_000_000
+        logger.info("AI chose response in {} ms: {}", thinkMs, when (response) {
             is ActionResponse.SubmitAction -> "Action(${response.action::class.simpleName})"
             is ActionResponse.SubmitDecision -> "Decision(${response.response::class.simpleName})"
         })
+
+        // The thinking delay paces moves a human watches. A priority pass shows nothing, and it is
+        // most of what the AI submits — every step of every turn — so waiting on each one made the
+        // game crawl through phases. Pass at once; for a visible move, count the time spent
+        // choosing against the delay rather than adding it on top.
+        val isPass = response is ActionResponse.SubmitAction && response.action is PassPriority
+        if (!isPass && thinkMs < thinkingDelayMs) {
+            delay(thinkingDelayMs - thinkMs)
+        }
 
         // Extra delay after declaring blockers so the human player can see assignments
         if (response is ActionResponse.SubmitAction && response.action is DeclareBlockers) {
