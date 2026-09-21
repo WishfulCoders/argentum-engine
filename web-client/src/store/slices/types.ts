@@ -1112,6 +1112,12 @@ export type GameStore = {
   ) => void
   resetBoardView: () => void
 
+  // Player-preferences slice
+  handOrder: readonly EntityId[]
+  announcementMode: import('./ui/playerPrefsSlice').AnnouncementMode
+  setHandOrder: (order: readonly EntityId[]) => void
+  setAnnouncementMode: (mode: import('./ui/playerPrefsSlice').AnnouncementMode) => void
+
   // UI slice
   selectedCardId: EntityId | null
   targetingState: TargetingState | null
@@ -1133,6 +1139,10 @@ export type GameStore = {
   hoverPosition: { x: number; y: number } | null
   autoTapPreview: readonly EntityId[] | null
   draggingBlockerId: EntityId | null
+  /** Click-to-block: your creatures picked as blockers, waiting for an attacker click. */
+  pendingBlockerIds: readonly EntityId[]
+  togglePendingBlocker: (blockerId: EntityId) => void
+  assignPendingBlockersTo: (attackerId: EntityId) => void
   draggingAttackerId: EntityId | null
   draggingAttackerHasBanding: boolean | null
   draggingCardId: EntityId | null
