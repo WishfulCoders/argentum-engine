@@ -395,6 +395,24 @@ data class AiProfile(
      */
     val holdExpiringGrantsForCombat: Boolean = false,
     /**
+     * [holdExpiringGrantsForCombat] with two gaps closed, off a play session (2026-09-20): a
+     * Kithkeeper pumped itself twice with every creature the AI had — once summoning sick, once
+     * tapping itself for its own cost — past turn 14, where the base rule's inherited turn decay
+     * had switched the floor off. This drops that decay (an ability cannot be stripped, so waiting
+     * stays free), floors an until-end-of-turn grant outside combat rather than handing it back to
+     * the leaf, and inside combat floors a self-grant on a creature not in the fight, and a tap cost
+     * that leaves no blocker unless the attack is lethal with it. See
+     * [com.wingedsheep.ai.engine.knowledge.ExpiringGrantWindow]. Needs [holdExpiringGrantsForCombat].
+     */
+    val expiringGrantsNeedACombat: Boolean = false,
+    /**
+     * Pay a "tap N untapped creatures" cost with the creatures that matter least: not the ability's
+     * own source, then those that cannot block, then the smallest bodies — the "keep the better
+     * blocker up" rule Teamwork's payment already follows. Off, the payment is the first N valid
+     * targets in enumeration order, which is how the Kithkeeper above came to tap itself.
+     */
+    val tapCostsKeepBlockersUp: Boolean = false,
+    /**
      * The two `BoardPresence.creatureValue` corrections [PRODUCTION_RACECLOCK]'s KDoc named as the
      * reason its arena win came with a puzzle trade — the damaged-creature discount and the flat
      * multiplier on "can't attack". Both are off by default; see

@@ -117,6 +117,10 @@ class Strategist(
      * hands it to [com.wingedsheep.ai.engine.knowledge.ExpiringGrantWindow].
      */
     private val holdExpiringGrantsForCombat: Boolean = false,
+    /** [AiProfile.expiringGrantsNeedACombat] — passed straight through to [HoldPolicy]. */
+    private val expiringGrantsNeedACombat: Boolean = false,
+    /** [AiProfile.tapCostsKeepBlockersUp] — read by [withAutomaticPayments]. */
+    private val tapCostsKeepBlockersUp: Boolean = false,
     /**
      * The profile's `EvaluationWeights.boardPresence`. Only [HoldPolicy] reads it, to quote a
      * patience discount in the same units the leaf score prices board value in.
@@ -150,6 +154,7 @@ class Strategist(
         cashCantripsInTheEndStep = cashCantripsInTheEndStep,
         holdFlashPermanentsForAmbush = holdFlashPermanentsForAmbush,
         holdExpiringGrantsForCombat = holdExpiringGrantsForCombat,
+        expiringGrantsNeedACombat = expiringGrantsNeedACombat,
         boardPresenceWeight = boardPresenceWeight,
     )
 
@@ -775,7 +780,7 @@ class Strategist(
          */
         forceTargetRefinement: Boolean = false,
     ): com.wingedsheep.engine.core.GameAction {
-        val baseAction = withAutomaticPayments(action)
+        val baseAction = withAutomaticPayments(state, action)
         if (TargetSelection.targetsAlreadyFilled(baseAction) != false) {
             return withSumGatedExilePayment(state, action, baseAction)
         }
@@ -845,6 +850,27 @@ class Strategist(
         )
     }
 
+    /**
+     * The order to pay a "tap N untapped permanents" cost in — [AiProfile.tapCostsKeepBlockersUp].
+     *
+     * Off, it is the enumerator's order, which is arbitrary: a Kithkeeper tapped itself for its own
+     * pump that way. On, the permanents that matter least go first: anything that is not the
+     * ability's own source, then non-creatures and creatures that cannot block, then the smallest
+     * bodies — Teamwork's "keep the better blocker up", one cost type over.
+     */
+    private fun tapOrder(state: GameState, gameAction: GameAction, candidates: List<EntityId>): List<EntityId> {
+        if (!tapCostsKeepBlockersUp) return candidates
+        val source = (gameAction as? ActivateAbility)?.sourceId
+        val projected = state.projectedState
+        return candidates.sortedWith(
+            compareBy<EntityId>(
+                { it == source },
+                { projected.isCreature(it) && !projected.cantBlock(it) },
+                { (projected.getPower(it) ?: 0) + (projected.getToughness(it) ?: 0) },
+            )
+        )
+    }
+
     /** The cheap target pick — one heuristic choice per requirement, no simulation. */
     private fun heuristicTargets(
         state: GameState,
@@ -853,7 +879,7 @@ class Strategist(
     ): com.wingedsheep.engine.core.GameAction = withSumGatedExilePayment(
         state, action,
         TargetSelection.fillHeuristically(
-            state, action.copy(action = withAutomaticPayments(action)), playerId,
+            state, action.copy(action = withAutomaticPayments(state, action)), playerId,
             fillPartialRequirements = useMeaningfulFilter, intents = intents
         ),
     )
@@ -867,7 +893,7 @@ class Strategist(
      * spells and activated abilities. The first candidate is deterministic and already filtered by
      * projected controller/type/counter legality.
      */
-    private fun withAutomaticPayments(action: LegalAction): GameAction {
+    private fun withAutomaticPayments(state: GameState, action: LegalAction): GameAction {
         val gameAction = withAutomaticTapForGeneric(action, withAutomaticConvoke(action))
         val info = action.additionalCostInfo ?: return gameAction
         val existing = when (gameAction) {
@@ -878,7 +904,9 @@ class Strategist(
         val payment = when (info.costType) {
             "Blight" -> existing.copy(blightTargets = info.validBlightTargets.take(1))
             "Behold" -> existing.copy(beheldCards = info.validBeholdTargets.take(info.beholdCount))
-            "TapPermanents" -> existing.copy(tappedPermanents = info.validTapTargets.take(info.tapCount))
+            "TapPermanents" -> existing.copy(
+                tappedPermanents = tapOrder(state, gameAction, info.validTapTargets).take(info.tapCount)
+            )
             "DiscardCard" -> existing.copy(discardedCards = info.validDiscardTargets.take(info.discardCount))
             "SacrificePermanent" -> existing.copy(
                 sacrificedPermanents = info.validSacrificeTargets.take(info.sacrificeCount)

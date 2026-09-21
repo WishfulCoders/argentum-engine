@@ -351,6 +351,8 @@ class AIPlayer(
                     endStepManaAllowance = profile.spendIdleManaInTheirEndStep,
                     holdFlashPermanentsForAmbush = profile.holdFlashPermanentsForAmbush,
                     holdExpiringGrantsForCombat = profile.holdExpiringGrantsForCombat,
+                    expiringGrantsNeedACombat = profile.expiringGrantsNeedACombat,
+                    tapCostsKeepBlockersUp = profile.tapCostsKeepBlockersUp,
                     // Same seam as `CombatAdvisor`'s `lifeWeight`: a raw Phase 9 profile resolves
                     // to the compiled fallback here, which is the right answer for a policy that
                     // only needs to know what a point of board value trades against.

@@ -67,6 +67,11 @@ class HoldPolicy(
      */
     private val holdExpiringGrantsForCombat: Boolean = false,
     /**
+     * [AiProfile.expiringGrantsNeedACombat][com.wingedsheep.ai.engine.AiProfile.expiringGrantsNeedACombat]
+     * — see [ExpiringGrantWindow.holds]'s `needsACombat`.
+     */
+    private val expiringGrantsNeedACombat: Boolean = false,
+    /**
      * The profile's `EvaluationWeights.boardPresence`, so [RemovalPatience] can quote its discount
      * in the same currency as the board value it compares against. The default is the compiled
      * fallback's, which is what every profile that does not opt in would have used anyway.
@@ -173,7 +178,7 @@ class HoldPolicy(
         if (!holdExpiringGrantsForCombat || activation == null) return TimingVerdict.Neutral
         val ability = intents.activatedAbility(cardName, activation.abilityId)
             ?: return TimingVerdict.Neutral
-        return if (ExpiringGrantWindow.holds(state, playerId, ability, intents)) TimingVerdict.NoWindow
+        return if (ExpiringGrantWindow.holds(state, playerId, ability, intents, activation, expiringGrantsNeedACombat)) TimingVerdict.NoWindow
         else TimingVerdict.Neutral
     }
 
