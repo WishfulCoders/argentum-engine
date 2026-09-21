@@ -67,7 +67,9 @@ data class EvaluationWeights(
                 )
             },
             threatAssessment to BoardFeature { state, projected, playerId ->
-                ThreatAssessment.score(state, projected, playerId, discountedRaceClock)
+                ThreatAssessment.score(
+                    state, projected, playerId, discountedRaceClock, creatureValuation.lockedCreaturesAreInert,
+                )
             },
             tempo to Tempo,
         )

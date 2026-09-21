@@ -20,6 +20,7 @@ import com.wingedsheep.engine.state.components.battlefield.TappedComponent
 import com.wingedsheep.engine.state.components.combat.AttackingComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.player.LandDropsComponent
+import com.wingedsheep.sdk.core.AbilityFlag
 import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
@@ -119,10 +120,29 @@ data class CreatureValuation(
      * actually gets to keep using.
      */
     val cantAttackCostsPower: Boolean = false,
+    /**
+     * Price a creature that is tapped and cannot untap — Blossombind ("can't become untapped"),
+     * Claustrophobia ("doesn't untap during its controller's untap step") — at a flat
+     * [LOCKED_CREATURE_VALUE] instead of as the body it no longer gets to use.
+     *
+     * Off a play session (2026-09-20, replay bca68ebf, action 377): the opponent put Blossombind on
+     * the AI's Stratosoarer, and the AI then paid {2} to equip Stalactite Dagger (+1/+1) onto it.
+     * Nothing in the AI read either untap flag, so a creature that will never attack or block again
+     * was valued as a creature, and +1/+1 on it as +1/+1.
+     *
+     * Flat rather than a multiplier, so that nothing done to the creature's stats can move its
+     * value: that is the claim. What it keeps is being a creature — a sacrifice, a body for "creatures
+     * you control" — and anything its statics do lands on *other* permanents' projected values,
+     * where it is already counted. Symmetric: an opponent's locked creature stops drawing removal.
+     */
+    val lockedCreaturesAreInert: Boolean = false,
 ) {
     companion object {
         /** Neither correction: what every number published before 2026-08-10 was measured on. */
         val LEGACY = CreatureValuation()
+
+        /** See [lockedCreaturesAreInert]. */
+        const val LOCKED_CREATURE_VALUE = 0.5
     }
 }
 
@@ -374,7 +394,21 @@ object BoardPresence : BoardFeature {
         }
 
         // Auras/equipment attached to something are valuable
-        if (container.has<com.wingedsheep.engine.state.components.battlefield.AttachedToComponent>()) {
+        val attachedTo = container.get<com.wingedsheep.engine.state.components.battlefield.AttachedToComponent>()
+        if (attachedTo != null) {
+            // …except Equipment on a creature that will never fight again, which is doing nothing
+            // there. Without this the flat 1.5 over 0.5 paid +1.0 for equipping *anything*, and a
+            // locked creature as the only candidate still drew the equip (`activate-08`). Auras stay:
+            // the Blossombind holding that creature down is doing its job, not wasting it.
+            val host = attachedTo.targetId
+            val hostContainer = state.getEntity(host)
+            if (creatureValuation.lockedCreaturesAreInert &&
+                projected.hasSubtype(entityId, "Equipment") &&
+                hostContainer != null && projected.isCreature(host) &&
+                isLockedTapped(projected, host, hostContainer)
+            ) {
+                return maxOf(0.5, prior)
+            }
             return maxOf(1.5, prior)
         }
 
@@ -581,6 +615,11 @@ object BoardPresence : BoardFeature {
         // Everything that is a property of the card's own body — stats, keywords, DEFENDER — is
         // [creatureBodyValue]; everything below is a property of this permanent in this position.
         var value = creatureBodyValue(power, toughness, keywords, settledPower, settledToughness)
+
+        // ── Locked down ── tapped, and nothing will untap it: see [CreatureValuation.lockedCreaturesAreInert].
+        if (valuation.lockedCreaturesAreInert && isLockedTapped(projected, entityId, container)) {
+            return CreatureValuation.LOCKED_CREATURE_VALUE
+        }
 
         // ── Drawbacks ──
         // "Can't attack" hung on the creature by a Pacifism takes away the same thing DEFENDER
@@ -968,20 +1007,22 @@ object ThreatAssessment : BoardFeature {
         projected: ProjectedState,
         playerId: EntityId,
         discountedRaceClock: Boolean,
+        /** [CreatureValuation.lockedCreaturesAreInert]: a locked creature is not a future attacker. */
+        lockedCreaturesAreInert: Boolean = false,
     ): Double {
         val sides = state.sidesFor(playerId) ?: return 0.0
 
         val myLife = sideLife(state, sides.mine)
 
         // Calculate attack potential (power of untapped, non-sick creatures)
-        val myAttackPower = attackPotential(state, projected, sides.mine)
+        val myAttackPower = attackPotential(state, projected, sides.mine, lockedCreaturesAreInert)
 
         // Calculate defense capability (total toughness of untapped creatures that can block)
         val myDefense = defensePotential(state, projected, sides.mine)
 
         return sides.against(OpponentAggregate.THREAT) { opponent ->
             val theirLife = sideLife(state, opponent)
-            val theirAttackPower = attackPotential(state, projected, opponent)
+            val theirAttackPower = attackPotential(state, projected, opponent, lockedCreaturesAreInert)
             val theirDefense = defensePotential(state, projected, opponent)
 
             // Score: positive if we're the faster clock
@@ -1055,15 +1096,25 @@ object ThreatAssessment : BoardFeature {
     private fun sideLife(state: GameState, side: List<EntityId>): Int =
         state.lifePoolsOf(side).minOrNull() ?: 20
 
-    private fun attackPotential(state: GameState, projected: ProjectedState, side: List<EntityId>): Int {
+    private fun attackPotential(
+        state: GameState,
+        projected: ProjectedState,
+        side: List<EntityId>,
+        lockedCreaturesAreInert: Boolean = false,
+    ): Int {
         // Don't filter by TappedComponent — tapped creatures untap on the next
         // turn and can attack again. Filtering them out massively penalizes the
         // post-combat state (where our creatures are tapped from attacking),
         // making the AI think attacking reduced its clock to zero.
+        //
+        // The exception is a creature that *won't* untap (Blossombind, Claustrophobia): that premise
+        // is false for it, and +1/+1 on it read as a faster clock — `activate-08`.
         return side.sumOf { playerId ->
             projected.getBattlefieldControlledBy(playerId)
                 .filter { entityId ->
                     projected.isCreature(entityId) &&
+                        !(lockedCreaturesAreInert && state.getEntity(entityId)
+                            ?.let { isLockedTapped(projected, entityId, it) } == true) &&
                         !projected.cantAttack(entityId) &&
                         state.getEntity(entityId)?.has<SummoningSicknessComponent>() != true
                 }
@@ -1161,4 +1212,11 @@ object Tempo : BoardFeature {
         count <= 6 -> 6.0 + (count - 3) * 1.2  // mid-game mana
         else -> 9.6 + (count - 6) * 0.4  // diminishing returns for excess mana
     }
+}
+
+/** Tapped, with nothing that will untap it — see [CreatureValuation.lockedCreaturesAreInert]. */
+private fun isLockedTapped(projected: ProjectedState, entityId: EntityId, container: ComponentContainer): Boolean {
+    if (!container.has<TappedComponent>()) return false
+    val keywords = projected.getKeywords(entityId)
+    return AbilityFlag.CANT_BECOME_UNTAPPED.name in keywords || AbilityFlag.DOESNT_UNTAP.name in keywords
 }

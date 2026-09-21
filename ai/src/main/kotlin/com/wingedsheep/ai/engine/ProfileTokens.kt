@@ -54,6 +54,10 @@ private fun withToken(p: AiProfile, token: String): AiProfile {
         "current" -> p
         "raceclock" -> p.copy(id = id, discountedRaceClock = true)
         "intent" -> p.copy(id = id, useCardIntent = true)
+        "locked" -> p.copy(
+            id = id,
+            creatureValuation = p.creatureValuation.copy(lockedCreaturesAreInert = true),
+        )
         "grants" -> p.copy(
             id = id,
             useCardIntent = true,

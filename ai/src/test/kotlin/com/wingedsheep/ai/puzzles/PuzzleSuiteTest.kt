@@ -37,7 +37,7 @@ class PuzzleSuiteTest : ScenarioTestBase() {
                     PuzzleCatalog.byCategory(category).size shouldBeGreaterThanOrEqual 6
                 }
             }
-            PuzzleCatalog.all.size shouldBe 107
+            PuzzleCatalog.all.size shouldBe 109
         }
 
         test("every KNOWN_FAILURES id names a real puzzle") {
@@ -112,6 +112,18 @@ class PuzzleSuiteTest : ScenarioTestBase() {
                 (kithkeeper - control) shouldBe emptySet()
             }
             failing(grants) shouldBe control - kithkeeper
+        }
+
+        // Same contract again. Control is the frozen baseline: `locked` is one valuation switch and
+        // needs nothing else on.
+        test("`locked` closes the locked-creature equip positions and breaks nothing else") {
+            val locked = AiProfile.PRODUCTION.copy(
+                id = "production-locked",
+                creatureValuation = AiProfile.PRODUCTION.creatureValuation.copy(lockedCreaturesAreInert = true),
+            )
+            val failing = runner.runAll(PuzzleCatalog.all, locked)
+                .filterNot { it.passed }.map { it.puzzle.id }.toSet()
+            failing shouldBe KNOWN_FAILURES - setOf("activate-08", "activate-09")
         }
 
         // The arena proved it discriminates by beating a zero-weight agent 200-0. Same argument,
@@ -344,6 +356,13 @@ class PuzzleSuiteTest : ScenarioTestBase() {
             // `grants`' lethal exception is what lets this activation *through* its floor, and it
             // does; the leaf is what then declines it. Pinned directly in `ExpiringGrantWindowTest`.
             "instants-22",
+            // Stalactite Dagger onto a Blossombind'd creature (play session 2026-09-20): nothing read
+            // "can't become untapped", so a creature that will never fight again kept its full
+            // value, +1/+1 on it counted as a faster clock, and any attachment paid a flat +1.0.
+            //
+            // **Closed by `CreatureValuation.lockedCreaturesAreInert`** (the `locked` token).
+            "activate-08",
+            "activate-09",
         )
     }
 }
