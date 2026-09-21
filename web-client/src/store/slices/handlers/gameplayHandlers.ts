@@ -205,6 +205,7 @@ const CLEARED_ACTION_SELECTIONS = {
   counterDistributionState: null,
   combatState: null,
   draggingBlockerId: null,
+  pendingBlockerIds: [],
   draggingAttackerId: null,
   draggingAttackerHasBanding: null,
   draggingCardId: null,
