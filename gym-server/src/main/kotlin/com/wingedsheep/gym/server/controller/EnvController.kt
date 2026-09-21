@@ -347,6 +347,23 @@ class EnvController(
     ): Observation =
         multiEnvService.determinize(EnvId(id), seed).observation
 
+    @Operation(
+        summary = "What the learner seat's own AI would do here, without doing it",
+        description = """
+            Asks a fresh instance of the learner seat's `decisionProfile` AI to choose from the
+            current legal actions, and maps its choice to the current observation's action ID by
+            template (kind, description, source, ability). The env does not move. 204 when the
+            learner has no priority decision to make.
+        """
+    )
+    @PostMapping("/{id}/pilot-choice")
+    fun pilotChoice(
+        @PathVariable id: String,
+    ): org.springframework.http.ResponseEntity<com.wingedsheep.gym.PilotChoice> =
+        multiEnvService.pilotChoice(EnvId(id))
+            ?.let { org.springframework.http.ResponseEntity.ok(it) }
+            ?: org.springframework.http.ResponseEntity.noContent().build()
+
     // =========================================================================
     // Fork / snapshot / restore
     // =========================================================================

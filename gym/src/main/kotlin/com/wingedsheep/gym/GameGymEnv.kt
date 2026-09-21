@@ -4,9 +4,13 @@ import com.wingedsheep.ai.engine.AIPlayer
 import com.wingedsheep.ai.engine.hidden.Determinizer
 import com.wingedsheep.ai.engine.AiProfiles
 import com.wingedsheep.ai.engine.GameSimulator
+import com.wingedsheep.engine.core.ActivateAbility
+import com.wingedsheep.engine.core.CastSpell
 import com.wingedsheep.engine.core.DecisionResponse
 import com.wingedsheep.engine.core.GameConfig
+import com.wingedsheep.engine.core.PlayLand
 import com.wingedsheep.engine.core.SubmitDecision
+import com.wingedsheep.engine.legalactions.LegalAction
 import com.wingedsheep.gym.contract.ActionParameterizer
 import com.wingedsheep.gym.contract.ActionParams
 import com.wingedsheep.gym.contract.ActionRegistry
@@ -238,6 +242,48 @@ class GameGymEnv(
             autoAdvanced++
             checkLimits()
         }
+    }
+
+    /**
+     * The action the learner seat's `decisionProfile` would take here, without taking it.
+     *
+     * A fresh AI instance answers, as the arena's shadow teacher does, so asking cannot disturb the
+     * seat's own AI (its Strategist memory, or a Treasure float it has queued). It chooses from the
+     * same enumeration the observation was built from, so the answer maps to the current IDs.
+     * Null when the learner has no priority decision to make.
+     */
+    fun pilotChoice(): PilotChoice? {
+        val learner = environment.agentToAct ?: return null
+        if (isTerminal || environment.state.pendingDecision != null || !isLearner(learner)) return null
+        val legal = environment.legalActions()
+        if (legal.isEmpty()) return null
+        val profile = when (val agent = agentAt(environment.playerIds.indexOf(learner))) {
+            is AgentSpec.Pilot -> agent.profile
+            is AgentSpec.Learner -> agent.decisionProfile
+        }
+        val ai = AIPlayer.create(environment.cardRegistry, learner, AiProfiles.parse(profile))
+        val chosen = ai.chooseFrom(environment.state, legal)
+        val key = templateKey(chosen)
+        // The mask preserves order, so an index into `legal` is the registry's ID for it.
+        val id = legal.indexOfFirst { templateKey(it) == key }.takeIf { it >= 0 }
+        val registered = id?.let { (registry.resolve(it) as? ResolvedAction.Legal)?.legalAction }
+        return PilotChoice(
+            actionId = id?.takeIf { registered != null && templateKey(registered) == key },
+            kind = chosen.actionType,
+            description = chosen.description,
+            isManaAbility = chosen.isManaAbility,
+            callable = registered?.affordable == true,
+        )
+    }
+
+    private fun templateKey(action: LegalAction): List<Any?> {
+        val source = when (val a = action.action) {
+            is CastSpell -> a.cardId
+            is ActivateAbility -> a.sourceId
+            is PlayLand -> a.cardId
+            else -> null
+        }
+        return listOf(action.actionType, action.description, source, (action.action as? ActivateAbility)?.abilityId)
     }
 
     fun submitDecision(response: DecisionResponse): ObservationResult {

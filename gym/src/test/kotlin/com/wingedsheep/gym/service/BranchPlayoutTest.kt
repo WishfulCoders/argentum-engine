@@ -167,4 +167,26 @@ class BranchPlayoutTest : FunSpec({
         svc.status(branchA).reward.map { it.value }.sorted() shouldBe listOf(-1.0, 1.0)
         svc.status(branchB).reward.map { it.value }.sorted() shouldBe listOf(-1.0, 1.0)
     }
+    test("the pilot's choice maps to a current action ID and asking for it does not move the env") {
+        val svc = MultiEnvService(registry())
+        val created = svc.create(pilotAnchored(seed = 17L))
+        val kinds = mutableSetOf<String>()
+        var asked = 0
+        repeat(40) {
+            val status = svc.status(created.envId)
+            if (status.terminated || status.truncated) return@repeat
+            val choice = svc.pilotChoice(created.envId) ?: return@repeat
+            asked++
+            // Every choice the pilot can make has a template in the observation it was asked about.
+            (choice.actionId != null) shouldBe true
+            kinds += choice.kind
+            // Asking is read-only: the env, and the seat's own AI, are exactly where they were.
+            svc.status(created.envId).stepCount shouldBe status.stepCount
+            svc.status(created.envId).playedOut shouldBe status.playedOut
+            svc.playout(created.envId, maxLearnerActions = 1)
+        }
+        asked shouldBeGreaterThan 10
+        // Not a pass-only walk: the answer has to be able to name a real action.
+        (kinds - "PassPriority").isNotEmpty() shouldBe true
+    }
 })

@@ -141,6 +141,15 @@ class MultiEnvService(
         requireGameEnv(envId).determinize(seed)
 
     /**
+     * What [envId]'s learner seat would do under its own `decisionProfile`, without doing it.
+     *
+     * The comparison an anchored override needs: a candidate is only an override where it differs
+     * from this. Null when the learner has no priority decision.
+     */
+    fun pilotChoice(envId: EnvId): com.wingedsheep.gym.PilotChoice? =
+        requireGameEnv(envId).pilotChoice()
+
+    /**
      * Submit a raw `DecisionResponse` for a game env paused on a complex pending
      * decision. Simple decisions are driven via [step] with a folded action ID.
      */
