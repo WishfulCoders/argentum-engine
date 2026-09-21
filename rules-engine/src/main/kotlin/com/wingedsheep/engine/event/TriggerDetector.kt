@@ -3950,6 +3950,9 @@ class TriggerDetector(
             val container = state.getEntity(permanentId) ?: continue
             val card = container.get<CardComponent>() ?: continue
             if (container.has<FaceDownComponent>()) continue
+            // The doubler is a static ability of the permanent's: one that has lost all abilities
+            // (Noggle the Mind on Twinflame Travelers) doubles nothing.
+            if (projected.hasLostAllAbilities(permanentId)) continue
             val controllerId = projected.getController(permanentId) ?: continue
             val cardDef = registry.getCard(card.cardDefinitionId) ?: continue
             // Route through RoomFaceStatics so a doubler printed on an *unlocked* Room face
