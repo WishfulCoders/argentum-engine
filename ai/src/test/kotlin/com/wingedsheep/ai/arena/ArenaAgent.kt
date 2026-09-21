@@ -149,6 +149,15 @@ object ArenaAgents {
             "production-grants-window",
             AiProfile.PRODUCTION_EXPIRING.copy(id = "production-grants-window", expiringGrantsNeedACombat = true),
         ),
+        // `locked` alone on top of `production` — one valuation switch, so the frozen baseline is the
+        // control: `just arena production production-locked 600 ECL`.
+        ArenaAgent(
+            "production-locked",
+            AiProfile.PRODUCTION.copy(
+                id = "production-locked",
+                creatureValuation = AiProfile.PRODUCTION.creatureValuation.copy(lockedCreaturesAreInert = true),
+            ),
+        ),
         ArenaAgent(
             "production-grants-order",
             AiProfile.PRODUCTION_EXPIRING.copy(id = "production-grants-order", tapCostsKeepBlockersUp = true),
