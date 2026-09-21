@@ -14,6 +14,7 @@ import { TargetingArrows } from '../targeting/TargetingArrows'
 import { SoulbondBonds } from './SoulbondBonds'
 import { DraggedCardOverlay } from './DraggedCardOverlay'
 import { GameLog } from './GameLog'
+import { StackAnnouncements, GameplaySettingsButton } from './StackAnnouncements'
 import { ActiveYieldsPanel } from './ActiveYieldsPanel'
 import { AiInsightPanel } from './AiInsightPanel'
 import { DrawAnimations } from '../animations/DrawAnimations'
@@ -1782,6 +1783,7 @@ export function GameBoard({ spectatorMode = false, topOffset = 0 }: GameBoardPro
               </button>
               {/* The in-game help entry. Opens a drawer rather than navigating — leaving `/` would
                   unmount the app and drop the WebSocket. */}
+              <GameplaySettingsButton buttonStyle={styles.floatingBarButton} />
               <HelpDrawerButton />
             </div>
             <button
@@ -2277,6 +2279,7 @@ export function GameBoard({ spectatorMode = false, topOffset = 0 }: GameBoardPro
           horizontal space the hand has, and the expanded panel is unusable at
           that size anyway. */}
       {!spectatorMode && !responsive.isMobile && <GameLog />}
+      {!spectatorMode && <StackAnnouncements />}
       {!spectatorMode && <ActiveYieldsPanel />}
       {/* Hidden on phones for the same reason as the log: its toggle sits in the
           bottom-left corner, directly on top of the hand, and the expanded panel
