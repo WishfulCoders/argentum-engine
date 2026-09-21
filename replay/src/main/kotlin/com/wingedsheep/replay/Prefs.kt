@@ -18,8 +18,11 @@ import com.wingedsheep.engine.core.PlayLand
 import com.wingedsheep.engine.core.SubmitDecision
 import com.wingedsheep.engine.legalactions.EnumerationMode
 import com.wingedsheep.engine.legalactions.LegalActionEnumerator
+import com.wingedsheep.engine.mechanics.layers.ProjectedState
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
+import com.wingedsheep.engine.state.components.identity.CardComponent
+import com.wingedsheep.engine.state.components.identity.TokenComponent
 import com.wingedsheep.sdk.model.EntityId
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonPrimitive
@@ -74,6 +77,25 @@ data class PrefRoot(
     val cands: List<PrefCandidate>,
 )
 
+/**
+ * The card identities of a candidate's quiet state, by zone, from the user's side (mtg-draft-ai `docs/40`).
+ *
+ * `RawBoardFeatures` counts permanents without knowing what they are, which is `docs/33` §10's blindness:
+ * two candidates that play different cards can share a feature vector. These lists are what a card-aware
+ * evaluator would read, and only from zones that side can see — the opponent's hand and both libraries are
+ * deliberately absent, so a model fit on them can be played honestly. Tokens are named `token:<name>`.
+ */
+@Serializable
+data class PrefCards(
+    /** The card the candidate's action casts, plays or activates; null for a pass. */
+    val act: String? = null,
+    val myBattlefield: List<String> = emptyList(),
+    val opponentBattlefield: List<String> = emptyList(),
+    val myHand: List<String> = emptyList(),
+    val myGraveyard: List<String> = emptyList(),
+    val opponentGraveyard: List<String> = emptyList(),
+)
+
 @Serializable
 data class PrefCandidate(
     val type: String,
@@ -87,6 +109,8 @@ data class PrefCandidate(
     val won: Boolean? = null,
     /** Rollout label ([RolloutWriter]): null when rollouts are off, or this candidate was not sampled. */
     val roll: RollResult? = null,
+    /** Card identities of the quiet state ([PrefCards]): null when `-Dreplay.prefCards=false`. */
+    val cards: PrefCards? = null,
 )
 
 /**
@@ -104,6 +128,8 @@ class PreferenceWriter(
     private val rollouts: RolloutWriter? = null,
     /** With [rollouts], how many of a choice's candidates to roll out — the human's move plus a random sample. */
     private val maxCandidates: Int = Int.MAX_VALUE,
+    /** Whether each candidate also records the card identities of its quiet state ([PrefCards]). */
+    private val emitCards: Boolean = true,
 ) {
     private val enumerator = LegalActionEnumerator.create(registry)
     private val simulator = GameSimulator(registry)
@@ -188,9 +214,40 @@ class PreferenceWriter(
                 type, code, FEATURES.map { (features[it] as JsonPrimitive).int },
                 baseline.evaluate(quiet, projected, user).coerceIn(-1e9, 1e9),
                 won = if (quiet.gameOver) quiet.winnerId == user else null,
+                cards = if (emitCards) cards(quiet, projected, user, state, action) else null,
             ),
             quiet,
         )
+    }
+
+    /** [PrefCards] of the quiet state; [before] is the state the action was taken in, where its card is known. */
+    private fun cards(
+        quiet: GameState, projected: ProjectedState, user: EntityId, before: GameState, action: GameAction,
+    ): PrefCards {
+        val opponent = quiet.getOpponents(user).firstOrNull()
+        return PrefCards(
+            act = when (action) {
+                is CastSpell -> name(before, action.cardId)
+                is PlayLand -> name(before, action.cardId)
+                is ActivateAbility -> name(before, action.sourceId)
+                else -> null
+            },
+            myBattlefield = names(quiet, projected.getBattlefieldControlledBy(user)),
+            opponentBattlefield = opponent?.let { names(quiet, projected.getBattlefieldControlledBy(it)) }.orEmpty(),
+            myHand = names(quiet, quiet.getHand(user)),
+            myGraveyard = names(quiet, quiet.getGraveyard(user)),
+            opponentGraveyard = opponent?.let { names(quiet, quiet.getGraveyard(it)) }.orEmpty(),
+        )
+    }
+
+    /** Sorted, because a zone is a bag of cards to the model and a canonical order keeps the files diffable. */
+    private fun names(state: GameState, ids: Collection<EntityId>): List<String> =
+        ids.mapNotNull { name(state, it) }.sorted()
+
+    private fun name(state: GameState, id: EntityId): String? {
+        val entity = state.getEntity(id) ?: return null
+        val card = entity.get<CardComponent>() ?: return null
+        return if (entity.has<TokenComponent>()) "token:${card.name}" else card.name
     }
 
     /** Whether the enumerated [template] is the move [chosen] makes (before its targets and payment). */
