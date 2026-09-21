@@ -135,6 +135,24 @@ object ArenaAgents {
         // gate, against what players face today.
         ArenaAgent("production-expiring", AiProfile.PRODUCTION_EXPIRING),
         ArenaAgent("production-candidate-expiring", AiProfile.PRODUCTION_CANDIDATE_EXPIRING),
+        // `grants` on top of `production-expiring`, off the Kithkeeper play session (2026-09-20):
+        // `just arena production-expiring production-grants 600 ECL` prices the two flags together
+        // against the guard they extend. `-window` and `-order` isolate them, so a result can say
+        // which carried it — the puzzle side says both are needed for the block (`instants-24`).
+        ArenaAgent(
+            "production-grants",
+            AiProfile.PRODUCTION_EXPIRING.copy(
+                id = "production-grants", expiringGrantsNeedACombat = true, tapCostsKeepBlockersUp = true,
+            ),
+        ),
+        ArenaAgent(
+            "production-grants-window",
+            AiProfile.PRODUCTION_EXPIRING.copy(id = "production-grants-window", expiringGrantsNeedACombat = true),
+        ),
+        ArenaAgent(
+            "production-grants-order",
+            AiProfile.PRODUCTION_EXPIRING.copy(id = "production-grants-order", tapCostsKeepBlockersUp = true),
+        ),
         ArenaAgent("production-targeted", AiProfile.PRODUCTION_TARGETED),
         // Explicit ECL candidates. Their resource-backed weights fail closed to production's
         // evaluator until a validated artifact is installed; automatic selection is set-gated.

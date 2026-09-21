@@ -37,7 +37,7 @@ class PuzzleSuiteTest : ScenarioTestBase() {
                     PuzzleCatalog.byCategory(category).size shouldBeGreaterThanOrEqual 6
                 }
             }
-            PuzzleCatalog.all.size shouldBe 100
+            PuzzleCatalog.all.size shouldBe 107
         }
 
         test("every KNOWN_FAILURES id names a real puzzle") {
@@ -86,6 +86,32 @@ class PuzzleSuiteTest : ScenarioTestBase() {
             val failing = runner.runAll(PuzzleCatalog.all, fixing)
                 .filterNot { it.passed }.map { it.puzzle.id }.toSet()
             failing shouldBe KNOWN_FAILURES - setOf("activate-07", "sequencing-09")
+        }
+
+        // Same contract as `fixing`'s: a new arm, so it must close what it was built for and move
+        // nothing else. Both flags, because `instants-24` needs the tap order — without it the payment
+        // taps Kithkeeper itself, and `expiringGrantsNeedACombat` then correctly refuses the block.
+        test("`grants` closes the Kithkeeper positions and breaks nothing else") {
+            // The control is the guard these flags extend, not the frozen baseline, so the
+            // difference is exactly what the two flags do.
+            val expiring = AiProfile.PRODUCTION.copy(
+                id = "production-expiring-control",
+                useCardIntent = true,
+                holdExpiringGrantsForCombat = true,
+            )
+            val grants = expiring.copy(
+                id = "production-grants",
+                expiringGrantsNeedACombat = true,
+                tapCostsKeepBlockersUp = true,
+            )
+            fun failing(profile: AiProfile) = runner.runAll(PuzzleCatalog.all, profile)
+                .filterNot { it.passed }.map { it.puzzle.id }.toSet()
+            val kithkeeper = setOf("instants-18", "instants-19", "instants-20", "instants-23")
+            val control = failing(expiring)
+            withClue("the control fails all four — the guard alone does not reach them") {
+                (kithkeeper - control) shouldBe emptySet()
+            }
+            failing(grants) shouldBe control - kithkeeper
         }
 
         // The arena proved it discriminates by beating a zero-weight agent 200-0. Same argument,
@@ -300,6 +326,24 @@ class PuzzleSuiteTest : ScenarioTestBase() {
             // the card cleanup was taking anyway) and `instants-17` (our own begin combat, the
             // release that keeps the floor from talking the AI out of the attack).
             "instants-14",
+            // Kithkeeper, off a play session (2026-09-20): a summoning-sick pump on our main, a pump
+            // after our combat is over, the source tapping itself for its own pump on their main, and
+            // every blocker tapped for three damage that is not lethal. `holdExpiringGrantsForCombat`
+            // closes none of them — the first three are past turn 14, where `Patience`'s turn decay
+            // has switched its floor off, and the fourth is in the window it releases at.
+            //
+            // **Closed by `AiProfile.expiringGrantsNeedACombat` + `tapCostsKeepBlockersUp`** (the
+            // `grants` token) — see the test above.
+            "instants-18",
+            "instants-19",
+            "instants-20",
+            "instants-23",
+            // The lethal pump: 3 + 3 unblocked into 6 life, and every profile passes. `instants-05`'s
+            // shape — the one-ply leaf scores the state right after the ability resolves, before
+            // combat damage, where the opponent is still at 6 and passing keeps three blockers up.
+            // `grants`' lethal exception is what lets this activation *through* its floor, and it
+            // does; the leaf is what then declines it. Pinned directly in `ExpiringGrantWindowTest`.
+            "instants-22",
         )
     }
 }
