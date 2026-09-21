@@ -87,6 +87,14 @@ game:
     # gzipped form, which is ~160 KB for a full game, so 4 MB only bites on something pathological
     # (a mill-loop stalemate, an AI grinding 400 turns). 0 disables archiving entirely.
     presentation-max-stored-bytes: ${GAME_REPLAY_PRESENTATION_MAX_STORED_BYTES:4194304}
+    # Write every finished game's input log to this directory as <gameId>.json. Blank writes
+    # nothing. Without accounts the replay store is in memory, so this is what keeps a research
+    # session's games after the server exits. `just pilot` sets it.
+    export-dir: ${GAME_REPLAY_EXPORT_DIR:}
+  playtest:
+    # Development-only: the curated matchup file /api/dev/playtest/matchups serves, written by
+    # mtg-draft-ai's scripts/playtest/build_matchups.py. Blank serves an empty list.
+    matchups-file: ${GAME_PLAYTEST_MATCHUPS_FILE:}
   dev-endpoints:
     # Enable development endpoints for manual testing. NEVER enable in production.
     enabled: ${GAME_DEV_ENDPOINTS_ENABLED:false}
@@ -134,6 +142,9 @@ game:
     # Local testing mode: record the engine AI's candidate actions + scores and serve them from
     # /api/dev/ai-insight. Off in production — recording retains a GameState per decision.
     insight-enabled: ${GAME_AI_INSIGHT_ENABLED:false}
+    # Engine mode only: `+`-joined profile tokens for the AI seat, blank for the production
+    # candidate. `just pilot` sets it to the gameplay pilot; see AiProperties.profile.
+    profile: ${GAME_AI_PROFILE:}
 
 # Swagger UI - only enabled when dev endpoints are enabled
 springdoc:

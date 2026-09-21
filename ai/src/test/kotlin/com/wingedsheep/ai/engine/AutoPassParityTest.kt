@@ -46,7 +46,7 @@ class AutoPassParityTest : FunSpec({
 
     val set = MtgSetCatalog.requireByCode("BLB")
     val registry = CardRegistry().apply {
-        register(set.cards)
+        register(draftableCards(set))
         register(set.basicLands)
     }
     val enricher = LegalActionEnricher(ManaSolver(registry), registry)
@@ -63,7 +63,7 @@ class AutoPassParityTest : FunSpec({
     fun harvest(seed: Long, maxActions: Int = 1_200): List<Window> {
         val processor = ActionProcessor(registry)
         val enumerator = LegalActionEnumerator.create(registry)
-        val deck = buildSeededSealedDeck(set.cards, Random(seed))
+        val deck = buildSeededSealedDeck(set, Random(seed))
         val init = GameInitializer(registry).initializeGame(
             GameConfig(
                 players = listOf(PlayerConfig("Seat0", deck), PlayerConfig("Seat1", deck)),

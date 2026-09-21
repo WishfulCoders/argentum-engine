@@ -709,6 +709,32 @@ export function GameBoard({ spectatorMode = false, topOffset = 0 }: GameBoardPro
     return { satisfied, total, entries, colorSatisfied }
   }, [manaSelectionState, viewingPlayer?.manaPool])
 
+  // Space passes priority: the same press as the floating Pass button, and only while that button is
+  // enabled. Whether it is enabled is decided below the early return, so the render hands the pass in
+  // through this ref (reset every render, set only when the button is live) and the listener, which
+  // has to be up here with the other hooks, just calls whatever is there.
+  const spacePassRef = useRef<(() => void) | null>(null)
+  spacePassRef.current = null
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      // A held key auto-repeats; passing on each repeat would skip straight through the priority
+      // windows that follow, opponent's spells included.
+      if (e.code !== 'Space' || e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return
+      const target = e.target as HTMLElement | null
+      if (target?.closest('input, textarea, select, [contenteditable="true"]')) return
+      // An open action menu is a choice in progress; don't pass out from under it.
+      if (useGameStore.getState().selectedCardId) return
+      const pass = spacePassRef.current
+      if (!pass) return
+      // Also stops a focused button (often the Pass button itself, after a click) from being
+      // activated by the same press and passing twice.
+      e.preventDefault()
+      pass()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
+
   // ⚠ Every hook must sit ABOVE this line. This is the component's only early return, and it fires
   // whenever the store has no game state yet — which is exactly how a replay or spectator surface
   // mounts the board, before frame 0 lands. A hook below here would run on the second render and
@@ -783,6 +809,28 @@ export function GameBoard({ spectatorMode = false, topOffset = 0 }: GameBoardPro
   const distributeRemaining = distributeState ? distributeState.totalAmount - distributeTotalAllocated : 0
   const isInCounterDistMode = !spectatorMode && counterDistributionState !== null
   const isInManaSelectionMode = !spectatorMode && manaSelectionState !== null
+
+  // The floating Pass button, and Space (see spacePassRef above). Kept out here so both go through
+  // one enabled check and one submit.
+  const passEnabled = canAct && !isHijacked && !isInCombatMode && !isInDistributeMode && !isInCounterDistMode && !isInManaSelectionMode && !delveSelectionState && !tapForPowerSelectionState && !targetingState && !pipelineState
+  const passPriority = () => {
+    if (!viewingPlayer) return
+    submitAction({
+      type: 'PassPriority',
+      // In hotseat, pass for whichever seat currently holds priority. During a
+      // Mindslaver-style hijack, pass for the controlled opponent (whose priority
+      // window this is), not our own seat.
+      playerId: hotseat
+        ? (gameState.priorityPlayerId ?? viewingPlayer.playerId)
+        : (youAreHijacking != null && gameState.priorityPlayerId === youAreHijacking
+          ? youAreHijacking
+          : viewingPlayer.playerId),
+    }, interactionEpoch)
+  }
+  // Only while the button is actually on screen and enabled — the same guard that renders it.
+  if (!spectatorMode && !isEliminatedSpectator && viewingPlayer && passEnabled) {
+    spacePassRef.current = passPriority
+  }
 
   // Attack restriction ("can only attack left/right", 2HG, …): during declare-attackers,
   // some living non-ally opponent is not a legal attack target. Drives the explainer
@@ -1639,7 +1687,6 @@ export function GameBoard({ spectatorMode = false, topOffset = 0 }: GameBoardPro
           pass button and the icon row above it end up exactly the same width; the row's intrinsic
           width wins whenever the priority-mode label ("Full Control") makes it the wider of the two. */}
       {!spectatorMode && !isEliminatedSpectator && viewingPlayer && !isInManaSelectionMode && !isInCounterDistMode && (() => {
-        const passEnabled = canAct && !isHijacked && !isInCombatMode && !isInDistributeMode && !isInCounterDistMode && !isInManaSelectionMode && !delveSelectionState && !tapForPowerSelectionState && !targetingState && !pipelineState
         return (
           <div style={{
             position: 'fixed',
@@ -1740,19 +1787,7 @@ export function GameBoard({ spectatorMode = false, topOffset = 0 }: GameBoardPro
             <button
               data-learn="pass"
               disabled={!passEnabled}
-              onClick={() => {
-                submitAction({
-                  type: 'PassPriority',
-                  // In hotseat, pass for whichever seat currently holds priority. During a
-                  // Mindslaver-style hijack, pass for the controlled opponent (whose priority
-                  // window this is), not our own seat.
-                  playerId: hotseat
-                    ? (gameState.priorityPlayerId ?? viewingPlayer.playerId)
-                    : (youAreHijacking != null && gameState.priorityPlayerId === youAreHijacking
-                      ? youAreHijacking
-                      : viewingPlayer.playerId),
-                }, interactionEpoch)
-              }}
+              onClick={passPriority}
               style={{
                 ...styles.floatingBarButton,
                 ...(passEnabled ? getPassButtonStyle() : {}),

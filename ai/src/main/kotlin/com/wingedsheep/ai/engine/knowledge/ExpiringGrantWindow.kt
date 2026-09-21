@@ -1,10 +1,20 @@
 package com.wingedsheep.ai.engine.knowledge
 
+import com.wingedsheep.ai.engine.evaluation.ThreatAssessment
+import com.wingedsheep.engine.core.ActivateAbility
+import com.wingedsheep.engine.core.MaximumHandSize
 import com.wingedsheep.engine.state.GameState
+import com.wingedsheep.engine.state.components.battlefield.SummoningSicknessComponent
+import com.wingedsheep.engine.state.components.battlefield.TappedComponent
+import com.wingedsheep.engine.state.components.combat.AttackingComponent
+import com.wingedsheep.engine.state.components.combat.BlockedComponent
+import com.wingedsheep.engine.state.components.combat.BlockingComponent
 import com.wingedsheep.engine.state.components.identity.ControllerComponent
 import com.wingedsheep.engine.state.components.stack.ChosenTarget
 import com.wingedsheep.engine.state.components.stack.TargetsComponent
+import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Step
+import com.wingedsheep.sdk.core.Zone
 import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.ActivatedAbility
 import com.wingedsheep.sdk.scripting.Duration
@@ -14,6 +24,7 @@ import com.wingedsheep.sdk.scripting.effects.GrantEvasionKeywordEffect
 import com.wingedsheep.sdk.scripting.effects.GrantKeywordEffect
 import com.wingedsheep.sdk.scripting.effects.ModifyStatsEffect
 import com.wingedsheep.sdk.scripting.values.DynamicAmount
+import com.wingedsheep.sdk.scripting.targets.EffectTarget
 
 /**
  * "Why are you paying for that now?" — the **activated ability** half of [HoldPolicy].
@@ -86,6 +97,10 @@ internal object ExpiringGrantWindow {
         playerId: EntityId,
         ability: ActivatedAbility,
         intents: IntentCatalog,
+        /** The activation as it would be submitted — the cost payment is what [needsACombat] reads. */
+        activation: ActivateAbility? = null,
+        /** [com.wingedsheep.ai.engine.AiProfile.expiringGrantsNeedACombat] — see [needsACombatHolds]. */
+        needsACombat: Boolean = false,
     ): Boolean {
         if (ability.isManaAbility) return false
 
@@ -94,6 +109,8 @@ internal object ExpiringGrantWindow {
         if (ability.timing != TimingRule.InstantSpeed) return false
 
         if (!everyPayoffExpiresThisTurn(ability.effect)) return false
+
+        if (needsACombat) return needsACombatHolds(state, playerId, ability, intents, activation)
 
         if (!laterWindowIsStillAhead(state, playerId)) return false
 
@@ -109,6 +126,176 @@ internal object ExpiringGrantWindow {
         // stopping it.
         return Patience.factorFor(state, state.projectedState, playerId) > 0.0
     }
+
+    /**
+     * The same question with two gaps closed, both found in one play session (2026-09-20): a
+     * Kithkeeper (`Tap three untapped creatures you control: +3/+0 and flying until end of turn`)
+     * activated the turn it came down, summoning sick, tapping the AI's other three creatures; and
+     * again on the opponent's turn in response to a creature spell, tapping **itself** and both
+     * remaining tokens. Zero blockers both times, and a pump nothing could spend.
+     *
+     * **It does not decay with the turn.** The base rule inherits [Patience]'s turn decay, which
+     * is gone by turn 14 — and that game was past it, so the floor never stood. The decay is an
+     * argument about a *card*: the opponent's best card is still coming, the mana to cast it is
+     * idling. Neither is true of an ability, which this file's own KDoc already says is provably
+     * still there later at the same cost. So waiting is exactly as free on turn 16 as on turn 3.
+     * The two releases that are about the *position* stay: facing lethal, and a full hand.
+     *
+     * **"No later window" is not "use it now".** The base rule only ever says *wait*; once no
+     * window is ahead it hands the choice back to the leaf, which prices +3/+0 and flying as a
+     * bigger creature whether or not any combat is left to use it. The instant-speed twin of this
+     * rule (`HoldPolicy.windowVerdictFor`, the `COMBAT_TRICK` branch) already says a pump outside
+     * combat, with nothing on the stack to answer, buys nothing. This says the same for the ability.
+     *
+     * Inside combat — the window where the grant can buy damage or a block — two more checks:
+     *
+     *  - **The grant must land on something in the fight** ([selfGrantIsIdle]). A self-pump on a
+     *    creature that is not attacking, cannot attack, or is being tapped by its own cost is idle.
+     *  - **Paying must not cost the whole defence** ([tapsAwayTheLastBlocker]) — unless the attack
+     *    is lethal with it ([lethalWithThePump]). Creatures tapped on our turn, or on theirs before
+     *    blocks, stay tapped through their next attack.
+     */
+    private fun needsACombatHolds(
+        state: GameState,
+        playerId: EntityId,
+        ability: ActivatedAbility,
+        intents: IntentCatalog,
+        activation: ActivateAbility?,
+    ): Boolean {
+        if (somethingOnTheStackThreatensUs(state, playerId, intents)) return false
+        if (ThreatAssessment.lethalOnBoardAgainst(state, state.projectedState, playerId)) return false
+        if (state.getZone(playerId, Zone.HAND).size >= MaximumHandSize.DEFAULT) return false
+
+        if (laterWindowIsStillAhead(state, playerId)) return true
+        if (state.step !in COMBAT_STEPS) return true
+
+        if (selfGrantIsIdle(state, playerId, ability, activation)) return true
+        if (tapsAwayTheLastBlocker(state, playerId, activation) &&
+            !lethalWithThePump(state, playerId, ability, activation)
+        ) return true
+        return false
+    }
+
+    /**
+     * Whether a grant whose every payoff lands on its own source is spent on a creature that is
+     * not in a position to use it this combat.
+     *
+     * A grant that targets something else is left alone: which creature it lands on is the
+     * target picker's question, not a window question.
+     *
+     * Tapping the source for its own cost is idle unless it is already attacking or blocking — a
+     * tapped attacker still deals damage, and so does a tapped blocker. Otherwise: on our turn,
+     * once attackers are declared it must be one of them, and before that it must be able to be;
+     * on theirs, once blocks are declared it must be blocking, and before that it must be able to.
+     */
+    private fun selfGrantIsIdle(
+        state: GameState,
+        playerId: EntityId,
+        ability: ActivatedAbility,
+        activation: ActivateAbility?,
+    ): Boolean {
+        val source = activation?.sourceId ?: return false
+        if (!everyPayoffLandsOnItsSource(ability.effect)) return false
+        val container = state.getEntity(source) ?: return false
+        val projected = state.projectedState
+
+        val attacking = container.has<AttackingComponent>()
+        val blocking = container.has<BlockingComponent>()
+        val tappedByItsOwnCost = activation.costPayment?.tappedPermanents.orEmpty().contains(source)
+        if (tappedByItsOwnCost && !attacking && !blocking) return true
+
+        val untapped = !container.has<TappedComponent>() && !tappedByItsOwnCost
+        return if (state.isActiveTurnFor(playerId)) {
+            when (state.step) {
+                Step.BEGIN_COMBAT -> !(untapped && !projected.cantAttack(source) &&
+                    (!container.has<SummoningSicknessComponent>() || projected.hasKeyword(source, Keyword.HASTE)))
+                else -> !attacking
+            }
+        } else {
+            when (state.step) {
+                in BLOCKS_IN_STEPS -> !blocking
+                else -> !(untapped && !projected.cantBlock(source))
+            }
+        }
+    }
+
+    /**
+     * Whether paying [activation]'s tap cost leaves us no creature to block their next attack with.
+     *
+     * Only when it matters: on their turn once blocks are declared, whatever we tap untaps in our
+     * own untap step, before they can attack again. And only against a board that has a creature
+     * to attack with. "At least one" is the floor the user asked for — tapping everything is the
+     * mistake that was seen, and a finer bar is the evaluator's job.
+     */
+    private fun tapsAwayTheLastBlocker(
+        state: GameState,
+        playerId: EntityId,
+        activation: ActivateAbility?,
+    ): Boolean {
+        val tapped = activation?.costPayment?.tappedPermanents.orEmpty().toSet()
+        if (tapped.isEmpty()) return false
+        if (!state.isActiveTurnFor(playerId) && state.step in BLOCKS_IN_STEPS) return false
+
+        val projected = state.projectedState
+        val theyHaveACreature = state.getOpponents(playerId).any { opponent ->
+            projected.getBattlefieldControlledBy(opponent).any { projected.isCreature(it) }
+        }
+        if (!theyHaveACreature) return false
+
+        return projected.getBattlefieldControlledBy(playerId).none { id ->
+            id !in tapped && projected.isCreature(id) && !projected.cantBlock(id) &&
+                state.getEntity(id)?.has<TappedComponent>() != true
+        }
+    }
+
+    /**
+     * Whether, on our turn with blocks declared, our unblocked attackers kill a player they are
+     * attacking once the pump is counted — the exception to [tapsAwayTheLastBlocker].
+     *
+     * Before blocks the answer is unknown and this says no, which is the conservative direction:
+     * the cost is at most a pump activated one step later, after blocks, where this can see it.
+     */
+    private fun lethalWithThePump(
+        state: GameState,
+        playerId: EntityId,
+        ability: ActivatedAbility,
+        activation: ActivateAbility?,
+    ): Boolean {
+        if (!state.isActiveTurnFor(playerId) || state.step !in BLOCKS_IN_STEPS) return false
+        val projected = state.projectedState
+        val source = activation?.sourceId
+        val pump = if (everyPayoffLandsOnItsSource(ability.effect)) selfPowerPump(ability.effect) else 0
+
+        val damageByDefender = mutableMapOf<EntityId, Int>()
+        for (id in projected.getBattlefieldControlledBy(playerId)) {
+            val container = state.getEntity(id) ?: continue
+            val attack = container.get<AttackingComponent>() ?: continue
+            if (container.has<BlockedComponent>()) continue
+            val power = (projected.getPower(id) ?: 0) + if (id == source) pump else 0
+            damageByDefender.merge(attack.defenderId, power.coerceAtLeast(0), Int::plus)
+        }
+        return state.getOpponents(playerId).any { opponent ->
+            (damageByDefender[opponent] ?: 0) >= state.lifeTotal(opponent)
+        }
+    }
+
+    /** Whether every leaf of [effect] lands on the ability's own source — see [selfGrantIsIdle]. */
+    private fun everyPayoffLandsOnItsSource(effect: Effect): Boolean {
+        val leaves = EffectWalker.leaves(effect)
+        return leaves.isNotEmpty() && leaves.all { leaf ->
+            when (leaf) {
+                is GrantKeywordEffect -> leaf.target == EffectTarget.Self
+                is GrantEvasionKeywordEffect -> leaf.target == EffectTarget.Self
+                is ModifyStatsEffect -> leaf.target == EffectTarget.Self
+                else -> false
+            }
+        }
+    }
+
+    /** The fixed power a self-pump adds, summed over its leaves. */
+    private fun selfPowerPump(effect: Effect): Int =
+        EffectWalker.leaves(effect).filterIsInstance<ModifyStatsEffect>()
+            .sumOf { (it.powerModifier as? DynamicAmount.Fixed)?.amount ?: 0 }
 
     /**
      * Whether **everything** [effect] does is gone at cleanup.
@@ -255,4 +442,15 @@ internal object ExpiringGrantWindow {
 
     /** [BEFORE_OUR_ATTACK] plus the step where their attack is not yet known. */
     private val BEFORE_THEIR_ATTACK = BEFORE_OUR_ATTACK + Step.BEGIN_COMBAT
+
+    /** The steps where a grant can still change a fight — the same set `HoldPolicy` uses for a trick. */
+    private val COMBAT_STEPS = setOf(
+        Step.BEGIN_COMBAT, Step.DECLARE_ATTACKERS, Step.DECLARE_BLOCKERS,
+        Step.FIRST_STRIKE_COMBAT_DAMAGE, Step.COMBAT_DAMAGE,
+    )
+
+    /** [COMBAT_STEPS] once blocks are declared. */
+    private val BLOCKS_IN_STEPS = setOf(
+        Step.DECLARE_BLOCKERS, Step.FIRST_STRIKE_COMBAT_DAMAGE, Step.COMBAT_DAMAGE,
+    )
 }

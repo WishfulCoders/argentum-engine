@@ -13,6 +13,7 @@ import com.wingedsheep.ai.engine.rollout.PlayoutEngine
 import com.wingedsheep.ai.engine.rollout.PlayoutPolicy
 import com.wingedsheep.ai.engine.rollout.HoldingGatedEvaluator
 import com.wingedsheep.ai.engine.rollout.RolloutCandidateEvaluator
+import com.wingedsheep.ai.engine.rollout.RolloutSettings
 import com.wingedsheep.ai.engine.rollout.StaticCandidateEvaluator
 import com.wingedsheep.engine.core.*
 import com.wingedsheep.engine.legalactions.LegalAction
@@ -267,6 +268,16 @@ class AIPlayer(
                 discountedRaceClock = profile.discountedRaceClock,
                 creatureValuation = profile.creatureValuation,
                 priceLandsInHandAsMana = profile.priceLandsInHandAsMana,
+                priceSacrificeLandsAsNoMana = profile.priceSacrificeLandsAsNoMana,
+                // The holder is built whenever either colour term needs it: it carries the
+                // registry `landSequencing` reads producible colours from, and the charge itself
+                // is applied only under `chargesForUnavailableColours`.
+                colourAvailability = if (profile.chargesForUnavailableColours || profile.sequenceLandsByCastability) {
+                    BoardPresence.ColourAvailability(cardRegistry, charging = profile.chargesForUnavailableColours)
+                } else {
+                    null
+                },
+                sequenceLandsByCastability = profile.sequenceLandsByCastability,
             )
             // Its features read the full catalog, as they did where it was fit (replay's PreferenceWriter).
             val correction = profile.priorityCorrectionId?.let(EvalWeights::correction)
@@ -292,6 +303,8 @@ class AIPlayer(
                 advisorRegistry = advisorRegistry,
                 budgetPolicy = profile.budgetPolicy,
                 intents = intents,
+                cardRegistry = cardRegistry,
+                choosesLandsByColour = profile.choosesLandsByColour,
             )
 
             // Wire up the decision resolver so simulations can resolve non-trivial
@@ -299,6 +312,24 @@ class AIPlayer(
             // NeedsDecision with an unresolved board state.
             simulator.decisionResolver = { state, decision ->
                 responder.respond(state, decision, decision.playerId)
+            }
+
+            // `AiProfile.opponentRespondsInSimulation`. Set here rather than passed to the
+            // constructor because the policy needs a `CombatAdvisor`, which needs the simulator —
+            // the same cycle `decisionResolver` above is broken for, broken the same way. The
+            // advisor is its own instance on its own simulator: a `PlayoutPolicy` may not simulate,
+            // and handing it the search's advisor would put a second consumer on the one the
+            // Strategist is mid-search with.
+            if (profile.opponentRespondsInSimulation) {
+                val responseCombat = CombatAdvisor(
+                    GameSimulator(cardRegistry), evaluator, cardRegistry, advisorRegistry
+                )
+                simulator.opponentResponse = PlayoutResponsePolicy(
+                    PlayoutPolicy(
+                        responseCombat, IntentCatalog.of(cardRegistry),
+                        profile.rollouts ?: RolloutSettings.DEFAULT, cardRegistry,
+                    )
+                )
             }
 
             return AIPlayer(
@@ -320,6 +351,8 @@ class AIPlayer(
                     endStepManaAllowance = profile.spendIdleManaInTheirEndStep,
                     holdFlashPermanentsForAmbush = profile.holdFlashPermanentsForAmbush,
                     holdExpiringGrantsForCombat = profile.holdExpiringGrantsForCombat,
+                    expiringGrantsNeedACombat = profile.expiringGrantsNeedACombat,
+                    tapCostsKeepBlockersUp = profile.tapCostsKeepBlockersUp,
                     // Same seam as `CombatAdvisor`'s `lifeWeight`: a raw Phase 9 profile resolves
                     // to the compiled fallback here, which is the right answer for a policy that
                     // only needs to know what a point of board value trades against.

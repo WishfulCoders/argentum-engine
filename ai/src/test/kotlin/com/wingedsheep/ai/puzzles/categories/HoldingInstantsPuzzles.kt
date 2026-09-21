@@ -393,5 +393,178 @@ object HoldingInstantsPuzzles {
             // grant on — the line thrown away by protecting it.
             check = { shouldActivate("Olivia's Dragoon") },
         ),
+
+        // Kithkeeper — "Tap three untapped creatures you control: this creature gets +3/+0 and
+        // gains flying until end of turn" — off a play session (2026-09-20, replay bca68ebf, actions
+        // 453 and 467). Past turn 14, where `Patience`'s turn decay has switched the
+        // `holdExpiringGrantsForCombat` floor off, the AI pumped a summoning-sick Kithkeeper with its
+        // other three creatures, then on the opponent's turn tapped Kithkeeper *itself* and both
+        // tokens to pump it again. Zero blockers both times. `instants-18`..`-20` are the mistake;
+        // `-21`, `-22` and `-24` are the windows where the same activation is right, so the category
+        // cannot be passed by never activating; `-23` is the blocker floor itself.
+
+        AiPuzzle(
+            id = "instants-18",
+            category = PuzzleCategory.HOLDING_INSTANTS,
+            expectation = "Late game, our main: don't tap three creatures to pump a summoning-sick Kithkeeper",
+            aiSeat = 1,
+            position = { scenario ->
+                scenario.withPlayers()
+                    .withTurnNumber(16)
+                    .withCardOnBattlefield(1, "Kithkeeper", summoningSickness = true)
+                    .withCardOnBattlefield(1, "Grizzly Bears")
+                    .withCardOnBattlefield(1, "Grizzly Bears")
+                    .withCardOnBattlefield(1, "Grizzly Bears")
+                    .withCardOnBattlefield(2, "Hill Giant")
+                    .build()
+                    .advanceToPriority(1, Step.PRECOMBAT_MAIN)
+            },
+            // Action 453. It cannot attack this turn, so +3/+0 and flying buy nothing, and the three
+            // Bears stay tapped through the Hill Giant's attack.
+            check = { shouldNotActivate("Kithkeeper") },
+        ),
+
+        AiPuzzle(
+            id = "instants-19",
+            category = PuzzleCategory.HOLDING_INSTANTS,
+            expectation = "Our postcombat main: combat is over, so an until-end-of-turn pump buys nothing",
+            aiSeat = 1,
+            position = { scenario ->
+                scenario.withPlayers()
+                    .withTurnNumber(16)
+                    .withCardOnBattlefield(1, "Kithkeeper")
+                    .withCardOnBattlefield(1, "Grizzly Bears")
+                    .withCardOnBattlefield(1, "Grizzly Bears")
+                    .withCardOnBattlefield(1, "Grizzly Bears")
+                    .withCardOnBattlefield(2, "Hill Giant")
+                    .build()
+                    .advanceToPriority(1, Step.POSTCOMBAT_MAIN)
+            },
+            // The gap "no later window" left: the base rule only ever says *wait*, and once nothing
+            // is ahead it hands the choice to the leaf, which prices the pump as a bigger creature.
+            check = { shouldNotActivate("Kithkeeper") },
+        ),
+
+        AiPuzzle(
+            id = "instants-20",
+            category = PuzzleCategory.HOLDING_INSTANTS,
+            expectation = "Their main: don't tap Kithkeeper itself to pump Kithkeeper",
+            aiSeat = 1,
+            position = { scenario ->
+                scenario.withPlayers()
+                    .withActivePlayer(2)
+                    .withTurnNumber(16)
+                    // Exactly three untapped creatures, so the cost can only be paid with the source.
+                    .withCardOnBattlefield(1, "Kithkeeper")
+                    .withCardOnBattlefield(1, "Grizzly Bears")
+                    .withCardOnBattlefield(1, "Grizzly Bears")
+                    .withCardOnBattlefield(2, "Hill Giant")
+                    .build()
+                    .advanceToPriority(1, Step.PRECOMBAT_MAIN)
+            },
+            // Action 467. A tapped Kithkeeper can neither block nor attack, so the pump is worth
+            // exactly nothing and all three blockers are gone for their combat.
+            check = { shouldNotActivate("Kithkeeper") },
+        ),
+
+        AiPuzzle(
+            id = "instants-21",
+            category = PuzzleCategory.HOLDING_INSTANTS,
+            expectation = "Kithkeeper unblocked with a blocker to spare: the pump is three free damage",
+            aiSeat = 1,
+            position = { scenario ->
+                scenario.withPlayers()
+                    .withTurnNumber(16)
+                    .withCardOnBattlefield(1, "Kithkeeper")
+                    // Four, so paying three still leaves one home for their attack.
+                    .withCardOnBattlefield(1, "Grizzly Bears")
+                    .withCardOnBattlefield(1, "Grizzly Bears")
+                    .withCardOnBattlefield(1, "Grizzly Bears")
+                    .withCardOnBattlefield(1, "Grizzly Bears")
+                    .withCardOnBattlefield(2, "Hill Giant")
+                    .build()
+                    .advanceToDeclaration(1, Step.DECLARE_ATTACKERS)
+                    .also { it.declareAttackers(mapOf("Kithkeeper" to 2)) }
+                    .advanceToDeclaration(2, Step.DECLARE_BLOCKERS)
+                    .also { it.declareBlockers(mapOf()) }
+                    .advanceToPriority(1, Step.DECLARE_BLOCKERS)
+            },
+            // The user's "free damage" exception — the window the grant exists for.
+            check = { shouldActivate("Kithkeeper") },
+        ),
+
+        AiPuzzle(
+            id = "instants-22",
+            category = PuzzleCategory.HOLDING_INSTANTS,
+            expectation = "Tapping every blocker is fine when the pump is lethal",
+            aiSeat = 1,
+            position = { scenario ->
+                scenario.withPlayers()
+                    .withTurnNumber(16)
+                    .withLifeTotal(2, 6)
+                    .withCardOnBattlefield(1, "Kithkeeper")
+                    .withCardOnBattlefield(1, "Grizzly Bears")
+                    .withCardOnBattlefield(1, "Grizzly Bears")
+                    .withCardOnBattlefield(1, "Grizzly Bears")
+                    .withCardOnBattlefield(2, "Hill Giant")
+                    .build()
+                    .advanceToDeclaration(1, Step.DECLARE_ATTACKERS)
+                    .also { it.declareAttackers(mapOf("Kithkeeper" to 2)) }
+                    .advanceToDeclaration(2, Step.DECLARE_BLOCKERS)
+                    .also { it.declareBlockers(mapOf()) }
+                    .advanceToPriority(1, Step.DECLARE_BLOCKERS)
+            },
+            // 3 + 3 = 6 unblocked into 6 life. No blockers left, and no turn of theirs to block in.
+            check = { shouldActivate("Kithkeeper") },
+        ),
+
+        AiPuzzle(
+            id = "instants-23",
+            category = PuzzleCategory.HOLDING_INSTANTS,
+            expectation = "Three damage is not worth every blocker we have when it isn't lethal",
+            aiSeat = 1,
+            position = { scenario ->
+                scenario.withPlayers()
+                    .withTurnNumber(16)
+                    .withCardOnBattlefield(1, "Kithkeeper")
+                    .withCardOnBattlefield(1, "Grizzly Bears")
+                    .withCardOnBattlefield(1, "Grizzly Bears")
+                    .withCardOnBattlefield(1, "Grizzly Bears")
+                    .withCardOnBattlefield(2, "Hill Giant")
+                    .build()
+                    .advanceToDeclaration(1, Step.DECLARE_ATTACKERS)
+                    .also { it.declareAttackers(mapOf("Kithkeeper" to 2)) }
+                    .advanceToDeclaration(2, Step.DECLARE_BLOCKERS)
+                    .also { it.declareBlockers(mapOf()) }
+                    .advanceToPriority(1, Step.DECLARE_BLOCKERS)
+            },
+            // `-22` at 20 life: the three Bears would be the only blockers against the Hill Giant.
+            check = { shouldNotActivate("Kithkeeper") },
+        ),
+
+        AiPuzzle(
+            id = "instants-24",
+            category = PuzzleCategory.HOLDING_INSTANTS,
+            expectation = "They attack with a flier: tap three to give Kithkeeper flying and block it",
+            aiSeat = 1,
+            position = { scenario ->
+                scenario.withPlayers()
+                    .withActivePlayer(2)
+                    .withTurnNumber(16)
+                    .withCardOnBattlefield(1, "Kithkeeper")
+                    .withCardOnBattlefield(1, "Grizzly Bears")
+                    .withCardOnBattlefield(1, "Grizzly Bears")
+                    .withCardOnBattlefield(1, "Grizzly Bears")
+                    .withCardOnBattlefield(2, "Wind Drake")
+                    .withLandsOnBattlefield(2, "Island", 4)
+                    .build()
+                    .advanceToDeclaration(2, Step.DECLARE_ATTACKERS)
+                    .also { it.declareAttackers(mapOf("Wind Drake" to 1)) }
+                    .advanceToPriority(1, Step.DECLARE_ATTACKERS)
+            },
+            // The blocking use the user named. Kithkeeper itself stays untapped to block, so the
+            // blocker floor is met by the creature the grant is for.
+            check = { shouldActivate("Kithkeeper") },
+        ),
     )
 }

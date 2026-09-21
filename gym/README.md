@@ -39,7 +39,10 @@ pairwise `validBlockerAssignments` map; declaration-wide requirements remain
 server-authoritative and are validated when the completed `ActionParams` is stepped.
 Schema v1.7 also exposes ordered target requirements, X-dependent target constraints,
 per-extra-target costs, and divided-damage bounds. `ActionParams.damageDistribution`
-completes divided-damage spell and activated-ability templates.
+completes divided-damage spell and activated-ability templates. Schema v1.8 adds a typed
+`structuredPayload` for every complex pending-decision family. It names the response discriminator
+and carries the concrete options and constraints needed to build a valid `DecisionResponse` without
+depending on engine internals.
 
 ## The two entry points
 
@@ -107,10 +110,11 @@ it just steps by ID like any other action.
 Complex decisions (`ChooseTargetsDecision`, `DistributeDecision`,
 `OrderObjectsDecision`, `SplitPilesDecision`, `SearchLibraryDecision`,
 `ReorderLibraryDecision`, `AssignDamageDecision`,
-`SelectManaSourcesDecision`, multi-select `SelectCardsDecision`,
-multi-mode `ChooseModeDecision`, `BudgetModalDecision`) flag
-`requiresStructuredResponse = true` and need a purpose-built
-`DecisionResponse` submitted via `MultiEnvService.submitDecision`.
+`CombatResolutionDecision`, `SelectManaSourcesDecision`,
+`ChooseReplacementDecision`, multi-select `SelectCardsDecision`, multi-mode
+`ChooseModeDecision`, `BudgetModalDecision`) flag `requiresStructuredResponse = true` and expose a
+purpose-built `structuredPayload`. Build the response named by its `responseType` and submit it via
+`MultiEnvService.submitDecision`.
 
 ### Information hiding by default
 
@@ -121,6 +125,9 @@ zone stays marked hidden — `hidden` reports the structural fact that the zone 
 not "something here is unknown", so it stays a stable feature as reveals come and go. Public
 face-down objects expose their public projected characteristics but not the underlying card
 identity.
+Structured decision options follow the same boundary: they are included only when the observation
+perspective is the player who must answer. Another player's observation retains the decision summary
+but omits `structuredPayload`. Debug `revealAll` observations include it.
 A `revealAll = true` flag is available for debug tooling and must not be
 enabled in real self-play (the agent would be training on leaked
 information).

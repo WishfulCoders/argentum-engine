@@ -193,6 +193,26 @@ data class AiProfile(
      */
     val discountedRaceClock: Boolean = false,
     /**
+     * Let the opponent answer a candidate that is still on the stack, instead of scoring every
+     * candidate as if it always resolves.
+     *
+     * `GameSimulator.resolveToQuietState` passes priority for both players — it says so, and calls
+     * it "the most common outcome", which it is. What it is not is the outcome worth *scoring*: the
+     * AI cannot tell a threat that lands from one that eats an instant, and so it cannot value
+     * playing around anything. `mtg-draft-ai` `docs/27` §7.4 reached this from the other end — a
+     * static bonus for keeping mana up (`ManaReserve`) lost at every weight and lost worst on blue
+     * decks, because mana held against a response nobody plays is only tempo spent — and §7.4.1
+     * concluded that holding mana "has to be earned by a search that plays the opponent's turn".
+     *
+     * `mtg-draft-ai` `docs/33` §10 is the second, independent reason to expect this to matter more
+     * broadly: the leaf score is a ladder of bodies, so the decks it misplays are the ones that win
+     * by anything else. That is a case about the *horizon*, not about blue.
+     *
+     * One response, from [com.wingedsheep.ai.engine.rollout.PlayoutPolicy], gated on the opponent
+     * having untapped lands and a card in hand. See [OpponentResponsePolicy].
+     */
+    val opponentRespondsInSimulation: Boolean = false,
+    /**
      * Charge a removal spell for pointing at a creature that isn't worth a card yet — so the AI
      * stops spending its Pacifism on the first 1/1 across the table.
      *
@@ -375,6 +395,24 @@ data class AiProfile(
      */
     val holdExpiringGrantsForCombat: Boolean = false,
     /**
+     * [holdExpiringGrantsForCombat] with two gaps closed, off a play session (2026-09-20): a
+     * Kithkeeper pumped itself twice with every creature the AI had — once summoning sick, once
+     * tapping itself for its own cost — past turn 14, where the base rule's inherited turn decay
+     * had switched the floor off. This drops that decay (an ability cannot be stripped, so waiting
+     * stays free), floors an until-end-of-turn grant outside combat rather than handing it back to
+     * the leaf, and inside combat floors a self-grant on a creature not in the fight, and a tap cost
+     * that leaves no blocker unless the attack is lethal with it. See
+     * [com.wingedsheep.ai.engine.knowledge.ExpiringGrantWindow]. Needs [holdExpiringGrantsForCombat].
+     */
+    val expiringGrantsNeedACombat: Boolean = false,
+    /**
+     * Pay a "tap N untapped creatures" cost with the creatures that matter least: not the ability's
+     * own source, then those that cannot block, then the smallest bodies — the "keep the better
+     * blocker up" rule Teamwork's payment already follows. Off, the payment is the first N valid
+     * targets in enumeration order, which is how the Kithkeeper above came to tap itself.
+     */
+    val tapCostsKeepBlockersUp: Boolean = false,
+    /**
      * The two `BoardPresence.creatureValue` corrections [PRODUCTION_RACECLOCK]'s KDoc named as the
      * reason its arena win came with a puzzle trade — the damaged-creature discount and the flat
      * multiplier on "can't attack". Both are off by default; see
@@ -409,6 +447,72 @@ data class AiProfile(
      * hand, and it is why this gets a real arena run rather than a puzzle column.
      */
     val priceLandsInHandAsMana: Boolean = false,
+
+    /**
+     * Price a land that cannot make mana as the permanent it is: nothing.
+     *
+     * The first half of mtg-draft-ai `docs/46`. `BoardPresence` tells one land from another with a
+     * single constant — 0.6 untapped, 0.3 tapped — and an Evolving Wilds sitting on the battlefield
+     * collects the 0.6 while producing no mana at all. So cracking it lost the 0.6 and gained a
+     * tapped basic's 0.3: **−0.45 in every position measured**, whatever was stranded in hand, and
+     * the AI never cracked a fetch land in any of them.
+     *
+     * With this on the permanent is worth nothing, cracking gains the basic outright, and the play
+     * stops needing a special case. Needs [useCardIntent], because "makes no mana and eats itself"
+     * is [com.wingedsheep.ai.engine.knowledge.CardIntent.sacrificeLand], read off the card's script.
+     *
+     * Paired with [choosesLandsByColour], and separable from it on purpose: this one decides
+     * *whether* to crack, that one decides *what to take*, and an arena arm should be able to say
+     * which of the two is carrying the result.
+     */
+    val priceSacrificeLandsAsNoMana: Boolean = false,
+
+    /**
+     * Rank a land search by the colours it fixes rather than by library order.
+     *
+     * The second half of `docs/46`. `DecisionResponder.contextualCardScore` grades a land by how
+     * many lands are already on the battlefield and nothing else, so every basic in a fetch's
+     * options ties and the stable sort takes the first — the AI fetched a Swamp with a {1}{G}
+     * creature stranded in hand, and fetched a Forest instead when the library happened to be
+     * ordered the other way.
+     *
+     * On, [com.wingedsheep.ai.engine.mana.ColourNeeds] supplies the missing fact: prefer a colour
+     * the hand is asking for and the board cannot make, then one the board cannot make at all, then
+     * whichever colour the deck leans on hardest. The ladder is bounded so that it orders lands
+     * against each other and never lifts a basic above a real card.
+     */
+    val choosesLandsByColour: Boolean = false,
+
+    /**
+     * Charge the board for each colour the hand needs and the battlefield cannot make.
+     *
+     * The third of `docs/46`'s three call sites, and the general one:
+     * [com.wingedsheep.ai.engine.evaluation.BoardPresence.ColourAvailability]. The other two fix a
+     * fetch land — whether to crack it, and what to take — and neither reaches the commonest form
+     * of the same mistake, which is a *land drop*: with two Mountains out and a {1}{G} creature in
+     * hand, the AI plays a third Mountain over the tapland that is its only green source, because
+     * an untapped land scores 0.6 and a tapped one 0.3 and no term knows what either one taps for.
+     *
+     * A penalty on the position rather than a bonus on a card, so any play that makes a colour
+     * available — a land drop, a fetch, a mana creature — is credited for it through the board it
+     * leads to, with no special case for any of them.
+     */
+    val chargesForUnavailableColours: Boolean = false,
+
+    /**
+     * [sequenceLandsByUsableMana] with its castability test reading colours as well as amount.
+     *
+     * Supersedes that flag rather than stacking with it — same term, better answer. Upstream's
+     * version asks whether untapping the tapped lands would bring a card in hand within reach by
+     * *mana value*, which its own KDoc admits ignores colours; on three Mountains with a `{2}{G}`
+     * in hand it says yes, so the refund is withheld and the AI is charged for a tapland on a turn
+     * when the mana it was not producing could never have cast anything.
+     *
+     * Its own flag because `docs/46` §9.7 measured the mana-value form at parity on 600 games and
+     * named this as the likeliest reason, so the two have to be separable to tell whether the idea
+     * or the approximation was at fault.
+     */
+    val sequenceLandsByCastability: Boolean = false,
     /** Non-null profiles may only be selected automatically for this set. Arena selection stays explicit. */
     val restrictedToSet: String? = null,
     /**

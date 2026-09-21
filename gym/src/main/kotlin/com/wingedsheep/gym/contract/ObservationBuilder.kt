@@ -7,6 +7,7 @@ import com.wingedsheep.engine.core.BatchYesNoResponse
 import com.wingedsheep.engine.core.BottomCards
 import com.wingedsheep.engine.core.BudgetModalDecision
 import com.wingedsheep.engine.core.BudgetModalResponse
+import com.wingedsheep.engine.core.CancelDecisionResponse
 import com.wingedsheep.engine.core.CardsSelectedResponse
 import com.wingedsheep.engine.core.CastSpell
 import com.wingedsheep.engine.core.ChooseColorDecision
@@ -125,8 +126,16 @@ class ObservationBuilder(
             buildStackItem(state, entityId, perspectivePlayerId, revealAll)
         }
 
+        val canObserveDecisionOptions = state.pendingDecision?.let {
+            revealAll || it.playerId == perspectivePlayerId
+        } ?: false
         val pendingDecisionAndRegistry = state.pendingDecision
-            ?.let { buildPendingDecision(it) }
+            ?.let {
+                buildPendingDecision(
+                    it,
+                    exposeStructuredPayload = canObserveDecisionOptions,
+                )
+            }
         val pendingDecisionView = pendingDecisionAndRegistry?.first
         val decisionRegistry = pendingDecisionAndRegistry?.second ?: ActionRegistry.EMPTY
 
@@ -135,9 +144,10 @@ class ObservationBuilder(
         val legalActionViews: List<LegalActionView>
         val actionRegistry: ActionRegistry
         if (state.pendingDecision != null) {
-            val responses = decisionRegistry.decisionResponses.map { it.second }
+            val visibleRegistry = if (canObserveDecisionOptions) decisionRegistry else ActionRegistry.EMPTY
+            val responses = visibleRegistry.decisionResponses.map { it.second }
             legalActionViews = buildDecisionOptionViews(state.pendingDecision!!, responses)
-            actionRegistry = decisionRegistry
+            actionRegistry = visibleRegistry
         } else {
             legalActionViews = legalActions.mapIndexed { idx, la -> legalActionToView(idx, la) }
             actionRegistry = ActionRegistry.ofLegalActions(legalActions)
@@ -514,10 +524,22 @@ class ObservationBuilder(
      * submits a `DecisionResponse` via a dedicated endpoint (Phase 3).
      */
     private fun buildPendingDecision(
-        decision: PendingDecision
+        decision: PendingDecision,
+        exposeStructuredPayload: Boolean,
     ): Pair<PendingDecisionView, ActionRegistry> {
         val ctx = decision.context
         val baseShape = DecisionShape()
+        fun decisionView(
+            kind: PendingDecisionKind,
+            shape: DecisionShape,
+            structured: Boolean,
+        ): PendingDecisionView = baseView(
+            decision = decision,
+            kind = kind,
+            shape = shape,
+            structured = structured,
+            exposeStructuredPayload = exposeStructuredPayload,
+        )
 
         return when (decision) {
             is YesNoDecision -> {
@@ -525,7 +547,7 @@ class ObservationBuilder(
                     YesNoResponse(decision.id, true),
                     YesNoResponse(decision.id, false)
                 )
-                val view = baseView(decision, PendingDecisionKind.YES_NO, baseShape, structured = false)
+                val view = decisionView(PendingDecisionKind.YES_NO, baseShape, structured = false)
                 view to ActionRegistry.ofDecisionResponses(responses)
             }
             is BatchYesNoDecision -> {
@@ -535,7 +557,7 @@ class ObservationBuilder(
                     BatchYesNoResponse(decision.id, choice = true, applyToAll = true),
                     BatchYesNoResponse(decision.id, choice = false, applyToAll = true)
                 )
-                val view = baseView(decision, PendingDecisionKind.YES_NO, baseShape, structured = false)
+                val view = decisionView(PendingDecisionKind.YES_NO, baseShape, structured = false)
                 view to ActionRegistry.ofDecisionResponses(responses)
             }
             is ChooseNumberDecision -> {
@@ -546,7 +568,7 @@ class ObservationBuilder(
                     numericMin = decision.minValue,
                     numericMax = decision.maxValue
                 )
-                val view = baseView(decision, PendingDecisionKind.CHOOSE_NUMBER, shape, structured = false)
+                val view = decisionView(PendingDecisionKind.CHOOSE_NUMBER, shape, structured = false)
                 view to ActionRegistry.ofDecisionResponses(responses)
             }
             is ChooseModeDecision -> {
@@ -559,14 +581,14 @@ class ObservationBuilder(
                         minSelections = decision.minModes,
                         maxSelections = decision.maxModes
                     )
-                    val view = baseView(decision, PendingDecisionKind.CHOOSE_MODE, shape, structured = false)
+                    val view = decisionView(PendingDecisionKind.CHOOSE_MODE, shape, structured = false)
                     view to ActionRegistry.ofDecisionResponses(responses)
                 } else {
                     val shape = DecisionShape(
                         minSelections = decision.minModes,
                         maxSelections = decision.maxModes
                     )
-                    baseView(decision, PendingDecisionKind.CHOOSE_MODE, shape, structured = true) to
+                    decisionView(PendingDecisionKind.CHOOSE_MODE, shape, structured = true) to
                         ActionRegistry.EMPTY
                 }
             }
@@ -575,20 +597,22 @@ class ObservationBuilder(
                     ColorChosenResponse(decision.id, it)
                 }
                 val shape = DecisionShape(availableColors = decision.availableColors)
-                val view = baseView(decision, PendingDecisionKind.CHOOSE_COLOR, shape, structured = false)
+                val view = decisionView(PendingDecisionKind.CHOOSE_COLOR, shape, structured = false)
                 view to ActionRegistry.ofDecisionResponses(responses)
             }
             is ChooseOptionDecision -> {
-                val responses = decision.options.indices.map {
+                val responses: List<DecisionResponse> = decision.options.indices.map {
                     OptionChosenResponse(decision.id, it)
-                }
-                val view = baseView(decision, PendingDecisionKind.CHOOSE_OPTION, baseShape, structured = false)
+                } + listOfNotNull(
+                    if (decision.canCancel) CancelDecisionResponse(decision.id) else null,
+                )
+                val view = decisionView(PendingDecisionKind.CHOOSE_OPTION, baseShape, structured = false)
                 view to ActionRegistry.ofDecisionResponses(responses)
             }
             is ChooseReplacementDecision ->
                 // Two-index (from, to) pick — emitted as a structured decision (trainer submits the
                 // DecisionResponse directly rather than via the flat action-ID space).
-                baseView(decision, PendingDecisionKind.CHOOSE_REPLACEMENT, baseShape, structured = true) to
+                decisionView(PendingDecisionKind.CHOOSE_REPLACEMENT, baseShape, structured = true) to
                     ActionRegistry.EMPTY
             is SelectCardsDecision -> {
                 if (decision.minSelections == 1 && decision.maxSelections == 1 && !decision.ordered) {
@@ -599,55 +623,55 @@ class ObservationBuilder(
                         minSelections = decision.minSelections,
                         maxSelections = decision.maxSelections
                     )
-                    val view = baseView(decision, PendingDecisionKind.SELECT_CARDS, shape, structured = false)
+                    val view = decisionView(PendingDecisionKind.SELECT_CARDS, shape, structured = false)
                     view to ActionRegistry.ofDecisionResponses(responses)
                 } else {
                     val shape = DecisionShape(
                         minSelections = decision.minSelections,
                         maxSelections = decision.maxSelections
                     )
-                    baseView(decision, PendingDecisionKind.SELECT_CARDS, shape, structured = true) to
+                    decisionView(PendingDecisionKind.SELECT_CARDS, shape, structured = true) to
                         ActionRegistry.EMPTY
                 }
             }
             is BudgetModalDecision -> {
                 val shape = DecisionShape(budget = decision.budget)
-                baseView(decision, PendingDecisionKind.BUDGET_MODAL, shape, structured = true) to
+                decisionView(PendingDecisionKind.BUDGET_MODAL, shape, structured = true) to
                     ActionRegistry.EMPTY
             }
             is ChooseTargetsDecision ->
-                baseView(decision, PendingDecisionKind.CHOOSE_TARGETS, baseShape, structured = true) to
+                decisionView(PendingDecisionKind.CHOOSE_TARGETS, baseShape, structured = true) to
                     ActionRegistry.EMPTY
             is DistributeDecision -> {
                 val shape = DecisionShape(totalToDistribute = decision.totalAmount)
-                baseView(decision, PendingDecisionKind.DISTRIBUTE, shape, structured = true) to
+                decisionView(PendingDecisionKind.DISTRIBUTE, shape, structured = true) to
                     ActionRegistry.EMPTY
             }
             is OrderObjectsDecision ->
-                baseView(decision, PendingDecisionKind.ORDER_OBJECTS, baseShape, structured = true) to
+                decisionView(PendingDecisionKind.ORDER_OBJECTS, baseShape, structured = true) to
                     ActionRegistry.EMPTY
             is SplitPilesDecision ->
-                baseView(decision, PendingDecisionKind.SPLIT_PILES, baseShape, structured = true) to
+                decisionView(PendingDecisionKind.SPLIT_PILES, baseShape, structured = true) to
                     ActionRegistry.EMPTY
             is SearchLibraryDecision -> {
                 val shape = DecisionShape(
                     minSelections = decision.minSelections,
                     maxSelections = decision.maxSelections
                 )
-                baseView(decision, PendingDecisionKind.SEARCH_LIBRARY, shape, structured = true) to
+                decisionView(PendingDecisionKind.SEARCH_LIBRARY, shape, structured = true) to
                     ActionRegistry.EMPTY
             }
             is ReorderLibraryDecision ->
-                baseView(decision, PendingDecisionKind.REORDER_LIBRARY, baseShape, structured = true) to
+                decisionView(PendingDecisionKind.REORDER_LIBRARY, baseShape, structured = true) to
                     ActionRegistry.EMPTY
             is AssignDamageDecision ->
-                baseView(decision, PendingDecisionKind.ASSIGN_DAMAGE, baseShape, structured = true) to
+                decisionView(PendingDecisionKind.ASSIGN_DAMAGE, baseShape, structured = true) to
                     ActionRegistry.EMPTY
             is CombatResolutionDecision ->
-                baseView(decision, PendingDecisionKind.COMBAT_RESOLUTION, baseShape, structured = true) to
+                decisionView(PendingDecisionKind.COMBAT_RESOLUTION, baseShape, structured = true) to
                     ActionRegistry.EMPTY
             is SelectManaSourcesDecision ->
-                baseView(decision, PendingDecisionKind.SELECT_MANA_SOURCES, baseShape, structured = true) to
+                decisionView(PendingDecisionKind.SELECT_MANA_SOURCES, baseShape, structured = true) to
                     ActionRegistry.EMPTY
         }
     }
@@ -656,7 +680,8 @@ class ObservationBuilder(
         decision: PendingDecision,
         kind: PendingDecisionKind,
         shape: DecisionShape,
-        structured: Boolean
+        structured: Boolean,
+        exposeStructuredPayload: Boolean,
     ): PendingDecisionView {
         val ctx = decision.context
         return PendingDecisionView(
@@ -669,7 +694,12 @@ class ObservationBuilder(
             triggeringEntityId = ctx.triggeringEntityId,
             effectHint = ctx.effectHint,
             requiresStructuredResponse = structured,
-            shape = shape
+            shape = shape,
+            structuredPayload = if (structured && exposeStructuredPayload) {
+                decision.toStructuredDecisionPayload()
+            } else {
+                null
+            },
         )
     }
 
@@ -700,6 +730,7 @@ class ObservationBuilder(
             (decision as? ChooseOptionDecision)?.options?.getOrNull(response.optionIndex)
                 ?: response.optionIndex.toString()
         is CardsSelectedResponse -> response.selectedCards.joinToString(",") { it.value }
+        is CancelDecisionResponse -> "Cancel"
         else -> response.toString()
     }
 }

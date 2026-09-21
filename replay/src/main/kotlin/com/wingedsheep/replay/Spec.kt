@@ -1,5 +1,6 @@
 package com.wingedsheep.replay
 
+import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -20,6 +21,8 @@ data class GameSpec(
     val onPlay: Boolean,
     val won: Boolean,
     val oppColors: String = "",
+    /** The user's deck colours, as 17Lands records them; used to match donor decks (`OppoDeckSampler`). */
+    val mainColors: String = "",
     val userDeck: List<String>,
     val openingHand: List<String>,
     /** Every card the opponent was seen with, with multiplicity; the rest of their deck is filler. */
@@ -82,6 +85,7 @@ data class EotSpec(
 )
 
 /** One line of the harness output. */
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 data class GameResult(
     val gameId: String,
@@ -97,6 +101,17 @@ data class GameResult(
     /** Search nodes expanded for each half-turn. */
     val nodes: List<Int> = emptyList(),
     val millis: Long = 0,
+    /** C2 (`-Dreplay.resync=true`): half-turns skipped by a resync to their snapshot. */
+    @EncodeDefault(EncodeDefault.Mode.NEVER) val gaps: List<Int> = emptyList(),
+    /** Half-turns rebuilt, in order or after a resync. */
+    @EncodeDefault(EncodeDefault.Mode.NEVER) val matched: Int? = null,
+    /** Edits each resync's state needed ([SnapshotPatcher.lastEdits]), one per gap. */
+    @EncodeDefault(EncodeDefault.Mode.NEVER) val resyncEdits: List<Int> = emptyList(),
+    /** Cards a resync made because their owner had none, "<half-turn>:<side>:<zone>:<name>" ([SnapshotPatcher.lastMade]). */
+    @EncodeDefault(EncodeDefault.Mode.NEVER) val resyncMade: List<String> = emptyList(),
+    /** Where a game with gaps stopped (the last half-turn, or a failed resync); null if it ran to the end. */
+    @EncodeDefault(EncodeDefault.Mode.NEVER) val stoppedAt: Int? = null,
+    @EncodeDefault(EncodeDefault.Mode.NEVER) val stopReason: String? = null,
 )
 
 @OptIn(ExperimentalSerializationApi::class)

@@ -3,6 +3,7 @@ package com.wingedsheep.ai.puzzles
 import com.wingedsheep.ai.engine.AiProfile
 import com.wingedsheep.engine.support.ScenarioTestBase
 import io.kotest.assertions.withClue
+import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.ints.shouldBeLessThan
 import io.kotest.matchers.shouldBe
@@ -36,7 +37,7 @@ class PuzzleSuiteTest : ScenarioTestBase() {
                     PuzzleCatalog.byCategory(category).size shouldBeGreaterThanOrEqual 6
                 }
             }
-            PuzzleCatalog.all.size shouldBe 98
+            PuzzleCatalog.all.size shouldBe 109
         }
 
         test("every KNOWN_FAILURES id names a real puzzle") {
@@ -47,6 +48,82 @@ class PuzzleSuiteTest : ScenarioTestBase() {
             val results = runner.runAll(PuzzleCatalog.all, AiProfile.PRODUCTION)
             println(PuzzleReport.summary(AiProfile.PRODUCTION.id, results))
             results.filterNot { it.passed }.map { it.puzzle.id }.toSet() shouldBe KNOWN_FAILURES
+        }
+
+        // The two mana-colour failures are failures of the *baseline*, and the whole point of
+        // recording them is that something closes them. `docs/46`'s `fixing` arm does, and asserting
+        // it here rather than only in `FixingBlindnessTest` keeps the claim in the same file as the
+        // set it contradicts — if the flags stop working, the KNOWN_FAILURES entry above becomes a
+        // lie and this is what says so.
+        test("`fixing` solves the two mana-colour puzzles the baseline cannot") {
+            val fixing = AiProfile.PRODUCTION.copy(
+                id = "production-fixing",
+                priceSacrificeLandsAsNoMana = true,
+                choosesLandsByColour = true,
+                chargesForUnavailableColours = true,
+            )
+            val mana = PuzzleCatalog.all.filter { it.id in setOf("activate-07", "sequencing-09") }
+            mana.size shouldBe 2
+            withClue("baseline") {
+                runner.runAll(mana, AiProfile.PRODUCTION).filter { it.passed } shouldBe emptyList()
+            }
+            val fixed = runner.runAll(mana, fixing)
+            withClue(fixed.joinToString("; ") { "${it.puzzle.id}: ${it.move} ${it.failure ?: ""}" }) {
+                fixed.all { it.passed }.shouldBeTrue()
+            }
+        }
+
+        // Nothing else may move. The suite's contract is that `KNOWN_FAILURES` describes a fixed
+        // agent, and `fixing` is a new arm rather than a change to it — but the search fix in
+        // `DecisionResponder` is *not* behind a flag, so this is the assertion that it was safe.
+        test("`fixing` breaks nothing else, and the unflagged search fix breaks nothing at all") {
+            val fixing = AiProfile.PRODUCTION.copy(
+                id = "production-fixing",
+                priceSacrificeLandsAsNoMana = true,
+                choosesLandsByColour = true,
+                chargesForUnavailableColours = true,
+            )
+            val failing = runner.runAll(PuzzleCatalog.all, fixing)
+                .filterNot { it.passed }.map { it.puzzle.id }.toSet()
+            failing shouldBe KNOWN_FAILURES - setOf("activate-07", "sequencing-09")
+        }
+
+        // Same contract as `fixing`'s: a new arm, so it must close what it was built for and move
+        // nothing else. Both flags, because `instants-24` needs the tap order — without it the payment
+        // taps Kithkeeper itself, and `expiringGrantsNeedACombat` then correctly refuses the block.
+        test("`grants` closes the Kithkeeper positions and breaks nothing else") {
+            // The control is the guard these flags extend, not the frozen baseline, so the
+            // difference is exactly what the two flags do.
+            val expiring = AiProfile.PRODUCTION.copy(
+                id = "production-expiring-control",
+                useCardIntent = true,
+                holdExpiringGrantsForCombat = true,
+            )
+            val grants = expiring.copy(
+                id = "production-grants",
+                expiringGrantsNeedACombat = true,
+                tapCostsKeepBlockersUp = true,
+            )
+            fun failing(profile: AiProfile) = runner.runAll(PuzzleCatalog.all, profile)
+                .filterNot { it.passed }.map { it.puzzle.id }.toSet()
+            val kithkeeper = setOf("instants-18", "instants-19", "instants-20", "instants-23")
+            val control = failing(expiring)
+            withClue("the control fails all four — the guard alone does not reach them") {
+                (kithkeeper - control) shouldBe emptySet()
+            }
+            failing(grants) shouldBe control - kithkeeper
+        }
+
+        // Same contract again. Control is the frozen baseline: `locked` is one valuation switch and
+        // needs nothing else on.
+        test("`locked` closes the locked-creature equip positions and breaks nothing else") {
+            val locked = AiProfile.PRODUCTION.copy(
+                id = "production-locked",
+                creatureValuation = AiProfile.PRODUCTION.creatureValuation.copy(lockedCreaturesAreInert = true),
+            )
+            val failing = runner.runAll(PuzzleCatalog.all, locked)
+                .filterNot { it.passed }.map { it.puzzle.id }.toSet()
+            failing shouldBe KNOWN_FAILURES - setOf("activate-08", "activate-09")
         }
 
         // The arena proved it discriminates by beating a zero-weight agent 200-0. Same argument,
@@ -132,6 +209,19 @@ class PuzzleSuiteTest : ScenarioTestBase() {
             // the hand's curve (or a horizon that reaches next turn's main phase), and it shows up
             // here as 07 flipping to a pass with 08 still passing.
             "sequencing-07",
+
+            // ── Mana colour (mtg-draft-ai `docs/46`) ──
+            // The same 0.6-vs-0.3 constant as sequencing-07, but with the curve argument removed:
+            // here the basic makes the wrong colour and would *never* cast the card in hand, so no
+            // setting of the constant is right — the evaluator has no colour term at all. Confirmed
+            // by reading the scores rather than inferring them: the tapland loses by exactly 0.45
+            // in every position tried, and where the two lands tie the AI picks by hand order.
+            "sequencing-09",
+            // The activation form of the same hole. Cracking Evolving Wilds leaves land count
+            // unchanged and untapped lands one lower, and the colour it buys is not a feature, so
+            // it scores a flat −0.45 against passing whatever the position — empty hand, flooded,
+            // screwed, one card stranded or two. The AI never cracks a fetch land in any position.
+            "activate-07",
 
             // ── Phase 2c: timing ──
             // b904bc8 added these two categories and deferred this list, so the four below have
@@ -248,6 +338,31 @@ class PuzzleSuiteTest : ScenarioTestBase() {
             // the card cleanup was taking anyway) and `instants-17` (our own begin combat, the
             // release that keeps the floor from talking the AI out of the attack).
             "instants-14",
+            // Kithkeeper, off a play session (2026-09-20): a summoning-sick pump on our main, a pump
+            // after our combat is over, the source tapping itself for its own pump on their main, and
+            // every blocker tapped for three damage that is not lethal. `holdExpiringGrantsForCombat`
+            // closes none of them — the first three are past turn 14, where `Patience`'s turn decay
+            // has switched its floor off, and the fourth is in the window it releases at.
+            //
+            // **Closed by `AiProfile.expiringGrantsNeedACombat` + `tapCostsKeepBlockersUp`** (the
+            // `grants` token) — see the test above.
+            "instants-18",
+            "instants-19",
+            "instants-20",
+            "instants-23",
+            // The lethal pump: 3 + 3 unblocked into 6 life, and every profile passes. `instants-05`'s
+            // shape — the one-ply leaf scores the state right after the ability resolves, before
+            // combat damage, where the opponent is still at 6 and passing keeps three blockers up.
+            // `grants`' lethal exception is what lets this activation *through* its floor, and it
+            // does; the leaf is what then declines it. Pinned directly in `ExpiringGrantWindowTest`.
+            "instants-22",
+            // Stalactite Dagger onto a Blossombind'd creature (play session 2026-09-20): nothing read
+            // "can't become untapped", so a creature that will never fight again kept its full
+            // value, +1/+1 on it counted as a faster clock, and any attachment paid a flat +1.0.
+            //
+            // **Closed by `CreatureValuation.lockedCreaturesAreInert`** (the `locked` token).
+            "activate-08",
+            "activate-09",
         )
     }
 }

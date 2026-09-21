@@ -145,5 +145,75 @@ object ActivatedAbilityPuzzles {
                 shouldTarget("Craw Wurm")
             },
         ),
+        AiPuzzle(
+            id = "activate-07",
+            category = PuzzleCategory.ACTIVATED_ABILITIES,
+            expectation = "Crack Evolving Wilds for the Forest that casts the creature stuck in hand",
+            aiSeat = 1,
+            position = { scenario ->
+                scenario.withPlayers()
+                    .withLandsOnBattlefield(1, "Mountain", 2)
+                    .withCardOnBattlefield(1, "Evolving Wilds")
+                    .withCardInHand(1, "Grizzly Bears")
+                    .also { builder -> repeat(3) { builder.withCardInLibrary(1, "Forest") } }
+                    .also { builder -> repeat(20) { builder.withCardInLibrary(1, "Craw Wurm") } }
+                    .build()
+            },
+            // Free in every sense: Grizzly Bears is {1}{G}, no Mountain will ever cast it, and
+            // cracking costs no mana the AI had a use for. It declines anyway, and by a constant:
+            // land count is unchanged (sacrifice one, fetch one) and the basic enters tapped, so
+            // `BoardPresence` charges 0.6 − 0.3 = 0.3 (weight 1.5 → **−0.45**) for a colour it has
+            // no feature for. Measured identical in seven positions — empty hand, flooded, screwed,
+            // one stranded card or two. See mtg-draft-ai `docs/46`; `sequencing-09` is the same
+            // blindness on a land drop instead of an activation.
+            check = { shouldActivate("Evolving Wilds") },
+        ),
+
+        // Stalactite Dagger onto a Blossombind'd creature, off a play session (2026-09-20, replay
+        // bca68ebf, action 377). Blossombind taps its creature and says it "can't become untapped",
+        // so the creature will never attack or block again — and the AI paid {2} to put +1/+1 on it.
+        // Nothing in the AI read either untap flag. `withCardAttachedTo` skips the Aura's enter
+        // trigger, so the creature starts tapped, which is where Blossombind leaves it.
+        AiPuzzle(
+            id = "activate-08",
+            category = PuzzleCategory.ACTIVATED_ABILITIES,
+            expectation = "Don't equip a creature that is locked tapped — it will never fight again",
+            aiSeat = 1,
+            position = { scenario ->
+                scenario.withPlayers()
+                    .withLandsOnBattlefield(1, "Island", 2)
+                    .withCardOnBattlefield(1, "Stalactite Dagger")
+                    .withCardOnBattlefield(1, "Stratosoarer", tapped = true)
+                    .withCardAttachedTo(2, "Blossombind", "Stratosoarer")
+                    .withCardOnBattlefield(2, "Hill Giant")
+                    .build()
+                    .advanceToPriority(1, Step.PRECOMBAT_MAIN)
+            },
+            check = { shouldNotActivate("Stalactite Dagger") },
+        ),
+
+        AiPuzzle(
+            id = "activate-09",
+            category = PuzzleCategory.ACTIVATED_ABILITIES,
+            expectation = "Equip the Bears, not the bigger creature that is locked tapped",
+            aiSeat = 1,
+            position = { scenario ->
+                scenario.withPlayers()
+                    .withLandsOnBattlefield(1, "Island", 2)
+                    .withCardOnBattlefield(1, "Stalactite Dagger")
+                    .withCardOnBattlefield(1, "Stratosoarer", tapped = true)
+                    .withCardAttachedTo(2, "Blossombind", "Stratosoarer")
+                    .withCardOnBattlefield(1, "Grizzly Bears")
+                    .withCardOnBattlefield(2, "Hill Giant")
+                    .build()
+                    .advanceToPriority(1, Step.PRECOMBAT_MAIN)
+            },
+            // The positive half, so the category cannot be passed by never equipping. The flier is
+            // the better home for +1/+1 on paper, which is exactly why the lock has to be read.
+            check = {
+                shouldActivate("Stalactite Dagger")
+                shouldTarget("Grizzly Bears")
+            },
+        ),
     )
 }

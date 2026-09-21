@@ -185,6 +185,7 @@ class GamePlayHandler(
             aiGameManager.createAiOpponent(
                 gameSession = gameSession,
                 setCode = quickGameSetCode,
+                deckOverride = message.aiDeckList?.takeIf { it.isNotEmpty() },
                 onActionReady = { aiPlayerId, action, interactionEpoch ->
                     handleAiAction(gameSession, aiPlayerId, action, interactionEpoch)
                 },

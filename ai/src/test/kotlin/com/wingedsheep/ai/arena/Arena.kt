@@ -1,6 +1,7 @@
 package com.wingedsheep.ai.arena
 
 import com.wingedsheep.ai.engine.buildSeededSealedDeck
+import com.wingedsheep.ai.engine.draftableCards
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.mtg.sets.MtgSetCatalog
 import com.wingedsheep.sdk.model.MtgSet
@@ -56,7 +57,7 @@ object Arena {
     fun run(config: ArenaConfig, onProgress: (completed: Int, total: Int, pair: ArenaPair) -> Unit = { _, _, _ -> }): ArenaRun {
         val set = MtgSetCatalog.requireByCode(config.setCode)
         val registry = CardRegistry().apply {
-            register(set.cards)
+            register(draftableCards(set))
             register(set.basicLands)
         }
         val featureCollector = config.featureOutput?.let {
@@ -105,7 +106,7 @@ object Arena {
         featureCollector: ArenaFeatureCollector?,
     ): ArenaPair {
         val pairSeed = mixSeed(config.seed, pairId.toLong())
-        val deck = buildSeededSealedDeck(set.cards, Random(pairSeed))
+        val deck = buildSeededSealedDeck(set, Random(pairSeed))
 
         val gameA = ArenaGameRunner.play(
             registry, seat0 = config.agentA, seat1 = config.agentB,

@@ -72,7 +72,7 @@ class SimulationThroughputBenchmark : FunSpec({
     test("benchmark: simulation throughput over $numGames AI games ($setCode)").config(enabled = benchmarkEnabled) {
         val set = MtgSetCatalog.requireByCode(setCode)
         val registry = CardRegistry().apply {
-            register(set.cards)
+            register(draftableCards(set))
             register(set.basicLands)
         }
         val pool = Executors.newFixedThreadPool(cores)
@@ -85,8 +85,8 @@ class SimulationThroughputBenchmark : FunSpec({
             // Seeded per game so a rerun measures the same games.
             val rng = Random(gameId.toLong())
             completionService.submit {
-                val deck1 = buildSeededSealedDeck(set.cards, rng)
-                val deck2 = buildSeededSealedDeck(set.cards, rng)
+                val deck1 = buildSeededSealedDeck(set, rng)
+                val deck2 = buildSeededSealedDeck(set, rng)
                 measureGame(registry, deck1, deck2, seed = gameId.toLong()).also {
                     val n = finished.incrementAndGet()
                     if (n <= 3 || n % 5 == 0 || n == total) {

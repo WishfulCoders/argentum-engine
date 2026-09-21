@@ -1,6 +1,6 @@
 package com.wingedsheep.replay
 
-import com.wingedsheep.arena.arenaProfile
+import com.wingedsheep.ai.engine.profileFromTokens
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.mtg.sets.MtgSetCatalog
 import com.wingedsheep.mtg.sets.tokens.PredefinedTokens
@@ -22,7 +22,11 @@ import java.util.zip.GZIPOutputStream
  * each game's accepted line ([GameLine], gzipped JSONL): the whole game when it was reproduced, the
  * half-turns before the failure otherwise. With a prefs file, also writes the user's priority choices on
  * that line with every alternative simulated ([PreferenceWriter]; pass `-` for no lines file), scored by
- * `-Dreplay.prefsProfile` (`current`, or `raceclock`). With `-Dreplay.playOn=PILOT[,PILOT...]` (arena profile names, e.g.
+ * `-Dreplay.prefsProfile` (`current`, or `raceclock`). With `-Dreplay.rollouts=N -Dreplay.rollPilots=ACTING[,OPP...]`
+ * each candidate is also played on to a winner N times ([RolloutWriter], mtg-draft-ai `docs/36`), optionally capped at
+ * `-Dreplay.rollMaxCands` candidates per choice and tuned by `-Dreplay.rollSeed`, `-Dreplay.rollShuffle`,
+ * `-Dreplay.rollMaxTurns`, `-Dreplay.rollMaxPermanents` (off by default; past it a rollout stops undecided), and `-Dreplay.rollOppoDeck=stub|donor|mirror` with `-Dreplay.rollDonors=SPECS[,SPECS...]`
+ * for where the opponent's unseen cards come from ([OppoDeckSampler]). With `-Dreplay.playOn=PILOT[,PILOT...]` (arena profile names, e.g.
  * `current,raceclock+timing+correction-actions`) and `-Dreplay.playOnOut=FILE`, also plays every failed game on from the
  * start of its failed half-turn with each pilot in both seats ([PlayOn], C1), one [PlayOnRecord] per line.
  *
@@ -51,9 +55,37 @@ fun main(args: Array<String>) {
     val local = ThreadLocal.withInitial { Reconstructor(registry, snapshotter, beamWidth, nodeBudget) }
     val writers = ThreadLocal.withInitial { LineWriter(registry) }
     val prefsBase = PreferenceWriter.baseProfile(System.getProperty("replay.prefsProfile"))
-    val prefWriters = ThreadLocal.withInitial { PreferenceWriter(registry, prefsBase) }
+    val rollN = System.getProperty("replay.rollouts")?.toInt() ?: 0
+    val rollPilots = System.getProperty("replay.rollPilots")?.let(RolloutWriter::pilots)
+    val rollSeed = System.getProperty("replay.rollSeed")?.toLong() ?: 1L
+    val rollMaxCands = System.getProperty("replay.rollMaxCands")?.toInt() ?: Int.MAX_VALUE
+    val rollShuffle = System.getProperty("replay.rollShuffle")?.toBooleanStrict() ?: true
+    val rollMaxTurns = System.getProperty("replay.rollMaxTurns")?.toInt() ?: 50
+    val rollMaxPermanents = System.getProperty("replay.rollMaxPermanents")?.toInt()
+    val oppoMode = OppoDeckMode.valueOf((System.getProperty("replay.rollOppoDeck") ?: "stub").uppercase())
+    val donorFiles = System.getProperty("replay.rollDonors")?.split(',')?.filter { it.isNotBlank() }.orEmpty()
+    val donors = OppoDeckSampler.load(donorFiles.map(::File))
+    val usableDonors = OppoDeckSampler(registry, snapshotter, OppoDeckMode.STUB, donors).donorDecks
+    require(oppoMode != OppoDeckMode.DONOR || usableDonors > 0) { "-Dreplay.rollOppoDeck=donor needs -Dreplay.rollDonors" }
+    require((rollN > 0) == (rollPilots != null)) { "-Dreplay.rollouts and -Dreplay.rollPilots go together" }
+    require(rollN == 0 || prefsFile != null) { "-Dreplay.rollouts needs a prefs file" }
+    val rollHeader = rollPilots?.let { (acting, opponents) ->
+        RollHeader(
+            acting.first, opponents.map { it.first }, rollN, rollSeed, rollShuffle, rollMaxTurns, rollMaxCands,
+            oppoMode.name.lowercase(), donorFiles.map { File(it).name }, usableDonors, rollMaxPermanents,
+        )
+    }
+    val prefWriters = ThreadLocal.withInitial {
+        val roller = rollPilots?.let { (acting, opponents) ->
+            RolloutWriter(
+                registry, acting, opponents, rollN, rollSeed, rollShuffle, rollMaxTurns,
+                OppoDeckSampler(registry, snapshotter, oppoMode, donors), rollMaxPermanents ?: Int.MAX_VALUE,
+            )
+        }
+        PreferenceWriter(registry, prefsBase, roller, rollMaxCands)
+    }
     val playOnFile = System.getProperty("replay.playOnOut")?.let(::File)
-    val playOnPilots = System.getProperty("replay.playOn")?.split(',')?.map { it to arenaProfile(it) }
+    val playOnPilots = System.getProperty("replay.playOn")?.split(',')?.map { it to profileFromTokens(it) }
     require((playOnFile == null) == (playOnPilots == null)) { "-Dreplay.playOn and -Dreplay.playOnOut go together" }
     val playOns = playOnPilots?.let { pilots -> ThreadLocal.withInitial { PlayOn(registry, pilots) } }
     val pool = Executors.newFixedThreadPool(threads)
@@ -70,7 +102,7 @@ fun main(args: Array<String>) {
                 try {
                     val seats = Seats.of(steps.first().before)
                     lineJson.encodeToString(GameLine.serializer(),
-                        writers.get().line(spec, result, seats, steps, reconstructor.acceptedThrough))
+                        writers.get().line(spec, result, seats, steps, reconstructor.acceptedThrough, reconstructor.gaps))
                 } catch (e: Throwable) {
                     System.err.println("line ${spec.gameId}: $e")
                     null
@@ -106,7 +138,9 @@ fun main(args: Array<String>) {
     val prefs = prefsFile?.let { f ->
         f.parentFile?.mkdirs()
         GZIPOutputStream(f.outputStream()).bufferedWriter().also {
-            it.write(lineJson.encodeToString(PrefHeader.serializer(), PrefHeader(PreferenceWriter.FEATURES, prefsBase.id)))
+            it.write(lineJson.encodeToString(
+                PrefHeader.serializer(), PrefHeader(PreferenceWriter.FEATURES, prefsBase.id, rollHeader),
+            ))
             it.newLine()
         }
     }
@@ -206,6 +240,17 @@ private fun summarize(results: List<GameResult>) {
     println("status: $byStatus")
     if (halfTurns > 0) {
         println("half-turns reproduced in order: $reproduced / $halfTurns (${"%.1f".format(100.0 * reproduced / halfTurns)}%)")
+    }
+    val resynced = played.filter { it.matched != null }
+    if (resynced.isNotEmpty()) {
+        val after = resynced.sumOf { it.halfTurns - it.reproduced }
+        val kept = resynced.sumOf { it.matched!! - it.reproduced }
+        println("resync: ${resynced.size} games, ${resynced.sumOf { it.gaps.size }} gaps; " +
+            "half-turns after the first break rebuilt $kept / $after (${"%.1f".format(100.0 * kept / maxOf(after, 1))}%); " +
+            "all half-turns ${played.sumOf { it.matched ?: it.reproduced }} / $halfTurns")
+        resynced.mapNotNull { it.stopReason }.groupingBy { it.take(40) }
+            .eachCount().entries.sortedByDescending { it.value }.take(8)
+            .forEach { (k, n) -> println("  stopped $n  $k") }
     }
     val medianMs = results.map { it.millis }.sorted().let { if (it.isEmpty()) 0 else it[it.size / 2] }
     println("median time per game: $medianMs ms")

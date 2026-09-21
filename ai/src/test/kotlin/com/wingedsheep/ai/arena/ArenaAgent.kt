@@ -135,6 +135,33 @@ object ArenaAgents {
         // gate, against what players face today.
         ArenaAgent("production-expiring", AiProfile.PRODUCTION_EXPIRING),
         ArenaAgent("production-candidate-expiring", AiProfile.PRODUCTION_CANDIDATE_EXPIRING),
+        // `grants` on top of `production-expiring`, off the Kithkeeper play session (2026-09-20):
+        // `just arena production-expiring production-grants 600 ECL` prices the two flags together
+        // against the guard they extend. `-window` and `-order` isolate them, so a result can say
+        // which carried it — the puzzle side says both are needed for the block (`instants-24`).
+        ArenaAgent(
+            "production-grants",
+            AiProfile.PRODUCTION_EXPIRING.copy(
+                id = "production-grants", expiringGrantsNeedACombat = true, tapCostsKeepBlockersUp = true,
+            ),
+        ),
+        ArenaAgent(
+            "production-grants-window",
+            AiProfile.PRODUCTION_EXPIRING.copy(id = "production-grants-window", expiringGrantsNeedACombat = true),
+        ),
+        // `locked` alone on top of `production` — one valuation switch, so the frozen baseline is the
+        // control: `just arena production production-locked 600 ECL`.
+        ArenaAgent(
+            "production-locked",
+            AiProfile.PRODUCTION.copy(
+                id = "production-locked",
+                creatureValuation = AiProfile.PRODUCTION.creatureValuation.copy(lockedCreaturesAreInert = true),
+            ),
+        ),
+        ArenaAgent(
+            "production-grants-order",
+            AiProfile.PRODUCTION_EXPIRING.copy(id = "production-grants-order", tapCostsKeepBlockersUp = true),
+        ),
         ArenaAgent("production-targeted", AiProfile.PRODUCTION_TARGETED),
         // Explicit ECL candidates. Their resource-backed weights fail closed to production's
         // evaluator until a validated artifact is installed; automatic selection is set-gated.
@@ -215,7 +242,76 @@ object ArenaAgents {
      * Every resource vector is automatically arena-addressable as `eval-<id>`. A tuning run can
      * replace the JSON artifact and immediately A/B its candidates without changing Kotlin.
      */
-    private val all: List<ArenaAgent> = builtIn + EvalWeights.ids.map { weightsId ->
+    /**
+     * `docs/46`'s three colour flags on top of `production`, and nothing else.
+     *
+     * The A/B the arena exists for: `just arena production production-fixing 500 SOS`. `production`
+     * is the right baseline rather than a pilot profile because the flags are evaluator-side and
+     * this is the only pair that differs in nothing but them.
+     */
+    private val fixingAgents: List<ArenaAgent> = listOf(
+        ArenaAgent(
+            "production-fixing",
+            AiProfile.PRODUCTION.copy(
+                id = "production-fixing",
+                priceSacrificeLandsAsNoMana = true,
+                choosesLandsByColour = true,
+                chargesForUnavailableColours = true,
+            ),
+        ),
+        // The three isolated, so a result can say which one carried it. `-crack` is the fetch
+        // activation, `-choose` is which basic it takes, `-colour` is the land drop.
+        ArenaAgent(
+            "production-fixing-crack",
+            AiProfile.PRODUCTION.copy(id = "production-fixing-crack", priceSacrificeLandsAsNoMana = true),
+        ),
+        ArenaAgent(
+            "production-fixing-choose",
+            AiProfile.PRODUCTION.copy(id = "production-fixing-choose", choosesLandsByColour = true),
+        ),
+        // Upstream's `sequenceLandsByUsableMana`, which is the *timing* question the colour flags
+        // do not touch: play the tapland on a turn when the mana it is not producing is mana you
+        // had no use for. Built long ago and on in only two upstream profiles, so it has never been
+        // measured beside anything here. `-seq` isolates it; `-both` asks whether it composes with
+        // the colour terms or overlaps them.
+        ArenaAgent(
+            "production-seq",
+            AiProfile.PRODUCTION.copy(id = "production-seq", sequenceLandsByUsableMana = true),
+        ),
+        ArenaAgent(
+            "production-fixing-seq",
+            AiProfile.PRODUCTION.copy(
+                id = "production-fixing-seq",
+                priceSacrificeLandsAsNoMana = true,
+                choosesLandsByColour = true,
+                chargesForUnavailableColours = true,
+                sequenceLandsByUsableMana = true,
+            ),
+        ),
+        // docs/46 §9.7's follow-up: the same sequencing term with a castability test that reads
+        // colours. `-seqc` against `production` is the idea; `-seqc` against `production-seq` is
+        // whether the approximation was what made the mana-value form a null.
+        ArenaAgent(
+            "production-seqc",
+            AiProfile.PRODUCTION.copy(id = "production-seqc", sequenceLandsByCastability = true),
+        ),
+        ArenaAgent(
+            "production-fixing-seqc",
+            AiProfile.PRODUCTION.copy(
+                id = "production-fixing-seqc",
+                priceSacrificeLandsAsNoMana = true,
+                choosesLandsByColour = true,
+                chargesForUnavailableColours = true,
+                sequenceLandsByCastability = true,
+            ),
+        ),
+        ArenaAgent(
+            "production-fixing-colour",
+            AiProfile.PRODUCTION.copy(id = "production-fixing-colour", chargesForUnavailableColours = true),
+        ),
+    )
+
+    private val all: List<ArenaAgent> = builtIn + fixingAgents + EvalWeights.ids.map { weightsId ->
         ArenaAgent(
             name = "eval-$weightsId",
             profile = AiProfile.LEGACY_V0.copy(

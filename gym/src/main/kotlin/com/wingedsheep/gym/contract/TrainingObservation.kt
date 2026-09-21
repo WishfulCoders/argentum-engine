@@ -368,11 +368,9 @@ data class TargetRequirementView(
  * Summary of the currently-paused decision. When present, [LegalActionView]s
  * with `isDecisionOption = true` are the concrete choices the player can post.
  *
- * For complex decisions (multi-target ChooseTargets, DistributeDecision,
- * OrderObjectsDecision, SplitPilesDecision, ReorderLibraryDecision) the folded
- * action-ID space is not expressive enough; [legalActions] will be empty and
- * the trainer must submit a structured `DecisionResponse` (exposed via a
- * separate endpoint in Phase 3).
+ * For complex decisions the folded action-ID space is not expressive enough;
+ * [legalActions] will be empty and [structuredPayload] describes the typed
+ * `DecisionResponse` to submit to the dedicated decision endpoint.
  */
 @Serializable
 data class PendingDecisionView(
@@ -387,7 +385,12 @@ data class PendingDecisionView(
     /** True when no LegalActionView options were generated; structured response required. */
     val requiresStructuredResponse: Boolean = false,
     /** Extra hints about the decision shape (min/max selections, numeric range, etc.). */
-    val shape: DecisionShape = DecisionShape()
+    val shape: DecisionShape = DecisionShape(),
+    /**
+     * Concrete policy-facing options and constraints for a structured response. Present only in
+     * the acting player's information set (or an explicit reveal-all debug observation).
+     */
+    val structuredPayload: StructuredDecisionPayload? = null,
 )
 
 @Serializable

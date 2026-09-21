@@ -47,12 +47,17 @@ data class EvaluationWeights(
         discountedRaceClock: Boolean = false,
         creatureValuation: CreatureValuation = CreatureValuation.LEGACY,
         priceLandsInHandAsMana: Boolean = false,
+        priceSacrificeLandsAsNoMana: Boolean = false,
+        colourAvailability: BoardPresence.ColourAvailability? = null,
+        sequenceLandsByCastability: Boolean = false,
     ): BoardEvaluator = CompositeBoardEvaluator(
         listOf(
             life to LifeDifferential,
             boardPresence to BoardFeature { state, projected, playerId ->
                 BoardPresence.score(
                     state, projected, playerId, intents, sequenceLandsByUsableMana, creatureValuation,
+                    priceSacrificeLandsAsNoMana, colourAvailability, sequenceLandsByCastability,
+                    colourAvailability?.registry,
                 )
             },
             cardAdvantage to BoardFeature { state, projected, playerId ->
@@ -62,7 +67,9 @@ data class EvaluationWeights(
                 )
             },
             threatAssessment to BoardFeature { state, projected, playerId ->
-                ThreatAssessment.score(state, projected, playerId, discountedRaceClock)
+                ThreatAssessment.score(
+                    state, projected, playerId, discountedRaceClock, creatureValuation.lockedCreaturesAreInert,
+                )
             },
             tempo to Tempo,
         )
@@ -144,12 +151,16 @@ object EvalWeights {
         discountedRaceClock: Boolean = false,
         creatureValuation: CreatureValuation = CreatureValuation.LEGACY,
         priceLandsInHandAsMana: Boolean = false,
+        priceSacrificeLandsAsNoMana: Boolean = false,
+        colourAvailability: BoardPresence.ColourAvailability? = null,
+        sequenceLandsByCastability: Boolean = false,
     ): BoardEvaluator =
         apprenticeWeights[id]?.takeIf(RawEvaluationWeights::isValid)?.toEvaluator(intents)
             ?: rawResourceWeights[id]?.takeIf(RawEvaluationWeights::isValid)?.toEvaluator(intents)
             ?: resolve(id).toEvaluator(
                 intents, landDropIsNotCardLoss, sequenceLandsByUsableMana, discountedRaceClock,
-                creatureValuation, priceLandsInHandAsMana,
+                creatureValuation, priceLandsInHandAsMana, priceSacrificeLandsAsNoMana,
+                colourAvailability, sequenceLandsByCastability,
             )
 
     /** An installed linear correction ([RawEvaluationWeights.toCorrection]), or null if none loaded. */

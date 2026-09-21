@@ -56,12 +56,16 @@ class EngineAiPlayerController(
      * can browse what the AI weighed. Null in normal play.
      */
     insightSink: AiInsightSink? = null,
+    /**
+     * The profile this seat plays. Defaults to the production candidate; a research profile — the
+     * gameplay pilot, say — is named by [profileFromTokens] and reaches here from `game.ai.profile`,
+     * so a human can play against the same AI an arena run measured (mtg-draft-ai `docs/44`).
+     */
+    private val profile: AiProfile = AiProfile.PRODUCTION_CANDIDATE_EXPIRING,
 ) : AiPlayerController {
 
     private val aiPlayer =
-        AIPlayer.create(
-            cardRegistry, playerId, AiProfile.PRODUCTION_CANDIDATE_EXPIRING, insightSink = insightSink,
-        )
+        AIPlayer.create(cardRegistry, playerId, profile, insightSink = insightSink)
 
     override fun chooseAction(
         state: ClientGameState,
