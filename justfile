@@ -456,9 +456,12 @@ server:
 # colours, worth +2.7 pp of play strength, and the games recorded here are supposed to be played by
 # the strongest pilot we have. It makes the engine a WORSE grader, so never assume it into a docs/33
 # grading run. Games recorded under different tokens are not one corpus — check the startup line.
+# `grants` and `locked` are from the first play session (2026-09-20): an end-of-turn pump needs a combat
+# to spend it on and must not tap away the last blocker (puzzles +4, arena parity), and a creature
+# locked tapped by Blossombind is not a creature that fights (+1.8 pp, CI clear of parity).
 # Pair with `just client`, or use `just dev-pilot` for both.
 [group: 'dev']
-pilot PROFILE="raceclock+timing+correction-actions+determinize+fixing" DIR="$HOME/mtg/models/rc2_actions":
+pilot PROFILE="raceclock+timing+correction-actions+determinize+fixing+grants+locked" DIR="$HOME/mtg/models/rc2_actions":
     @if [ -f .env ]; then set -a && . ./.env && set +a; fi && \
       GAME_AI_PROFILE="{{PROFILE}}" \
       GAME_REPLAY_EXPORT_DIR="${GAME_REPLAY_EXPORT_DIR:-$HOME/mtg/artifacts/engine_games/$(date +%Y-%m-%d)/replays}" \
@@ -469,7 +472,7 @@ pilot PROFILE="raceclock+timing+correction-actions+determinize+fixing" DIR="$HOM
 
 # `just pilot` and the web client together
 [group: 'dev']
-dev-pilot PROFILE="raceclock+timing+correction-actions+determinize+fixing":
+dev-pilot PROFILE="raceclock+timing+correction-actions+determinize+fixing+grants+locked":
     #!/usr/bin/env bash
     set -euo pipefail
     just pilot "{{PROFILE}}" &
