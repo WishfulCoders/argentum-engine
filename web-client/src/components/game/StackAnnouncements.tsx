@@ -181,11 +181,11 @@ export function StackAnnouncements() {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  // Right edge: the stack itself sits at the left-middle (StackZone), and the toast shouldn't
-  // cover the object it describes.
+  // Right side, inside the pile column: the stack itself sits at the left-middle (StackZone),
+  // and the toast shouldn't cover the object it describes or the library/graveyard piles.
   feed: {
     position: 'fixed',
-    right: 12,
+    right: 'max(12px, min(100px, 7vw))',
     top: '50%',
     transform: 'translateY(-50%)',
     zIndex: 450,
@@ -265,7 +265,7 @@ export function GameplaySettingsButton({ buttonStyle }: { buttonStyle?: React.CS
         onClick={() => setOpen((o) => !o)}
         title="Gameplay settings"
         aria-expanded={open}
-        style={{ ...buttonStyle, cursor: 'pointer', color: open ? '#fff' : '#999' }}
+        style={{ ...buttonStyle, cursor: 'pointer', color: open ? '#fff' : '#bbb', fontSize: 17, lineHeight: 1 }}
       >
         ⚙
       </button>
