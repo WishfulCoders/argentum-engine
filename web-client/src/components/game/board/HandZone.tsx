@@ -1,6 +1,9 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useZoneCards, useZone } from '@/store/selectors.ts'
+import { useGameStore } from '@/store/gameStore.ts'
+import { applyHandOrder } from '@/store/slices/ui/playerPrefsSlice.ts'
 import type { ZoneId, ClientCard } from '@/types'
+import { ZoneType } from '@/types/enums'
 import { calculateFittingCardWidth } from '@/hooks/useResponsive.ts'
 import { useResponsiveContext } from './shared'
 import { styles } from './styles'
@@ -56,9 +59,16 @@ export function CardRow({
    */
   fan?: boolean
 }) {
-  const cards = useZoneCards(zoneId)
+  const zoneCards = useZoneCards(zoneId)
   const zone = useZone(zoneId)
   const responsive = useResponsiveContext()
+  // Your own hand shows in the order you arranged it (drag a card sideways to move it).
+  const handOrder = useGameStore((state) => state.handOrder)
+  const arrangeable = interactive && !faceDown
+  const cards = useMemo(
+    () => (arrangeable ? applyHandOrder(zoneCards, handOrder) : zoneCards),
+    [arrangeable, zoneCards, handOrder],
+  )
 
   // For hidden zones (like opponent's hand), use zone size to show face-down placeholders
   // If some cards are revealed, show them face-up plus placeholders for unrevealed cards
@@ -115,6 +125,46 @@ export function CardRow({
   // For opponent's hand: show revealed cards face-up, plus placeholders for unrevealed cards
   const hasRevealedCards = faceDown && cards.length > 0
   const shouldShowFan = fan || isPlayerHand || isOpponentHand || isSpectatorBottomHand
+
+  // Your own hand keeps its playable-from-elsewhere cards (flashback, impulse draw, a revealed
+  // library top) in a separate tray beside the fan, labelled with the zone each one sits in —
+  // mixed into the fan they read as cards in hand.
+  if (isPlayerHand && ghostCards.length > 0) {
+    const tray = (
+      <GhostTray
+        cards={ghostCards}
+        cardWidth={fittingWidth}
+        cardHeight={cardHeight}
+        interactive={interactive}
+        small={small}
+        viewerId={zoneId.ownerId}
+      />
+    )
+    if (cards.length === 0) {
+      return <div style={{ marginRight: fanShift > 0 ? fanShift : undefined }}>{tray}</div>
+    }
+    return (
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'flex-end',
+          gap: Math.max(10, responsive.cardGap * 3),
+          marginRight: fanShift > 0 ? fanShift : undefined,
+        }}
+      >
+        <HandFan
+          cards={cards}
+          fittingWidth={fittingWidth}
+          cardHeight={cardHeight}
+          cardGap={responsive.cardGap}
+          faceDown={false}
+          interactive={interactive}
+          small={small}
+        />
+        {tray}
+      </div>
+    )
+  }
 
   if (shouldShowFan && (cards.length > 0 || showPlaceholders || unrevealedCount > 0 || ghostCards.length > 0)) {
     return (
@@ -292,10 +342,13 @@ export function HandFan({
         const zIndex = 50 - Math.abs(index - Math.floor(cardCount / 2))
 
         const key = item.type === 'card' ? item.card.id : `placeholder-${item.index}`
+        // A real card in your own hand: its slot is what drag-to-rearrange measures against.
+        const handSlot = item.type === 'card' && !item.isGhost && interactive && !faceDown ? item.card.id : undefined
 
         return (
           <div
             key={key}
+            {...(handSlot ? { 'data-hand-slot': handSlot } : {})}
             style={{
               position: 'absolute',
               left,
@@ -343,6 +396,116 @@ export function HandFan({
           </div>
         )
       })}
+    </div>
+  )
+}
+
+/** Where a ghost offer is being played from, as a short chip label. */
+function ghostZoneLabel(card: ClientCard, viewerId: string): string {
+  if (card.isPreparedSpell) return 'Prepared'
+  const zone = card.zone
+  if (!zone) return 'Elsewhere'
+  const theirs = zone.ownerId !== viewerId
+  switch (zone.zoneType) {
+    case ZoneType.EXILE: return theirs ? 'Their exile' : 'Exile'
+    case ZoneType.GRAVEYARD: return theirs ? 'Their graveyard' : 'Graveyard'
+    case ZoneType.LIBRARY: return 'Library top'
+    case ZoneType.COMMAND: return 'Command'
+    default: return zone.zoneType
+  }
+}
+
+/**
+ * The cards you can play from somewhere other than your hand, shown beside the hand in a tinted
+ * tray. Each card carries a chip naming its zone, so an impulse-drawn card never passes for one
+ * you hold.
+ */
+function GhostTray({
+  cards,
+  cardWidth,
+  cardHeight,
+  interactive,
+  small,
+  viewerId,
+}: {
+  cards: readonly ClientCard[]
+  cardWidth: number
+  cardHeight: number
+  interactive: boolean
+  small: boolean
+  viewerId: string
+}) {
+  const spacing = cards.length > 1 ? cardWidth * 0.62 : 0
+  const innerWidth = spacing * (cards.length - 1) + cardWidth
+  return (
+    <div
+      data-ghost-tray
+      style={{
+        position: 'relative',
+        padding: '20px 8px 0',
+        marginBottom: -HAND_FAN_EDGE_MARGIN,
+        borderRadius: '10px 10px 0 0',
+        background: 'linear-gradient(180deg, rgba(88, 56, 160, 0.30), rgba(88, 56, 160, 0.10))',
+        border: '1px solid rgba(170, 119, 238, 0.45)',
+        borderBottom: 'none',
+      }}
+    >
+      <div
+        style={{
+          position: 'absolute',
+          top: 3,
+          left: 0,
+          right: 0,
+          textAlign: 'center',
+          fontSize: 10,
+          fontWeight: 700,
+          letterSpacing: 0.8,
+          textTransform: 'uppercase',
+          color: '#c9b3f5',
+          whiteSpace: 'nowrap',
+          pointerEvents: 'none',
+        }}
+      >
+        Not in hand
+      </div>
+      <div style={{ position: 'relative', width: innerWidth, height: cardHeight }}>
+        {cards.map((card, i) => (
+          <div
+            key={card.id}
+            style={{ position: 'absolute', left: i * spacing, bottom: 0, zIndex: 10 + i }}
+          >
+            <GameCard
+              card={card}
+              count={1}
+              interactive={interactive}
+              small={small}
+              overrideWidth={cardWidth}
+              inHand={interactive}
+              isGhost
+            />
+            <span
+              style={{
+                position: 'absolute',
+                top: 4,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                padding: '1px 7px',
+                borderRadius: 999,
+                background: 'rgba(40, 20, 80, 0.92)',
+                border: '1px solid #aa77ee',
+                color: '#e6dbff',
+                fontSize: 10,
+                fontWeight: 600,
+                whiteSpace: 'nowrap',
+                pointerEvents: 'none',
+                zIndex: 5,
+              }}
+            >
+              {ghostZoneLabel(card, viewerId)}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

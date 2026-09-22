@@ -6,6 +6,7 @@ import com.wingedsheep.ai.engine.GameSimulator
 import com.wingedsheep.ai.engine.SimulationResult
 import com.wingedsheep.ai.engine.TargetSelection
 import com.wingedsheep.ai.engine.evaluation.BoardEvaluator
+import com.wingedsheep.ai.engine.evaluation.CardValueTable
 import com.wingedsheep.ai.engine.evaluation.EvalWeights
 import com.wingedsheep.ai.engine.evaluation.RawBoardFeatures
 import com.wingedsheep.ai.engine.knowledge.IntentCatalog
@@ -21,8 +22,6 @@ import com.wingedsheep.engine.legalactions.LegalActionEnumerator
 import com.wingedsheep.engine.mechanics.layers.ProjectedState
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
-import com.wingedsheep.engine.state.components.identity.CardComponent
-import com.wingedsheep.engine.state.components.identity.TokenComponent
 import com.wingedsheep.sdk.model.EntityId
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonPrimitive
@@ -244,11 +243,8 @@ class PreferenceWriter(
     private fun names(state: GameState, ids: Collection<EntityId>): List<String> =
         ids.mapNotNull { name(state, it) }.sorted()
 
-    private fun name(state: GameState, id: EntityId): String? {
-        val entity = state.getEntity(id) ?: return null
-        val card = entity.get<CardComponent>() ?: return null
-        return if (entity.has<TokenComponent>()) "token:${card.name}" else card.name
-    }
+    /** The evaluator's own naming ([CardValueTable.name]), so a fitted table keys on these records. */
+    private fun name(state: GameState, id: EntityId): String? = CardValueTable.name(state, id)
 
     /** Whether the enumerated [template] is the move [chosen] makes (before its targets and payment). */
     private fun sameChoice(template: GameAction, chosen: GameAction): Boolean = when {

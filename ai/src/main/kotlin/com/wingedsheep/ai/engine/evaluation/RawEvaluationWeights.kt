@@ -12,14 +12,25 @@ data class RawEvaluationWeights(
     val intercept: Double,
     val weights: Map<String, Double>,
     val winProbabilityScale: Double = 1.0,
+    /**
+     * An optional card -> value term added to the linear one (`docs/40`; schema 2 of
+     * [com.wingedsheep.ai.training.ApprenticeArtifact]). Absent in every fit before it, and 0 for
+     * every card the fit never saw move, so a model without one is unchanged.
+     */
+    val cards: CardValueTable? = null,
 ) {
     fun isValid(): Boolean =
         intercept.isFinite() &&
             winProbabilityScale.isFinite() && winProbabilityScale > 0.0 &&
             weights.keys == RawBoardFeatures.names &&
-            weights.values.all(Double::isFinite)
+            weights.values.all(Double::isFinite) &&
+            (cards == null || cards.isValid())
 
     fun evaluate(features: RawBoardFeatures): Double = intercept + features.weightedSum(weights)
+
+    /** The card term on this position, or 0.0 when no table is installed. */
+    fun cardTerm(state: GameState, projected: ProjectedState, playerId: EntityId): Double =
+        cards?.score(state, projected, playerId) ?: 0.0
 
     fun toEvaluator(intents: IntentCatalog): BoardEvaluator = RawBoardEvaluator(this, intents)
 
@@ -29,7 +40,8 @@ data class RawEvaluationWeights(
      */
     fun toCorrection(intents: IntentCatalog): BoardEvaluator = BoardEvaluator { state, projected, playerId ->
         if (terminalScore(state, playerId) != null) 0.0
-        else evaluate(RawBoardFeatures.extract(state, projected, playerId, intents))
+        else evaluate(RawBoardFeatures.extract(state, projected, playerId, intents)) +
+            cardTerm(state, projected, playerId)
     }
 }
 
@@ -39,7 +51,8 @@ private class RawBoardEvaluator(
 ) : BoardEvaluator {
     override fun evaluate(state: GameState, projected: ProjectedState, playerId: EntityId): Double {
         terminalScore(state, playerId)?.let { return it }
-        return fitted.evaluate(RawBoardFeatures.extract(state, projected, playerId, intents))
+        return fitted.evaluate(RawBoardFeatures.extract(state, projected, playerId, intents)) +
+            fitted.cardTerm(state, projected, playerId)
     }
 }
 
