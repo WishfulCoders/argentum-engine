@@ -136,7 +136,10 @@ class DecisionResponder(
                 targets.sortedByDescending { targetHeuristic(state, it, playerId) }.take(maxCandidates)
             }
 
-            val best = pickBestBySimulation(state, candidates, playerId) { target ->
+            val best = pickBestBySimulation(
+                state, candidates, playerId,
+                tieBreak = { TargetSelection.offBattlefieldWorth(state, it) },
+            ) { target ->
                 TargetsResponse(decision.id, mapOf(req.index to listOf(target)))
             }
             val bestResponse = TargetsResponse(decision.id, mapOf(req.index to listOf(best)))
@@ -165,7 +168,12 @@ class DecisionResponder(
             if (targets.isEmpty()) {
                 req.index to emptyList()
             } else {
-                val best = pickBestBySimulation(state, targets.take(maxCandidates), playerId) { target ->
+                val ranked = if (targets.size <= maxCandidates) targets
+                    else targets.sortedByDescending { targetHeuristic(state, it, playerId) }.take(maxCandidates)
+                val best = pickBestBySimulation(
+                    state, ranked, playerId,
+                    tieBreak = { TargetSelection.offBattlefieldWorth(state, it) },
+                ) { target ->
                     TargetsResponse(decision.id, baseline + (req.index to listOf(target)))
                 }
                 // For optional targets, compare best pick against skipping
@@ -200,7 +208,8 @@ class DecisionResponder(
         // Players — prefer an opponent (any of them; CR 810 teammates are not opponents)
         if (state.isOpponentTo(targetId, playerId)) return 3.0
 
-        return 0.0
+        // A card in a graveyard, exile or hand: rank by what it is, not where it sits in the zone.
+        return TargetSelection.offBattlefieldWorth(state, targetId)
     }
 
     // ── Card selection ───────────────────────────────────────────────────
@@ -823,15 +832,23 @@ class DecisionResponder(
     private fun evaluateResult(result: SimulationResult, playerId: EntityId): Double =
         result.scoreOrRankLast { evaluator.evaluate(it, it.projectedState, playerId) }
 
+    /**
+     * The candidate whose simulated result scores best. Among candidates that score the same,
+     * [tieBreak] decides, then list order; the default keeps list order alone.
+     */
     private fun <T> pickBestBySimulation(
         state: GameState,
         candidates: List<T>,
         playerId: EntityId,
+        tieBreak: (T) -> Double = { 0.0 },
         buildResponse: (T) -> DecisionResponse
     ): T {
-        return candidates.maxByOrNull { candidate ->
-            evaluateResult(simulator.simulateDecision(state, buildResponse(candidate)), playerId)
-        } ?: candidates.first()
+        val scored = candidates.map { candidate ->
+            candidate to evaluateResult(simulator.simulateDecision(state, buildResponse(candidate)), playerId)
+        }
+        val top = scored.maxOfOrNull { it.second } ?: return candidates.first()
+        return scored.filter { it.second >= top - SCORE_TIE_EPSILON }
+            .maxByOrNull { tieBreak(it.first) }!!.first
     }
 
     /**
@@ -863,3 +880,6 @@ class DecisionResponder(
         return BoardPresence.permanentValue(state, state.projectedState, entityId, card, intents)
     }
 }
+
+/** Simulated scores closer than this are a tie, decided by the caller's tie-break. */
+private const val SCORE_TIE_EPSILON = 1e-9

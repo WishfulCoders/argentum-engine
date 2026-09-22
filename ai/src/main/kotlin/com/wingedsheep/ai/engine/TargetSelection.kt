@@ -57,6 +57,8 @@ object TargetSelection {
         return if (isPlayer) {
             // Player target — prefer opponent
             if (isOpponent) 5.0 else -5.0
+        } else if (card != null && zoneOfCardTarget(state, entityId) != null) {
+            offBattlefieldWorth(card)
         } else if (projected.isCreature(entityId)) {
             val value = if (card != null) {
                 BoardPresence.permanentValue(state, projected, entityId, card, intents)
@@ -321,6 +323,25 @@ object TargetSelection {
                 else -> ChosenTarget.Permanent(entityId)
             }
         }
+    }
+
+    /**
+     * What a card in a graveyard, exile, hand or library is worth as a target, for ranking and for
+     * breaking ties between targets a simulation cannot tell apart. The effects that target such a
+     * card mostly want a good one — return it, reanimate it, exile the opponent's best — and a
+     * simulation often scores them all the same: every card back in hand is one card. Without this
+     * every such card ranked 0, so the first in zone order won, which in a flooded graveyard is a
+     * land (`GraveyardReturnTargetTest`).
+     *
+     * A land is 0; any other card is 1 plus its mana value, the cheapest proxy for what it does.
+     */
+    fun offBattlefieldWorth(card: CardComponent): Double =
+        if (card.isLand) 0.0 else 1.0 + card.manaValue
+
+    /** [offBattlefieldWorth] of [entityId], or 0 when it is not a card in a card-target zone. */
+    fun offBattlefieldWorth(state: GameState, entityId: EntityId): Double {
+        val card = state.getEntity(entityId)?.get<CardComponent>() ?: return 0.0
+        return if (zoneOfCardTarget(state, entityId) != null) offBattlefieldWorth(card) else 0.0
     }
 
     /**
