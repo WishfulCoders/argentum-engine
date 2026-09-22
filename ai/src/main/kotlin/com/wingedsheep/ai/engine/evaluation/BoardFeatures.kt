@@ -6,6 +6,8 @@ import com.wingedsheep.engine.mechanics.layers.SerializableModification
 import com.wingedsheep.ai.engine.OpponentAggregate
 import com.wingedsheep.ai.engine.knowledge.CardIntent
 import com.wingedsheep.ai.engine.knowledge.IntentCatalog
+import com.wingedsheep.ai.engine.mana.ColourNeeds
+import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.ai.engine.lifePoolsOf
 import com.wingedsheep.ai.engine.sidesFor
 import com.wingedsheep.engine.state.ComponentContainer
@@ -18,9 +20,11 @@ import com.wingedsheep.engine.state.components.battlefield.TappedComponent
 import com.wingedsheep.engine.state.components.combat.AttackingComponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.player.LandDropsComponent
+import com.wingedsheep.sdk.core.AbilityFlag
 import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Keyword
 import com.wingedsheep.sdk.core.Zone
+import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.model.EntityId
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -116,10 +120,29 @@ data class CreatureValuation(
      * actually gets to keep using.
      */
     val cantAttackCostsPower: Boolean = false,
+    /**
+     * Price a creature that is tapped and cannot untap — Blossombind ("can't become untapped"),
+     * Claustrophobia ("doesn't untap during its controller's untap step") — at a flat
+     * [LOCKED_CREATURE_VALUE] instead of as the body it no longer gets to use.
+     *
+     * Off a play session (2026-09-20, replay bca68ebf, action 377): the opponent put Blossombind on
+     * the AI's Stratosoarer, and the AI then paid {2} to equip Stalactite Dagger (+1/+1) onto it.
+     * Nothing in the AI read either untap flag, so a creature that will never attack or block again
+     * was valued as a creature, and +1/+1 on it as +1/+1.
+     *
+     * Flat rather than a multiplier, so that nothing done to the creature's stats can move its
+     * value: that is the claim. What it keeps is being a creature — a sacrifice, a body for "creatures
+     * you control" — and anything its statics do lands on *other* permanents' projected values,
+     * where it is already counted. Symmetric: an opponent's locked creature stops drawing removal.
+     */
+    val lockedCreaturesAreInert: Boolean = false,
 ) {
     companion object {
         /** Neither correction: what every number published before 2026-08-10 was measured on. */
         val LEGACY = CreatureValuation()
+
+        /** See [lockedCreaturesAreInert]. */
+        const val LOCKED_CREATURE_VALUE = 0.5
     }
 }
 
@@ -153,12 +176,25 @@ object BoardPresence : BoardFeature {
         intents: IntentCatalog,
         sequenceLandsByUsableMana: Boolean = false,
         creatureValuation: CreatureValuation = CreatureValuation.LEGACY,
+        priceSacrificeLandsAsNoMana: Boolean = false,
+        colourAvailability: ColourAvailability? = null,
+        sequenceLandsByCastability: Boolean = false,
+        cardRegistry: CardRegistry? = null,
     ): Double {
         val sides = state.sidesFor(playerId) ?: return 0.0
-        val mine = boardValue(state, projected, sides.mine, intents, creatureValuation) +
-            if (sequenceLandsByUsableMana) landSequencing(state, projected, playerId, intents) else 0.0
+        // The colour-aware form supersedes the mana-value one rather than stacking: they are the
+        // same term, asking the same question with a better answer.
+        val sequencing = when {
+            sequenceLandsByCastability && cardRegistry != null ->
+                landSequencing(state, projected, playerId, intents, cardRegistry)
+            sequenceLandsByUsableMana -> landSequencing(state, projected, playerId, intents, null)
+            else -> 0.0
+        }
+        val mine = boardValue(state, projected, sides.mine, intents, creatureValuation, priceSacrificeLandsAsNoMana) +
+            sequencing +
+            (colourAvailability?.penalty(state, projected, playerId) ?: 0.0)
         return sides.against(OpponentAggregate.THREAT) { opponent ->
-            mine - boardValue(state, projected, opponent, intents, creatureValuation)
+            mine - boardValue(state, projected, opponent, intents, creatureValuation, priceSacrificeLandsAsNoMana)
         }
     }
 
@@ -168,12 +204,15 @@ object BoardPresence : BoardFeature {
         side: List<EntityId>,
         intents: IntentCatalog,
         creatureValuation: CreatureValuation,
+        priceSacrificeLandsAsNoMana: Boolean = false,
     ): Double {
         var total = 0.0
         for (playerId in side) {
             for (entityId in projected.getBattlefieldControlledBy(playerId)) {
                 val card = state.getEntity(entityId)?.get<CardComponent>() ?: continue
-                total += permanentValue(state, projected, entityId, card, intents, creatureValuation)
+                total += permanentValue(
+                    state, projected, entityId, card, intents, creatureValuation, priceSacrificeLandsAsNoMana,
+                )
             }
         }
         return total
@@ -218,6 +257,17 @@ object BoardPresence : BoardFeature {
         projected: ProjectedState,
         playerId: EntityId,
         intents: IntentCatalog,
+        /**
+         * Non-null makes the castability test read **colours** as well as amount
+         * ([AiProfile.sequenceLandsByCastability]).
+         *
+         * The KDoc above admits the approximation — "castability is mana *value* against a land
+         * count ... colours ... are ignored" — and on a two-colour deck the two answers differ
+         * constantly. Three Mountains and a `{2}{G}` in hand read as "a card that untapping would
+         * unlock", so the refund is withheld and the AI is charged for a tapland on a turn when the
+         * mana it was not producing could never have cast anything. mtg-draft-ai `docs/46` §9.7.
+         */
+        cardRegistry: CardRegistry?,
     ): Double {
         // Projection on the battlefield, base state in hand: an animated Mishra's Factory is still a
         // land and a Dryad Arbor is one from the moment it arrives, and only the projection knows.
@@ -230,14 +280,69 @@ object BoardPresence : BoardFeature {
         val hand = state.getZone(playerId, Zone.HAND)
             .mapNotNull { state.getEntity(it)?.get<CardComponent>() }
 
+        // What the lands could make between them. Their *colours*, not their availability: the
+        // question is whether untapping would unlock the card, and a tapped land untaps.
+        val producible: Set<Color>? = cardRegistry?.let { registry ->
+            lands.flatMapTo(mutableSetOf()) {
+                ColourNeeds.coloursProducedBy(state, projected, it, registry)
+            }
+        }
         var score = 0.0
-        if (tapped > 0 && hand.none { !it.isLand && it.manaValue in (untapped + 1)..lands.size }) {
+        val unlockable = hand.any { card ->
+            !card.isLand && card.manaValue in (untapped + 1)..lands.size &&
+                (producible == null || card.manaCost.colorCount.keys.all { it in producible })
+        }
+        if (tapped > 0 && !unlockable) {
             score += tapped * IDLE_MANA_REFUND
         }
         score -= TAPLAND_IN_HAND * hand.count {
             it.isLand && intents.forName(it.name)?.entersTapped == true
         }
         return score
+    }
+
+    /**
+     * The colours your hand is asking for that your board cannot make, as a charge on the board.
+     *
+     * The one fact no term in this evaluator could state (mtg-draft-ai `docs/46`). Everything else
+     * about mana here is a *count* — `Tempo` counts lands, [LAND_UNTAPPED] counts whether one is
+     * tapped — and counting is exactly the thing that cannot tell a Mountain from the Forest that
+     * casts the creature you are holding.
+     *
+     * As a penalty on the position rather than a bonus on a card, which is what makes it work
+     * without special-casing anything: a land drop, a fetch activation and a mana creature all
+     * *remove* the penalty by making the colour available, so each of them is credited for fixing
+     * in the ordinary way, through the board they lead to.
+     *
+     * **Own seat only**, like [landSequencing], and for its reason: it reads the hand.
+     *
+     * Two deliberate limits. It charges per missing *colour*, not per unpayable card, so it says
+     * nothing about how much mana you have — that is [Tempo]'s job and double-counting it would
+     * make the AI hoard lands. And it is capped, so a three-colour hand on turn one is not scored
+     * as a catastrophe it cannot do anything about.
+     */
+    class ColourAvailability(
+        val registry: CardRegistry,
+        /**
+         * False makes this a registry carrier only, for
+         * [AiProfile.sequenceLandsByCastability] — which needs to read producible colours but must
+         * not also start charging for missing ones, or the two arms could not be told apart.
+         */
+        private val charging: Boolean = true,
+    ) {
+        fun penalty(state: GameState, projected: ProjectedState, playerId: EntityId): Double {
+            if (!charging) return 0.0
+            val needs = ColourNeeds.of(state, projected, playerId, registry)
+            // `ColourNeeds.available` counts lands in hand as reachable, which is right for
+            // choosing what to fetch and wrong here: a land in hand is a colour you have not got
+            // yet, and pricing it as though you had would make the land drop worth nothing.
+            val onBoard = projected.getBattlefieldControlledBy(playerId)
+                .flatMapTo(mutableSetOf()) {
+                    ColourNeeds.coloursProducedBy(state, projected, it, registry)
+                }
+            val unmet = needs.handPips.count { (colour, pips) -> pips > 0 && colour !in onBoard }
+            return -UNMET_COLOUR * minOf(unmet, UNMET_COLOUR_CAP)
+        }
     }
 
     internal fun permanentValue(
@@ -247,6 +352,7 @@ object BoardPresence : BoardFeature {
         card: CardComponent,
         intents: IntentCatalog = IntentCatalog.NONE,
         creatureValuation: CreatureValuation = CreatureValuation.LEGACY,
+        priceSacrificeLandsAsNoMana: Boolean = false,
     ): Double {
         val container = state.getEntity(entityId) ?: return 0.0
 
@@ -256,6 +362,17 @@ object BoardPresence : BoardFeature {
 
         // Non-creature permanents
         if (card.isLand) {
+            // A fetch land is not a mana source. `LAND_UNTAPPED` is a claim about mana you can
+            // spend, and an Evolving Wilds sitting on the battlefield has none — its only ability
+            // eats it. Pricing it 0.6 made cracking it cost 0.6 − 0.3 = 0.3 (weight 1.5 → 0.45)
+            // in every position, which is why the AI never did (mtg-draft-ai `docs/46` §3.1).
+            // Priced at nothing, cracking *gains* the tapped basic instead, and the choice stops
+            // being a special case. [AiProfile.priceSacrificeLandsAsNoMana].
+            if (priceSacrificeLandsAsNoMana &&
+                intents.forPermanent(container, card.name).any { it.sacrificeLand }
+            ) {
+                return LAND_NO_MANA
+            }
             return if (container.has<TappedComponent>()) LAND_TAPPED else LAND_UNTAPPED
         }
 
@@ -277,7 +394,21 @@ object BoardPresence : BoardFeature {
         }
 
         // Auras/equipment attached to something are valuable
-        if (container.has<com.wingedsheep.engine.state.components.battlefield.AttachedToComponent>()) {
+        val attachedTo = container.get<com.wingedsheep.engine.state.components.battlefield.AttachedToComponent>()
+        if (attachedTo != null) {
+            // …except Equipment on a creature that will never fight again, which is doing nothing
+            // there. Without this the flat 1.5 over 0.5 paid +1.0 for equipping *anything*, and a
+            // locked creature as the only candidate still drew the equip (`activate-08`). Auras stay:
+            // the Blossombind holding that creature down is doing its job, not wasting it.
+            val host = attachedTo.targetId
+            val hostContainer = state.getEntity(host)
+            if (creatureValuation.lockedCreaturesAreInert &&
+                projected.hasSubtype(entityId, "Equipment") &&
+                hostContainer != null && projected.isCreature(host) &&
+                isLockedTapped(projected, host, hostContainer)
+            ) {
+                return maxOf(0.5, prior)
+            }
             return maxOf(1.5, prior)
         }
 
@@ -485,6 +616,11 @@ object BoardPresence : BoardFeature {
         // [creatureBodyValue]; everything below is a property of this permanent in this position.
         var value = creatureBodyValue(power, toughness, keywords, settledPower, settledToughness)
 
+        // ── Locked down ── tapped, and nothing will untap it: see [CreatureValuation.lockedCreaturesAreInert].
+        if (valuation.lockedCreaturesAreInert && isLockedTapped(projected, entityId, container)) {
+            return CreatureValuation.LOCKED_CREATURE_VALUE
+        }
+
         // ── Drawbacks ──
         // "Can't attack" hung on the creature by a Pacifism takes away the same thing DEFENDER
         // does: the power. [CreatureValuation.cantAttackCostsPower] is what makes the two spellings
@@ -565,6 +701,29 @@ object BoardPresence : BoardFeature {
     /** What a land is worth on the battlefield. Historical constants; [landSequencing] refines them. */
     private const val LAND_UNTAPPED = 0.6
     private const val LAND_TAPPED = 0.3
+
+    /**
+     * What a land that cannot produce mana is worth as a *permanent*: nothing.
+     *
+     * Not a tuned constant — the whole point is that there is nothing to tune. Its worth is its
+     * ability, and the ability is scored where every other ability is, on the board the activation
+     * leads to. See [CardIntent.sacrificeLand].
+     */
+    private const val LAND_NO_MANA = 0.0
+
+    /**
+     * What one colour your hand needs and your board cannot make is worth, before the weight.
+     *
+     * Sized against the one constant it has to beat. The only thing that previously separated two
+     * land drops was [LAND_UNTAPPED] − [LAND_TAPPED] = 0.3, in the basic's favour — so a tapland
+     * that is your only source of a colour has to clear 0.3, and 0.75 clears it without swamping
+     * the board terms it sits beside. `sequencing-07` and `-08` are untouched by construction:
+     * both are single-colour positions, where this term is zero for every candidate.
+     */
+    private const val UNMET_COLOUR = 0.75
+
+    /** Past two missing colours the position is not about a land drop any more. */
+    private const val UNMET_COLOUR_CAP = 2
 
     /** Exactly the charge [permanentValue] applied, so an idle tapped land nets out to a full land. */
     private const val IDLE_MANA_REFUND = LAND_UNTAPPED - LAND_TAPPED
@@ -848,20 +1007,22 @@ object ThreatAssessment : BoardFeature {
         projected: ProjectedState,
         playerId: EntityId,
         discountedRaceClock: Boolean,
+        /** [CreatureValuation.lockedCreaturesAreInert]: a locked creature is not a future attacker. */
+        lockedCreaturesAreInert: Boolean = false,
     ): Double {
         val sides = state.sidesFor(playerId) ?: return 0.0
 
         val myLife = sideLife(state, sides.mine)
 
         // Calculate attack potential (power of untapped, non-sick creatures)
-        val myAttackPower = attackPotential(state, projected, sides.mine)
+        val myAttackPower = attackPotential(state, projected, sides.mine, lockedCreaturesAreInert)
 
         // Calculate defense capability (total toughness of untapped creatures that can block)
         val myDefense = defensePotential(state, projected, sides.mine)
 
         return sides.against(OpponentAggregate.THREAT) { opponent ->
             val theirLife = sideLife(state, opponent)
-            val theirAttackPower = attackPotential(state, projected, opponent)
+            val theirAttackPower = attackPotential(state, projected, opponent, lockedCreaturesAreInert)
             val theirDefense = defensePotential(state, projected, opponent)
 
             // Score: positive if we're the faster clock
@@ -935,15 +1096,25 @@ object ThreatAssessment : BoardFeature {
     private fun sideLife(state: GameState, side: List<EntityId>): Int =
         state.lifePoolsOf(side).minOrNull() ?: 20
 
-    private fun attackPotential(state: GameState, projected: ProjectedState, side: List<EntityId>): Int {
+    private fun attackPotential(
+        state: GameState,
+        projected: ProjectedState,
+        side: List<EntityId>,
+        lockedCreaturesAreInert: Boolean = false,
+    ): Int {
         // Don't filter by TappedComponent — tapped creatures untap on the next
         // turn and can attack again. Filtering them out massively penalizes the
         // post-combat state (where our creatures are tapped from attacking),
         // making the AI think attacking reduced its clock to zero.
+        //
+        // The exception is a creature that *won't* untap (Blossombind, Claustrophobia): that premise
+        // is false for it, and +1/+1 on it read as a faster clock — `activate-08`.
         return side.sumOf { playerId ->
             projected.getBattlefieldControlledBy(playerId)
                 .filter { entityId ->
                     projected.isCreature(entityId) &&
+                        !(lockedCreaturesAreInert && state.getEntity(entityId)
+                            ?.let { isLockedTapped(projected, entityId, it) } == true) &&
                         !projected.cantAttack(entityId) &&
                         state.getEntity(entityId)?.has<SummoningSicknessComponent>() != true
                 }
@@ -1041,4 +1212,11 @@ object Tempo : BoardFeature {
         count <= 6 -> 6.0 + (count - 3) * 1.2  // mid-game mana
         else -> 9.6 + (count - 6) * 0.4  // diminishing returns for excess mana
     }
+}
+
+/** Tapped, with nothing that will untap it — see [CreatureValuation.lockedCreaturesAreInert]. */
+private fun isLockedTapped(projected: ProjectedState, entityId: EntityId, container: ComponentContainer): Boolean {
+    if (!container.has<TappedComponent>()) return false
+    val keywords = projected.getKeywords(entityId)
+    return AbilityFlag.CANT_BECOME_UNTAPPED.name in keywords || AbilityFlag.DOESNT_UNTAP.name in keywords
 }

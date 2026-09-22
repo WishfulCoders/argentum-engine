@@ -59,6 +59,11 @@ export interface GameplaySliceState {
 export interface GameplaySliceActions {
   createGame: (deckList: Record<string, number>, setCode?: string) => void
   createAiGame: (deckList: Record<string, number>, setCode?: string) => void
+  createPlaytestGame: (
+    deckList: Record<string, number>,
+    aiDeckList: Record<string, number>,
+    setCode?: string,
+  ) => void
   joinGame: (sessionId: string, deckList: Record<string, number>) => void
   submitAction: (action: GameAction, interactionEpoch: string | null | undefined) => void
   /** The decision ID must come from the rendered prompt, never from a later store snapshot. */
@@ -140,6 +145,15 @@ export const createGameplaySlice: SliceCreator<GameplaySlice> = (set, get) => ({
 
   createAiGame: (deckList, setCode) => {
     getWebSocket()?.send(createCreateGameMessage(deckList, true, setCode))
+  },
+
+  // Both seats' decks are named by the caller, which is the whole point of a playtest matchup:
+  // the same two draft decks every time, so games are comparable to each other and to an arena
+  // run on the same pair.
+  createPlaytestGame: (deckList, aiDeckList, setCode) => {
+    getWebSocket()?.send(
+      createCreateGameMessage(deckList, true, setCode, undefined, undefined, aiDeckList)
+    )
   },
 
   joinGame: (sessionId, deckList) => {
@@ -598,6 +612,7 @@ export const createGameplaySlice: SliceCreator<GameplaySlice> = (set, get) => ({
       manaSelectionState: null,
       hoveredCardId: null,
       draggingBlockerId: null,
+      pendingBlockerIds: [],
       draggingCardId: null,
       revealedHandCardIds: null,
       revealedCardsInfo: null,
@@ -608,6 +623,7 @@ export const createGameplaySlice: SliceCreator<GameplaySlice> = (set, get) => ({
       nextStopPoint: null,
       opponentDisconnectCountdown: null,
       eventLog: [],
+      handOrder: [],
       gameOverState: null,
       lastError: null,
       spectatorCount: 0,

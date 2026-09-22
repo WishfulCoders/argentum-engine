@@ -7,6 +7,7 @@ import com.wingedsheep.ai.arena.TableGameRunner
 import com.wingedsheep.ai.arena.TableSetup
 import com.wingedsheep.ai.arena.mixSeed
 import com.wingedsheep.ai.engine.buildSeededSealedDeck
+import com.wingedsheep.ai.engine.draftableCards
 import com.wingedsheep.engine.core.DecisionResponse
 import com.wingedsheep.engine.core.GameAction
 import com.wingedsheep.engine.core.SubmitDecision
@@ -35,7 +36,7 @@ class EclTrainingBenchmark : FunSpec({
         val output = if (requestedOutput.isAbsolute) requestedOutput else baseDir.resolve(requestedOutput).normalize()
         val runId = System.getProperty("eclCollectRunId") ?: "ecl-$seed"
         val set = MtgSetCatalog.requireByCode("ECL")
-        val registry = CardRegistry().apply { register(set.cards); register(set.basicLands) }
+        val registry = CardRegistry().apply { register(draftableCards(set)); register(set.basicLands) }
         val profiles = listOf("production", "v0", "v0-rollout-determinized")
         val existing = if (Files.isRegularFile(output)) {
             TrainingCorpusFiles.read(output)
@@ -52,7 +53,7 @@ class EclTrainingBenchmark : FunSpec({
 
         while (cleanGames < games) {
             val gameSeed = mixSeed(seed, gameIndex.toLong() + 1)
-            val deck = buildSeededSealedDeck(set.cards, Random(gameSeed))
+            val deck = buildSeededSealedDeck(set, Random(gameSeed))
             val seat0 = ArenaAgents.resolve(profiles[gameIndex % profiles.size])
             val seat1 = ArenaAgents.resolve(profiles[(gameIndex + 1) % profiles.size])
             val gameId = "game-${gameIndex.toString().padStart(6, '0')}"

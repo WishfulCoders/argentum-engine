@@ -27,6 +27,7 @@ import { SpectatorGameBoard } from './components/spectating/SpectatorGameBoard'
 import { trackPageView } from './utils/analytics'
 import { randomBackground } from './utils/background'
 import { useNavigate } from 'react-router-dom'
+import { takeMatchup } from '@/components/playtest/playtest'
 import { useGameStore } from './store/gameStore'
 import { useConnectName } from './store/useConnectName'
 import { useRematch } from '@/components/lobby/useRematch'
@@ -38,6 +39,7 @@ import { GameOverReason } from './types'
 export default function App() {
   const interactionEpoch = useGameStore((state) => state.interactionEpoch)
   const connectionStatus = useGameStore((state) => state.connectionStatus)
+  const createPlaytestGame = useGameStore((state) => state.createPlaytestGame)
   const gameState = useGameStore((state) => state.gameState)
   const gameOverState = useGameStore((state) => state.gameOverState)
   const mulliganState = useGameStore((state) => state.mulliganState)
@@ -64,6 +66,15 @@ export default function App() {
     []
   )
   const hasSpectatedRef = useRef(false)
+
+  // Dev deep-link: /?playtest=<matchupId> starts the matchup the playtest page parked in
+  // sessionStorage, with BOTH decks fixed. Mirrors the spectate link above — the page owns the
+  // choosing, the board owns the connection (mtg-draft-ai `docs/44`).
+  const playtestParam = useMemo(
+    () => new URLSearchParams(window.location.search).get('playtest'),
+    []
+  )
+  const hasStartedPlaytestRef = useRef(false)
 
   const viewingPlayer = useViewingPlayer()
   const battlefieldCards = useBattlefieldCards()
@@ -104,6 +115,16 @@ export default function App() {
       spectateGame(spectateParam)
     }
   }, [spectateParam, connectionStatus, spectatingState, spectateGame])
+
+  // Once connected, start the parked playtest matchup (fire once). Taking it out of storage means
+  // a reload is a normal game rather than a silent rematch of decks nobody chose again.
+  useEffect(() => {
+    if (!playtestParam || connectionStatus !== 'connected' || hasStartedPlaytestRef.current) return
+    hasStartedPlaytestRef.current = true
+    const matchup = takeMatchup()
+    if (!matchup) return
+    createPlaytestGame(matchup.you.deckList, matchup.opponent.deckList, matchup.set)
+  }, [playtestParam, connectionStatus, createPlaytestGame])
 
   /**
    * Keep the URL bar in sync with tournament state so the link is shareable.

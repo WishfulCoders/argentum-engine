@@ -514,6 +514,8 @@ export const HELP_TOPICS: readonly HelpTopic[] = [
     summary:
       'Drag a card from your hand onto the battlefield to cast it, drag an attacker onto a defender to attack, and drag a blocker onto an attacker to block. Clicking works everywhere dragging does.',
     body: [
+      { kind: 'p', text: 'To block by clicking, click one or more of your creatures (they turn gold), then click the attacker they should block. Click an assigned blocker again to take it back.' },
+      { kind: 'p', text: 'Drag a card sideways within your hand to rearrange it; drop it back over the hand and nothing is cast. Cards you can play from another zone — flashback from the graveyard, an impulse draw from exile, a revealed library top — sit in the "Not in hand" tray beside your hand, each labelled with its zone.' },
       { kind: 'p', text: 'Dragging one attacker onto another bands them (CR 702.22). On a phone, swipe left and right on the opponent strip to move between boards.' },
     ],
     related: ['multiplayer-camera'],

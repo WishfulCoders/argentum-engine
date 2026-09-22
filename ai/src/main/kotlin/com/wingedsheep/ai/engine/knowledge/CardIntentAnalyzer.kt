@@ -215,6 +215,7 @@ object CardIntentAnalyzer {
             anthemBonus = anthemBonus,
             pumpToughness = pumpToughness,
             entersTapped = scripts.any(::alwaysEntersTapped),
+            sacrificeLand = isSacrificeLand(card, scripts),
             flashPermanent = card.typeLine.isPermanent && Keyword.FLASH in card.keywords,
             hasHaste = Keyword.HASTE in card.keywords,
             targetsOnlyOurPermanents = targetsOnlyOurPermanents(scripts),
@@ -521,6 +522,23 @@ object CardIntentAnalyzer {
             script.activatedAbilities.any { !it.isManaAbility && !consumesSource(it.cost) } ||
                 script.triggeredAbilities.any { canFireMoreThanOnce(it) }
         }
+    }
+
+    /**
+     * Whether [card] is a land that makes no mana and whose activated abilities all eat it.
+     *
+     * Three clauses, and each one is carrying a card the others would let through. Land, because a
+     * Mind Stone is the same shape and is not a mana base question. No mana ability, because a
+     * Blighted Woodland taps for mana *and* sacrifices, and it is a real land while it sits there.
+     * And *every* activated ability consuming the source, because a land with a second, repeatable
+     * ability is one you keep. What is left is the fetch family. See [CardIntent.sacrificeLand].
+     */
+    private fun isSacrificeLand(card: CardDefinition, scripts: List<CardScript>): Boolean {
+        if (!card.typeLine.isLand) return false
+        val activated = scripts.flatMap { it.activatedAbilities }
+        if (activated.isEmpty()) return false
+        if (activated.any { it.isManaAbility }) return false
+        return activated.all { consumesSource(it.cost) }
     }
 
     private fun consumesSource(cost: AbilityCost): Boolean = when (cost) {

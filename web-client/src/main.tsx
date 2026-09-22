@@ -29,6 +29,9 @@ const ScenarioBuilderPage = lazy(() =>
 const LlmTournamentPage = lazy(() =>
   import('./components/llmTournament/LlmTournamentPage').then(({ LlmTournamentPage }) => ({ default: LlmTournamentPage }))
 )
+// Research tooling, not linked from the home screen: a curated list of draft-deck matchups to play
+// against the gameplay pilot (mtg-draft-ai `docs/44`).
+const PlaytestPage = lazy(() => import('./components/playtest/PlaytestPage'))
 const AiSandboxPage = lazy(() =>
   import('./components/aiSandbox/AiSandboxPage').then(({ AiSandboxPage }) => ({ default: AiSandboxPage }))
 )
@@ -88,6 +91,7 @@ createRoot(rootElement).render(
           <Route path="/learn/:missionId" element={<LearnPage />} />
           <Route path="/llm-tournament" element={<LlmTournamentPage />} />
           <Route path="/llm-tournament/:id" element={<LlmTournamentPage />} />
+          <Route path="/playtest" element={<PlaytestPage />} />
           <Route path="/ai-sandbox" element={<AiSandboxPage />} />
           <Route path="/ai-sandbox/:lobbyId" element={<AiSandboxPage />} />
           <Route path="*" element={<App />} />

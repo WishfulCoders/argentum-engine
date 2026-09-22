@@ -1,6 +1,7 @@
 package com.wingedsheep.ai.arena
 
 import com.wingedsheep.ai.engine.buildSeededSealedDeck
+import com.wingedsheep.ai.engine.draftableCards
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.mtg.sets.MtgSetCatalog
 import io.kotest.assertions.withClue
@@ -81,11 +82,11 @@ class PodArenaHarnessTest : FunSpec({
     // One test per table so each gets its own hang-guard budget and a failure names the table.
 
     val set = MtgSetCatalog.requireByCode("POR")
-    val podRegistry = CardRegistry().apply { register(set.cards); register(set.basicLands) }
+    val podRegistry = CardRegistry().apply { register(draftableCards(set)); register(set.basicLands) }
 
     fun soloGame(table: TableSetup, maxTurns: Int): TableGameOutcome {
         val seed = mixSeed(ArenaConfig.DEFAULT_SEED, 1L)
-        val deck = buildSeededSealedDeck(set.cards, Random(seed))
+        val deck = buildSeededSealedDeck(set, Random(seed))
         val v0 = ArenaAgents.resolve("v0")
         return TableGameRunner.play(
             podRegistry, table, List(table.seats) { v0 }, List(table.seats) { deck },

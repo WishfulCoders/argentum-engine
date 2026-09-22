@@ -43,6 +43,12 @@ function combatActingSeat(
 export interface CombatSliceState {
   combatState: CombatState | null
   draggingBlockerId: EntityId | null
+  /**
+   * Click-to-block: your creatures clicked as blockers but not yet pointed at an attacker. The
+   * next click on an attacking creature assigns all of them to it. The drag gesture still works
+   * alongside; this is the same assignment reached with two clicks.
+   */
+  pendingBlockerIds: readonly EntityId[]
   draggingAttackerId: EntityId | null
   /**
    * Whether the currently-dragged attacker has the BANDING keyword. Set alongside
@@ -69,6 +75,10 @@ export interface CombatSliceActions {
   assignBlocker: (blockerId: EntityId, attackerId: EntityId) => void
   removeBlockerAssignment: (blockerId: EntityId) => void
   clearBlockerAssignments: () => void
+  /** Pick / unpick one of your valid blockers for the next attacker click. */
+  togglePendingBlocker: (blockerId: EntityId) => void
+  /** Assign every pending blocker to [attackerId] (each within its max-block count), then clear. */
+  assignPendingBlockersTo: (attackerId: EntityId) => void
   startDraggingBlocker: (blockerId: EntityId) => void
   stopDraggingBlocker: () => void
   startDraggingAttacker: (attackerId: EntityId, hasBanding?: boolean) => void
@@ -105,6 +115,7 @@ export type CombatSlice = CombatSliceState & CombatSliceActions
 export const createCombatSlice: SliceCreator<CombatSlice> = (set, get) => ({
   combatState: null,
   draggingBlockerId: null,
+  pendingBlockerIds: [],
   draggingAttackerId: null,
   draggingAttackerHasBanding: null,
   draggingCardId: null,
@@ -113,7 +124,7 @@ export const createCombatSlice: SliceCreator<CombatSlice> = (set, get) => ({
 
   startCombat: (combatState) => {
     if (!combatState.interactionEpoch || combatState.interactionEpoch !== get().interactionEpoch) return
-    set({ combatState })
+    set({ combatState, pendingBlockerIds: [] })
     // Sync pre-populated blocker assignments with opponent
     if (combatState.mode === 'declareBlockers' && Object.keys(combatState.blockerAssignments).length > 0) {
       getWebSocket()?.send(createUpdateBlockerAssignmentsMessage(combatState.blockerAssignments))
@@ -276,7 +287,38 @@ export const createCombatSlice: SliceCreator<CombatSlice> = (set, get) => ({
           ...state.combatState,
           blockerAssignments: {},
         },
+        pendingBlockerIds: [],
       }
+    })
+  },
+
+  togglePendingBlocker: (blockerId) => {
+    const { combatState, pendingBlockerIds } = get()
+    if (!combatState || combatState.mode !== 'declareBlockers') return
+    if (!combatState.validCreatures.includes(blockerId)) return
+    set({
+      pendingBlockerIds: pendingBlockerIds.includes(blockerId)
+        ? pendingBlockerIds.filter((id) => id !== blockerId)
+        : [...pendingBlockerIds, blockerId],
+    })
+  },
+
+  assignPendingBlockersTo: (attackerId) => {
+    const { combatState, pendingBlockerIds } = get()
+    if (!combatState || combatState.mode !== 'declareBlockers' || pendingBlockerIds.length === 0) return
+    if (!combatState.attackingCreatures.includes(attackerId)) return
+    const newAssignments = { ...combatState.blockerAssignments }
+    for (const blockerId of pendingBlockerIds) {
+      const existing = newAssignments[blockerId] ?? []
+      if (existing.includes(attackerId)) continue
+      const maxBlocks = combatState.blockerMaxBlockCounts[blockerId] ?? 1
+      if (existing.length >= maxBlocks) continue
+      newAssignments[blockerId] = [...existing, attackerId]
+    }
+    getWebSocket()?.send(createUpdateBlockerAssignmentsMessage(newAssignments))
+    set({
+      combatState: { ...combatState, blockerAssignments: newAssignments },
+      pendingBlockerIds: [],
     })
   },
 
@@ -369,7 +411,7 @@ export const createCombatSlice: SliceCreator<CombatSlice> = (set, get) => ({
       get().submitAction(action, combatState.interactionEpoch)
     }
 
-    set({ draggingBlockerId: null })
+    set({ draggingBlockerId: null, pendingBlockerIds: [] })
   },
 
   attackWithAll: () => {
@@ -421,7 +463,7 @@ export const createCombatSlice: SliceCreator<CombatSlice> = (set, get) => ({
       get().submitAction(action, combatState.interactionEpoch)
     }
 
-    set({ draggingBlockerId: null })
+    set({ draggingBlockerId: null, pendingBlockerIds: [] })
   },
 
   clearAttackers: () => {
@@ -441,7 +483,7 @@ export const createCombatSlice: SliceCreator<CombatSlice> = (set, get) => ({
   },
 
   clearCombat: () => {
-    set({ combatState: null, draggingBlockerId: null })
+    set({ combatState: null, draggingBlockerId: null, pendingBlockerIds: [] })
   },
 
   removeBand: (bandIndex) => {

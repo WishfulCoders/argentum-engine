@@ -48,6 +48,15 @@ sealed interface ClientMessage {
          * in-game only by wish effects (Burning Wish, …). Empty for almost every deck.
          */
         val sideboard: Map<String, Int> = emptyMap(),
+        /**
+         * The exact deck the AI seat must play, card name → count. Null (the default) keeps the
+         * historical behaviour: the AI gets a generated sealed deck for the human's set.
+         *
+         * Only meaningful with [vsAi]. It exists for playtesting, where the point is a *named*
+         * matchup — this draft deck against that one — rather than a fresh pool each game
+         * (mtg-draft-ai `docs/44`).
+         */
+        val aiDeckList: Map<String, Int>? = null,
     ) : ClientMessage
 
     /**

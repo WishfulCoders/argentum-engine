@@ -268,6 +268,16 @@ class AIPlayer(
                 discountedRaceClock = profile.discountedRaceClock,
                 creatureValuation = profile.creatureValuation,
                 priceLandsInHandAsMana = profile.priceLandsInHandAsMana,
+                priceSacrificeLandsAsNoMana = profile.priceSacrificeLandsAsNoMana,
+                // The holder is built whenever either colour term needs it: it carries the
+                // registry `landSequencing` reads producible colours from, and the charge itself
+                // is applied only under `chargesForUnavailableColours`.
+                colourAvailability = if (profile.chargesForUnavailableColours || profile.sequenceLandsByCastability) {
+                    BoardPresence.ColourAvailability(cardRegistry, charging = profile.chargesForUnavailableColours)
+                } else {
+                    null
+                },
+                sequenceLandsByCastability = profile.sequenceLandsByCastability,
             )
             // Its features read the full catalog, as they did where it was fit (replay's PreferenceWriter).
             val correction = profile.priorityCorrectionId?.let(EvalWeights::correction)
@@ -293,6 +303,8 @@ class AIPlayer(
                 advisorRegistry = advisorRegistry,
                 budgetPolicy = profile.budgetPolicy,
                 intents = intents,
+                cardRegistry = cardRegistry,
+                choosesLandsByColour = profile.choosesLandsByColour,
             )
 
             // Wire up the decision resolver so simulations can resolve non-trivial
@@ -339,6 +351,8 @@ class AIPlayer(
                     endStepManaAllowance = profile.spendIdleManaInTheirEndStep,
                     holdFlashPermanentsForAmbush = profile.holdFlashPermanentsForAmbush,
                     holdExpiringGrantsForCombat = profile.holdExpiringGrantsForCombat,
+                    expiringGrantsNeedACombat = profile.expiringGrantsNeedACombat,
+                    tapCostsKeepBlockersUp = profile.tapCostsKeepBlockersUp,
                     // Same seam as `CombatAdvisor`'s `lifeWeight`: a raw Phase 9 profile resolves
                     // to the compiled fallback here, which is the right answer for a policy that
                     // only needs to know what a point of board value trades against.

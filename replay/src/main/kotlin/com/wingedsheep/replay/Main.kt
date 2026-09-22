@@ -1,6 +1,6 @@
 package com.wingedsheep.replay
 
-import com.wingedsheep.arena.arenaProfile
+import com.wingedsheep.ai.engine.profileFromTokens
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.mtg.sets.MtgSetCatalog
 import com.wingedsheep.mtg.sets.tokens.PredefinedTokens
@@ -22,7 +22,8 @@ import java.util.zip.GZIPOutputStream
  * each game's accepted line ([GameLine], gzipped JSONL): the whole game when it was reproduced, the
  * half-turns before the failure otherwise. With a prefs file, also writes the user's priority choices on
  * that line with every alternative simulated ([PreferenceWriter]; pass `-` for no lines file), scored by
- * `-Dreplay.prefsProfile` (`current`, or `raceclock`). With `-Dreplay.rollouts=N -Dreplay.rollPilots=ACTING[,OPP...]`
+ * `-Dreplay.prefsProfile` (`current`, or `raceclock`), each candidate carrying the card identities of its
+ * quiet state unless `-Dreplay.prefCards=false` (mtg-draft-ai `docs/40`). With `-Dreplay.rollouts=N -Dreplay.rollPilots=ACTING[,OPP...]`
  * each candidate is also played on to a winner N times ([RolloutWriter], mtg-draft-ai `docs/36`), optionally capped at
  * `-Dreplay.rollMaxCands` candidates per choice and tuned by `-Dreplay.rollSeed`, `-Dreplay.rollShuffle`,
  * `-Dreplay.rollMaxTurns`, `-Dreplay.rollMaxPermanents` (off by default; past it a rollout stops undecided), and `-Dreplay.rollOppoDeck=stub|donor|mirror` with `-Dreplay.rollDonors=SPECS[,SPECS...]`
@@ -55,6 +56,7 @@ fun main(args: Array<String>) {
     val local = ThreadLocal.withInitial { Reconstructor(registry, snapshotter, beamWidth, nodeBudget) }
     val writers = ThreadLocal.withInitial { LineWriter(registry) }
     val prefsBase = PreferenceWriter.baseProfile(System.getProperty("replay.prefsProfile"))
+    val prefCards = System.getProperty("replay.prefCards") != "false"
     val rollN = System.getProperty("replay.rollouts")?.toInt() ?: 0
     val rollPilots = System.getProperty("replay.rollPilots")?.let(RolloutWriter::pilots)
     val rollSeed = System.getProperty("replay.rollSeed")?.toLong() ?: 1L
@@ -82,10 +84,10 @@ fun main(args: Array<String>) {
                 OppoDeckSampler(registry, snapshotter, oppoMode, donors), rollMaxPermanents ?: Int.MAX_VALUE,
             )
         }
-        PreferenceWriter(registry, prefsBase, roller, rollMaxCands)
+        PreferenceWriter(registry, prefsBase, roller, rollMaxCands, prefCards)
     }
     val playOnFile = System.getProperty("replay.playOnOut")?.let(::File)
-    val playOnPilots = System.getProperty("replay.playOn")?.split(',')?.map { it to arenaProfile(it) }
+    val playOnPilots = System.getProperty("replay.playOn")?.split(',')?.map { it to profileFromTokens(it) }
     require((playOnFile == null) == (playOnPilots == null)) { "-Dreplay.playOn and -Dreplay.playOnOut go together" }
     val playOns = playOnPilots?.let { pilots -> ThreadLocal.withInitial { PlayOn(registry, pilots) } }
     val pool = Executors.newFixedThreadPool(threads)

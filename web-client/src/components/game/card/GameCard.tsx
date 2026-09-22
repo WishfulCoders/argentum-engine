@@ -202,6 +202,25 @@ function LegendChip({
 }
 
 /**
+ * The hand order after dropping [cardId] at [clientX], read off the rendered hand slots
+ * (`data-hand-slot`, in their current left-to-right order). Null when the card isn't one of them.
+ */
+function handOrderAfterDrop(cardId: EntityId, clientX: number): EntityId[] | null {
+  const slots = Array.from(document.querySelectorAll<HTMLElement>('[data-zone="hand"] [data-hand-slot]'))
+  const ids = slots.map((el) => el.dataset.handSlot as EntityId)
+  if (!ids.includes(cardId)) return null
+  let index = 0
+  for (const el of slots) {
+    if (el.dataset.handSlot === cardId) continue
+    const r = el.getBoundingClientRect()
+    if (clientX > r.left + r.width / 2) index++
+  }
+  const rest = ids.filter((id) => id !== cardId)
+  rest.splice(index, 0, cardId)
+  return rest
+}
+
+/**
  * Single card display.
  */
 function GameCardImpl({
@@ -256,6 +275,11 @@ function GameCardImpl({
   const startDraggingBlocker = useGameStore((state) => state.startDraggingBlocker)
   const stopDraggingBlocker = useGameStore((state) => state.stopDraggingBlocker)
   const draggingBlockerId = useGameStore((state) => state.draggingBlockerId)
+  const isPendingBlocker = useGameStore((state) => state.pendingBlockerIds.includes(card.id))
+  const hasPendingBlockers = useGameStore((state) => state.pendingBlockerIds.length > 0)
+  const togglePendingBlocker = useGameStore((state) => state.togglePendingBlocker)
+  const assignPendingBlockersTo = useGameStore((state) => state.assignPendingBlockersTo)
+  const setHandOrder = useGameStore((state) => state.setHandOrder)
   const startDraggingAttacker = useGameStore((state) => state.startDraggingAttacker)
   const stopDraggingAttacker = useGameStore((state) => state.stopDraggingAttacker)
   const draggingAttackerId = useGameStore((state) => state.draggingAttackerId)
@@ -570,9 +594,10 @@ function GameCardImpl({
   const isValidAttackTargetCard = isInAttackerMode && combatState.validAttackTargets.includes(card.id)
 
   // Show playable highlight for cards that aren't purely combat-role cards.
-  // Valid blockers with legal actions (e.g., activated abilities) are still playable since blocking uses drag.
+  // A valid blocker is a combat-role card even with abilities: a click picks it to block, and
+  // declaring blockers is a turn-based action with no priority window to activate them in anyway.
   // Face-down cards can be playable too (for TurnFaceUp action)
-  const isCombatRoleCard = isValidAttacker || (isValidBlocker && !hasLegalActions) || isAttackingInBlockerMode
+  const isCombatRoleCard = isValidAttacker || isValidBlocker || isAttackingInBlockerMode
   // A mana-payment decision is the one kind that still leaves actions open: CR 605.3a lets the
   // paying player activate mana abilities, and the server sends exactly those as legal actions
   // while the window is up. Sources already offered in the decision's own menu are excluded —
@@ -621,6 +646,9 @@ function GameCardImpl({
   // deliberately or cancel instead of silently auto-firing the lone affordable action.
   const shouldShowCastModal = computeShouldShowCastModal(playableActions, card)
   const canDragToPlay = (inHand || enableDragToCast) && playableAction && !isInCombatMode && !isInTargetingMode
+  // Any real card in your own hand can be dragged sideways to rearrange it, playable or not.
+  // Ghost offers (graveyard / exile / library top) live in their own tray and have no hand slot.
+  const canDragToReorder = inHand && interactive && !isGhost && !faceDown && !isInCombatMode && !isInTargetingMode
 
   // What it costs to play this card from a face-up zone (hand or, for Commander, the command zone).
   //
@@ -675,13 +703,13 @@ function GameCardImpl({
       startDraggingBlocker(card.id)
       return
     }
-    // Start dragging card from hand
-    if (canDragToPlay) {
+    // Start dragging card from hand (to play it, or to move it within the hand)
+    if (canDragToPlay || canDragToReorder) {
       e.preventDefault()
       dragStartPos.current = { x: clientX, y: clientY }
       startDraggingCard(card.id)
     }
-  }, [isInAttackerMode, isSelectedAsAttacker, isValidAttacker, combatState, startDraggingAttacker, toggleAttacker, isInBlockerMode, isValidBlocker, startDraggingBlocker, canDragToPlay, startDraggingCard, card.id])
+  }, [isInAttackerMode, isSelectedAsAttacker, isValidAttacker, combatState, startDraggingAttacker, toggleAttacker, isInBlockerMode, isValidBlocker, startDraggingBlocker, canDragToPlay, canDragToReorder, startDraggingCard, card.id])
 
   // Handle mouse/touch up - drop blocker on attacker
   const handlePointerUp = useCallback(() => {
@@ -716,6 +744,13 @@ function GameCardImpl({
         isOverHand = clientY >= rect.top
       }
 
+      if (!draggedFarEnough && !playableAction) {
+        // A press on a card that could only be rearranged: let the ordinary click handler have
+        // it, so decision selections (discard, reveal, ...) keep working exactly as before.
+        stopDraggingCard()
+        return
+      }
+
       // Mark that drag handled this interaction to prevent duplicate click
       handledByDrag.current = true
 
@@ -739,6 +774,14 @@ function GameCardImpl({
 
         // Outside combat mode, open action menu
         handleCardClick(card.id)
+        return
+      }
+
+      if (isOverHand && inHand && !isGhost) {
+        // Dropped back over the hand: move the card to the slot under the pointer.
+        const order = handOrderAfterDrop(card.id, clientX)
+        if (order) setHandOrder(order)
+        stopDraggingCard()
         return
       }
 
@@ -774,7 +817,7 @@ function GameCardImpl({
       window.removeEventListener('mouseup', handleMouseUp)
       window.removeEventListener('touchend', handleTouchEnd)
     }
-  }, [isDraggingThisCard, card.id, playableAction, shouldShowCastModal, executeAction, stopDraggingCard, handleCardClick, selectCard, isInAttackerMode, isValidAttacker, toggleAttacker, isInBlockerMode, isValidBlocker, isSelectedAsBlocker, removeBlockerAssignment])
+  }, [isDraggingThisCard, card.id, playableAction, shouldShowCastModal, executeAction, stopDraggingCard, handleCardClick, selectCard, isInAttackerMode, isValidAttacker, toggleAttacker, isInBlockerMode, isValidBlocker, isSelectedAsBlocker, removeBlockerAssignment, inHand, isGhost, setHandOrder])
 
   // Global mouse/touch up handler to cancel blocker drag
   // For touch, we also detect drop target since touchend fires on the originating element
@@ -1026,17 +1069,21 @@ function GameCardImpl({
       // Non-attacker cards fall through to normal selection
     }
 
-    // Handle blocker mode clicks - clicking an assigned blocker removes it
+    // Handle blocker mode clicks. Blocks can be dragged (blocker onto attacker) or clicked:
+    // click one or more of your creatures to pick them, then click the attacker they block.
+    // Clicking an assigned blocker removes its assignment.
     if (isInBlockerMode) {
       if (isValidBlocker && isSelectedAsBlocker) {
         removeBlockerAssignment(card.id)
         return
       }
       if (isAttackingInBlockerMode) {
-        return  // Handled by drag-and-drop mouseup
+        if (hasPendingBlockers) assignPendingBlockersTo(card.id)
+        return
       }
-      if (isValidBlocker && !hasLegalActions) {
-        return  // Pure blocker with no abilities, handled by drag-and-drop
+      if (isValidBlocker) {
+        togglePendingBlocker(card.id)
+        return
       }
       // Non-blocker/non-attacker cards fall through to normal selection
     }
@@ -1087,6 +1134,10 @@ function GameCardImpl({
     // Red for attacking creatures
     borderStyle = '3px solid #ff4444'
     boxShadow = '0 0 16px rgba(255, 68, 68, 0.7), 0 0 32px rgba(255, 68, 68, 0.4)'
+  } else if (isPendingBlocker) {
+    // Gold for creatures picked to block, waiting for the attacker click
+    borderStyle = '3px solid #ffd54f'
+    boxShadow = '0 0 16px rgba(255, 213, 79, 0.8), 0 0 32px rgba(255, 213, 79, 0.45)'
   } else if (isSelectedAsBlocker) {
     // Blue for blocking creatures
     borderStyle = '3px solid #4488ff'
@@ -1099,6 +1150,10 @@ function GameCardImpl({
     // Red highlight for planeswalkers currently targeted by an attacker
     borderStyle = '3px solid #ff4444'
     boxShadow = '0 0 16px rgba(255, 68, 68, 0.7), 0 0 32px rgba(255, 68, 68, 0.4)'
+  } else if (isAttackingInBlockerMode && hasPendingBlockers && isHovered) {
+    // Brighter while picked blockers are waiting: this click assigns them here
+    borderStyle = '3px solid #ffd54f'
+    boxShadow = '0 0 20px rgba(255, 213, 79, 0.9), 0 0 40px rgba(255, 136, 0, 0.5)'
   } else if (isAttackingInBlockerMode) {
     // Orange glow for attackers that can be blocked
     borderStyle = '3px solid #ff8800'
@@ -1277,7 +1332,7 @@ function GameCardImpl({
   // Determine cursor
   const canInteract = interactive || isValidTarget || isValidDecisionTarget || isValidDecisionSelection || isValidAttacker || isValidBlocker || isAttackingInBlockerMode || isValidAttackTargetCard || canDragToPlay || isDistributeTarget || isManaValidSource || isValidTapForPowerCreature || isValidConvokeCreature || isValidTapForGenericPermanent || isValidHarmonizeCreature
   const baseCursor = canInteract ? 'pointer' : 'default'
-  const cursor = isValidBlocker || isValidAttacker || isSelectedAsAttacker || canDragToPlay ? 'grab' : baseCursor
+  const cursor = isValidBlocker || isValidAttacker || isSelectedAsAttacker || canDragToPlay || canDragToReorder ? 'grab' : baseCursor
 
   // Check if currently being dragged (attacker, blocker, or hand card)
   const isBeingDragged = draggingBlockerId === card.id || draggingAttackerId === card.id || isDraggingThisCard
@@ -1339,7 +1394,7 @@ function GameCardImpl({
         boxShadow: card.isCommander && !faceDown
           ? `${boxShadow}, 0 0 6px 2px rgba(212, 175, 55, 0.6), 0 0 14px 4px rgba(212, 175, 55, 0.3)`
           : boxShadow,
-        opacity: isPhasedOut ? 0.4 : isBeingDragged ? 0.6 : (isGhost && card.isPreparedSpell) ? 0.82 : isGhost ? 0.55 : isBystanderAttacker ? 0.45 : (inHand && isInTargetingMode && !isValidTarget && !isBeingCast) ? 0.35 : 1,
+        opacity: isPhasedOut ? 0.4 : isBeingDragged ? 0.6 : (isGhost && isPlayable) ? 0.92 : (isGhost && card.isPreparedSpell) ? 0.82 : isGhost ? 0.55 : isBystanderAttacker ? 0.45 : (inHand && isInTargetingMode && !isValidTarget && !isBeingCast) ? 0.35 : 1,
         // Phased-out permanents (Rule 702.26) are treated as though they don't exist —
         // desaturate so they read as "not really there" while still showing the board slot.
         ...(isPhasedOut ? { filter: 'grayscale(0.7)' } : {}),
