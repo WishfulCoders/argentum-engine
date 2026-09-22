@@ -4,6 +4,17 @@ import com.wingedsheep.ai.engine.AIPlayer
 import com.wingedsheep.ai.engine.hidden.Determinizer
 import com.wingedsheep.ai.engine.AiProfiles
 import com.wingedsheep.ai.engine.GameSimulator
+import com.wingedsheep.ai.engine.PriorityLeaf
+import com.wingedsheep.ai.engine.PriorityLeaves
+import com.wingedsheep.ai.engine.evaluation.CardValueTable
+import com.wingedsheep.ai.engine.evaluation.RawBoardFeatures
+import com.wingedsheep.ai.engine.knowledge.IntentCatalog
+import com.wingedsheep.engine.core.GameAction
+import com.wingedsheep.engine.state.GameState
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonObject
 import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.core.CastSpell
 import com.wingedsheep.engine.core.DecisionResponse
@@ -276,6 +287,157 @@ class GameGymEnv(
         )
     }
 
+    /**
+     * A paired outcome label at the learner's current priority decision (mtg-draft-ai `docs/50`).
+     *
+     * A fresh instance of the learner's `decisionProfile` AI scores the decision, and what it
+     * compared is what gets labelled: its concrete actions (targets, X and payment filled in), the
+     * quiet states they lead to and its scores. Each candidate is then played in every requested
+     * world: fork, [determinize] with that world's seed, submit the action (floating Treasure mana
+     * first, as the seat's own AI would), and let every seat's AI finish the game. The env itself
+     * does not move.
+     *
+     * Branches run one after another. Forks share their [GameEnvironment]'s simulator, whose
+     * recursion guard is not thread-safe, so parallelism belongs across root envs, not inside one.
+     *
+     * Null when the learner has no priority decision, or the AI scored fewer than two candidates
+     * (combat declarations and single-action windows never reach scoring).
+     */
+    fun valueLabel(request: ValueLabelRequest): ValueLabel? {
+        require(request.worldSeeds.isNotEmpty()) { "worldSeeds must not be empty" }
+        require(request.maxCandidates >= 2) { "maxCandidates must be at least 2" }
+        check(truncation == null) { "Env was truncated ($truncation); reset it before labelling" }
+        val learner = environment.agentToAct ?: return null
+        if (isTerminal || environment.state.pendingDecision != null || !isLearner(learner)) return null
+        if (learner != environment.playerIds[perspectivePlayerIndex]) return null
+        val legal = environment.legalActions()
+        if (legal.size < 2) return null
+        val profile = when (val agent = agentAt(environment.playerIds.indexOf(learner))) {
+            is AgentSpec.Pilot -> agent.profile
+            is AgentSpec.Learner -> agent.decisionProfile
+        }
+        var scored: PriorityLeaves? = null
+        AIPlayer.create(
+            environment.cardRegistry, learner, AiProfiles.parse(profile), leafSink = { scored = it },
+        ).chooseFrom(environment.state, legal)
+        val leaves = scored ?: return null
+        if (leaves.leaves.size < 2 || leaves.chosenIndex < 0) return null
+
+        // The pass and the pilot's choice always; the rest a uniform sample.
+        val must = listOfNotNull(
+            leaves.leaves.indexOfFirst { it.isPass }.takeIf { it >= 0 }, leaves.chosenIndex,
+        ).distinct()
+        val rest = leaves.leaves.indices.filter { it !in must }.toMutableList()
+        val rng = java.util.Random(request.sampleSeed)
+        while (must.size + rest.size > request.maxCandidates && rest.isNotEmpty()) {
+            rest.removeAt(rng.nextInt(rest.size))
+        }
+        val picked = leaves.leaves.indices.filter { it in must || it in rest }
+
+        val started = System.nanoTime()
+        val intents = IntentCatalog.of(environment.cardRegistry)
+        val candidates = picked.map { i ->
+            val leaf = leaves.leaves[i]
+            val outcomes = StringBuilder()
+            var illegal = 0
+            var truncated = 0
+            var turns = 0
+            for (seed in request.worldSeeds) {
+                val branch = fork() as GameGymEnv
+                branch.determinize(seed)
+                val turnAtStart = branch.environment.turnNumber
+                val outcome = if (!branch.submitAsAi(leaf.action.action)) {
+                    illegal++
+                    'U'
+                } else {
+                    if (!branch.isTerminal && branch.truncation == null) branch.drive(learnerActions = Int.MAX_VALUE)
+                    turns += branch.environment.turnNumber - turnAtStart
+                    when {
+                        branch.isTerminal -> when (branch.environment.terminalRewards()[learner]) {
+                            1.0 -> 'W'
+                            -1.0 -> 'L'
+                            else -> 'U'
+                        }
+                        else -> {
+                            truncated++
+                            'U'
+                        }
+                    }
+                }
+                outcomes.append(outcome)
+            }
+            val labels = outcomes.toString()
+            candidate(leaf, learner, leaves.evaluationState, intents).copy(
+                roll = ValueRoll(
+                    n = labels.length, wins = labels.count { it == 'W' }, undecided = labels.count { it == 'U' },
+                    illegal = illegal, truncated = truncated, turns = turns, outcomes = labels,
+                ),
+            )
+        }
+        return ValueLabel(
+            turnNumber = environment.turnNumber,
+            step = environment.state.step.name,
+            activeTurn = environment.state.activePlayerId == learner,
+            features = FEATURES,
+            candidates = candidates,
+            unlabelled = leaves.leaves.size - picked.size,
+            pilotIndex = picked.indexOf(leaves.chosenIndex),
+            worldSeeds = request.worldSeeds,
+            branches = picked.size * request.worldSeeds.size,
+            seconds = (System.nanoTime() - started) / 1e9,
+        )
+    }
+
+    /**
+     * Submit [action] for the learner the way its AI would: a cast only a Treasure pays for floats
+     * that mana first ([AIPlayer.chooseAction]). False when the engine refuses it in this world.
+     */
+    private fun submitAsAi(action: GameAction): Boolean {
+        val float = policySimulator.floatSacrificeMana(environment.state, action)
+        for (step in float?.activations.orEmpty() + action) {
+            environment.step(step)
+            if (environment.lastRejection != null) return false
+            checkLimits()
+            if (isTerminal || truncation != null) return true
+        }
+        return true
+    }
+
+    /** The prefs-shaped record of one scored leaf, without its label. */
+    private fun candidate(leaf: PriorityLeaf, learner: EntityId, before: GameState, intents: IntentCatalog): ValueCandidate {
+        val quiet = leaf.state
+        val projected = quiet.projectedState
+        val features = featureJson.encodeToJsonElement(
+            RawBoardFeatures.serializer(), RawBoardFeatures.extract(quiet, projected, learner, intents),
+        ).jsonObject
+        val opponent = quiet.getOpponents(learner).firstOrNull()
+        fun names(ids: Collection<EntityId>) = ids.mapNotNull { CardValueTable.name(quiet, it) }.sorted()
+        val act = when (val a = leaf.action.action) {
+            is CastSpell -> CardValueTable.name(before, a.cardId)
+            is PlayLand -> CardValueTable.name(before, a.cardId)
+            is ActivateAbility -> CardValueTable.name(before, a.sourceId)
+            else -> null
+        }
+        return ValueCandidate(
+            type = leaf.action.actionType,
+            description = leaf.action.description,
+            result = if (quiet.gameOver) "T" else if (quiet.pendingDecision != null) "D" else "Q",
+            f = FEATURES.map { (features[it] as JsonPrimitive).int },
+            base = leaf.score.coerceIn(-1e9, 1e9),
+            raw = leaf.rawScore.coerceIn(-1e9, 1e9),
+            won = if (quiet.gameOver) quiet.winnerId == learner else null,
+            cards = ValueCards(
+                act = act,
+                myBattlefield = names(projected.getBattlefieldControlledBy(learner)),
+                opponentBattlefield = opponent?.let { names(projected.getBattlefieldControlledBy(it)) }.orEmpty(),
+                myHand = names(quiet.getHand(learner)),
+                myGraveyard = names(quiet.getGraveyard(learner)),
+                opponentGraveyard = opponent?.let { names(quiet.getGraveyard(it)) }.orEmpty(),
+            ),
+            roll = ValueRoll(0, 0, 0, 0, 0, 0, ""),
+        )
+    }
+
     private fun templateKey(action: LegalAction): List<Any?> {
         val source = when (val a = action.action) {
             is CastSpell -> a.cardId
@@ -419,5 +581,10 @@ class GameGymEnv(
         environment.lastRejection?.let {
             throw IllegalArgumentException("Action $actionId rejected by the engine: $it")
         }
+    }
+
+    private companion object {
+        val FEATURES: List<String> = RawBoardFeatures.names.toList()
+        val featureJson = Json { encodeDefaults = true }
     }
 }

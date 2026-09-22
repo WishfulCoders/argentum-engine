@@ -364,6 +364,26 @@ class EnvController(
             ?.let { org.springframework.http.ResponseEntity.ok(it) }
             ?: org.springframework.http.ResponseEntity.noContent().build()
 
+    @Operation(
+        summary = "Label the learner's decision by playing every candidate out in shared worlds",
+        description = """
+            A fresh instance of the learner seat's `decisionProfile` AI scores the current priority
+            decision. Each scored candidate (the pass and the AI's own choice always, the rest
+            sampled down to `maxCandidates`) is played out once per world seed: fork, determinize
+            with the seed, submit, and let every seat's AI finish. Returns prefs-shaped candidates
+            (features, scores, card identities, W/L/U per world). The env does not move. 204 when
+            there is no priority decision with two or more scored candidates.
+        """
+    )
+    @PostMapping("/{id}/value-label")
+    fun valueLabel(
+        @PathVariable id: String,
+        @RequestBody request: com.wingedsheep.gym.ValueLabelRequest,
+    ): org.springframework.http.ResponseEntity<com.wingedsheep.gym.ValueLabel> =
+        multiEnvService.valueLabel(EnvId(id), request)
+            ?.let { org.springframework.http.ResponseEntity.ok(it) }
+            ?: org.springframework.http.ResponseEntity.noContent().build()
+
     // =========================================================================
     // Fork / snapshot / restore
     // =========================================================================

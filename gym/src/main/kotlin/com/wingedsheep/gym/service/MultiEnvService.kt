@@ -150,6 +150,14 @@ class MultiEnvService(
         requireGameEnv(envId).pilotChoice()
 
     /**
+     * A paired outcome label at [envId]'s learner decision (mtg-draft-ai `docs/50`): every scored
+     * candidate played out in every requested world. The env does not move. Null when the learner
+     * has no priority decision with at least two scored candidates.
+     */
+    fun valueLabel(envId: EnvId, request: com.wingedsheep.gym.ValueLabelRequest): com.wingedsheep.gym.ValueLabel? =
+        requireGameEnv(envId).valueLabel(request)
+
+    /**
      * Submit a raw `DecisionResponse` for a game env paused on a complex pending
      * decision. Simple decisions are driven via [step] with a folded action ID.
      */

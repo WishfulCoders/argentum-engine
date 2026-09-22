@@ -193,7 +193,7 @@ class AIPlayer(
             profile: AiProfile = AiProfile.CURRENT,
             opponentModels: Map<EntityId, OpponentModel> = emptyMap(),
             insightSink: AiInsightSink? = null,
-        ): AIPlayer = compose(cardRegistry, playerId, profile, opponentModels, insightSink) {
+        ): AIPlayer = compose(cardRegistry, playerId, profile, opponentModels, insightSink, leafSink = null) {
             GameSimulator(
                 cardRegistry,
                 processor = processor,
@@ -226,12 +226,15 @@ class AIPlayer(
             playerId: EntityId,
             profile: AiProfile,
             opponentModels: Map<EntityId, OpponentModel> = emptyMap(),
+            /** Where each priority decision's scored candidates go ([PriorityLeaves]); null in play. */
+            leafSink: ((PriorityLeaves) -> Unit)? = null,
             /**
              * Local testing mode: where the [Strategist]'s per-candidate scores are published
-             * instead of being discarded. Null (the default) is production — no recording.
+             * instead of being discarded. Null (the default) is production — no recording. Last, so
+             * a trailing lambda still means this sink.
              */
             insightSink: AiInsightSink? = null,
-        ): AIPlayer = compose(cardRegistry, playerId, profile, opponentModels, insightSink) {
+        ): AIPlayer = compose(cardRegistry, playerId, profile, opponentModels, insightSink, leafSink) {
             GameSimulator(cardRegistry, resolveThroughCombatDamage = profile.resolveThroughCombatDamage)
         }
 
@@ -241,6 +244,7 @@ class AIPlayer(
             profile: AiProfile,
             opponentModels: Map<EntityId, OpponentModel>,
             insightSink: AiInsightSink?,
+            leafSink: ((PriorityLeaves) -> Unit)?,
             newSimulator: () -> GameSimulator,
         ): AIPlayer {
             val advisorRegistry = CardAdvisorRegistry()
@@ -372,6 +376,7 @@ class AIPlayer(
                     },
                     insightSink = insightSink,
                     actionCorrection = correction?.takeIf { profile.priorityCorrectionChoosesActionOnly },
+                    leafSink = leafSink,
                 ),
                 responder = responder,
                 useMeaningfulFilter = profile.useMeaningfulFilter,

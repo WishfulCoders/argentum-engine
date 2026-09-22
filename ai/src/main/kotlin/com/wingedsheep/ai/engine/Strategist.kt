@@ -145,6 +145,13 @@ class Strategist(
      * uncorrected action, as always.
      */
     private val actionCorrection: BoardEvaluator? = null,
+    /**
+     * Where each priority decision's scored candidates go, as this class compared them: the concrete
+     * action, the quiet state it leads to and the scores that decided it. Null in production. A value
+     * label (mtg-draft-ai `docs/50`) needs exactly these, and recomputing them outside would label a
+     * slightly different player than the one that plays.
+     */
+    private val leafSink: ((PriorityLeaves) -> Unit)? = null,
 ) {
     private val holdPolicy = HoldPolicy(
         intents,
@@ -330,16 +337,38 @@ class Strategist(
                 passScore
             }
 
-        val best = scored.maxByOrNull { it.second }
+        val bestIndex = scored.indices.maxByOrNull { scored[it].second }
+        val best = bestIndex?.let { scored[it] }
         val takeAction = best != null && best.second > adjustedPassScore
         // Whether to act is the uncorrected scores' call; which action, the correction's.
-        val action = if (takeAction && actionCorrection != null) {
+        val actionIndex = if (takeAction && actionCorrection != null) {
             scored.indices.maxBy { j ->
                 val leaf = leafStates[firstCandidate + j]
                 scored[j].second + actionCorrection.evaluate(leaf, leaf.projectedState, playerId)
-            }.let { scored[it].first }
+            }
         } else {
-            best?.first
+            bestIndex
+        }
+        val action = actionIndex?.let { scored[it].first }
+        if (leafSink != null) {
+            val passLeaf = if (pass != null) {
+                listOf(PriorityLeaf(pass, leafStates.first(), passScore, adjustedPassScore, isPass = true))
+            } else {
+                emptyList()
+            }
+            leafSink.invoke(
+                PriorityLeaves(
+                    evaluationState = evaluationState,
+                    leaves = passLeaf + scored.indices.map { j ->
+                        PriorityLeaf(scored[j].first, leafStates[firstCandidate + j], adjusted[j].second, scored[j].second, isPass = false)
+                    },
+                    chosenIndex = when {
+                        takeAction -> firstCandidate + actionIndex!!
+                        pass != null -> 0
+                        else -> -1
+                    },
+                )
+            )
         }
         val chosen = if (takeAction) {
             remember(here)
