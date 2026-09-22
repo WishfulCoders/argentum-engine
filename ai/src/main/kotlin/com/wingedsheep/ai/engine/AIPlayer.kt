@@ -349,6 +349,7 @@ class AIPlayer(
                     cashCantripsInTheEndStep = profile.cashCantripsInTheEndStep,
                     idleManaAllowance = profile.spendIdleManaAtSorcerySpeed,
                     endStepManaAllowance = profile.spendIdleManaInTheirEndStep,
+                    endStepAbilityAllowance = profile.spendIdleManaOnAbilitiesInTheirEndStep,
                     holdFlashPermanentsForAmbush = profile.holdFlashPermanentsForAmbush,
                     holdExpiringGrantsForCombat = profile.holdExpiringGrantsForCombat,
                     expiringGrantsNeedACombat = profile.expiringGrantsNeedACombat,

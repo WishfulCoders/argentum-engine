@@ -107,6 +107,8 @@ class Strategist(
     private val idleManaAllowance: Double = 0.0,
     /** [AiProfile.spendIdleManaInTheirEndStep]; 0 is off. */
     private val endStepManaAllowance: Double = 0.0,
+    /** [AiProfile.spendIdleManaOnAbilitiesInTheirEndStep]; 0 is off. */
+    private val endStepAbilityAllowance: Double = 0.0,
     /**
      * [AiProfile.holdFlashPermanentsForAmbush] — passed straight through to [HoldPolicy], which
      * hands it to [com.wingedsheep.ai.engine.knowledge.AmbushWindow].
@@ -304,13 +306,16 @@ class Strategist(
         // beats letting the mana go at cleanup. See [AiProfile.spendIdleManaAtSorcerySpeed].
         val spare = if (idleManaAllowance > 0.0) spareManaInLastSorcerySpeedWindow(state, playerId) else null
         // The same for instant-speed casts in the opponent's end step, the last window before our lands untap.
-        val theirEndStep = endStepManaAllowance > 0.0 && !state.isActiveTurnFor(playerId) &&
-            state.step == Step.END && state.stack.isEmpty()
+        val theirEndStep = (endStepManaAllowance > 0.0 || endStepAbilityAllowance > 0.0) &&
+            !state.isActiveTurnFor(playerId) && state.step == Step.END && state.stack.isEmpty()
         val scored = adjusted.map { (action, _, adjustment) ->
             val cost = spare?.let { sorcerySpeedCastCost(state, action) }
             val bonus = when {
                 cost != null && cost <= spare -> idleManaAllowance
-                theirEndStep && !adjustment.floored && isInstantSpeedCast(state, action) -> endStepManaAllowance
+                theirEndStep && endStepManaAllowance > 0.0 && !adjustment.floored &&
+                    isInstantSpeedCast(state, action) -> endStepManaAllowance
+                theirEndStep && endStepAbilityAllowance > 0.0 && !adjustment.floored &&
+                    isIdleActivation(state, action) -> endStepAbilityAllowance
                 else -> 0.0
             }
             action to adjustment.score + bonus
@@ -666,6 +671,20 @@ class Strategist(
         val cast = action.action as? CastSpell ?: return false
         val card = state.getEntity(cast.cardId)?.get<CardComponent>() ?: return false
         return isInstantSpeed(card)
+    }
+
+    /**
+     * A non-mana activated ability of a card in hand or a non-creature permanent: what
+     * [AiProfile.spendIdleManaOnAbilitiesInTheirEndStep] may spend the end step's mana on.
+     */
+    private fun isIdleActivation(state: GameState, action: LegalAction): Boolean {
+        val activate = action.action as? ActivateAbility ?: return false
+        if (action.isManaAbility) return false
+        val source = activate.sourceId
+        if (source in state.getHand(activate.playerId)) return true
+        val projected = state.projectedState
+        return source in projected.getBattlefieldControlledBy(activate.playerId) &&
+            !projected.hasType(source, "CREATURE")
     }
 
     /** The mana value of a sorcery-speed spell cast from hand, or null for anything else. */

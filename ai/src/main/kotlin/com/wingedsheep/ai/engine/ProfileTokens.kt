@@ -41,6 +41,9 @@ import com.wingedsheep.ai.engine.rollout.RolloutSettings
  *
  * - `eot`: the same for instant-speed casts in the opponent's end step, at `-Darena.eotAllowance` (default 3.0)
  *   ([AiProfile.spendIdleManaInTheirEndStep], `docs/33` §13.6).
+ * - `abil`: the same for non-mana activated abilities of cards in hand and non-creature permanents, at
+ *   `-Darena.abilAllowance` (default 3.0) ([AiProfile.spendIdleManaOnAbilitiesInTheirEndStep], mtg-draft-ai `docs/49`
+ *   §6.11/§6.14).
  *
  * So `raceclock+timing+correction-actions` is the race clock, the hold rules and the correction together.
  * An apprentice or correction that did not load is an error, not a silent fallback to the default evaluator.
@@ -109,6 +112,10 @@ private fun withToken(p: AiProfile, token: String): AiProfile {
         "eot" -> {
             val allowance = System.getProperty("arena.eotAllowance")?.toDouble() ?: 3.0
             p.copy(id = "$id-$allowance", spendIdleManaInTheirEndStep = allowance)
+        }
+        "abil" -> {
+            val allowance = System.getProperty("arena.abilAllowance")?.toDouble() ?: 3.0
+            p.copy(id = "$id-$allowance", spendIdleManaOnAbilitiesInTheirEndStep = allowance)
         }
         "rollout" -> p.copy(id = id, rollouts = RolloutSettings.DEFAULT, determinizeHiddenInformation = true)
         "holdup" -> {

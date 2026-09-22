@@ -88,6 +88,49 @@ class IdleManaTest : ScenarioTestBase() {
             withClue(result.move) { result.failure shouldBe null }
         }
 
+        // AiProfile.spendIdleManaOnAbilitiesInTheirEndStep: the same end step, for an ability rather than a cast.
+        val abil = AiProfile.CURRENT.copy(id = "abil", useCardIntent = true, spendIdleManaOnAbilitiesInTheirEndStep = 3.0)
+
+        fun tomeAt(activePlayer: Int, step: Step) = { scenario: ScenarioBuilder ->
+            scenario.withPlayers()
+                .withActivePlayer(activePlayer)
+                .withLandsOnBattlefield(1, "Island", 2)
+                .withCardOnBattlefield(1, "Jalum Tome")
+                .withCardInHand(1, "Grizzly Bears")
+                .build().advanceToPriority(1, step)
+        }
+
+        test("the opponent's end step activates a card-neutral artifact ability, and passes without the allowance") {
+            val on = runner.run(puzzle("abil-01", tomeAt(2, Step.END)) { shouldActivate("Jalum Tome") }, abil)
+            withClue(on.move) { on.failure shouldBe null }
+            val off = runner.run(
+                puzzle("abil-01-off", tomeAt(2, Step.END)) { shouldPass() },
+                abil.copy(spendIdleManaOnAbilitiesInTheirEndStep = 0.0),
+            )
+            withClue(off.move) { off.failure shouldBe null }
+        }
+
+        test("our own turn is not the opponent's end step, so the ability allowance does not apply there") {
+            val base = runner.run(
+                puzzle("abil-02-base", tomeAt(1, Step.POSTCOMBAT_MAIN)) {},
+                abil.copy(spendIdleManaOnAbilitiesInTheirEndStep = 0.0),
+            )
+            val result = runner.run(puzzle("abil-02", tomeAt(1, Step.POSTCOMBAT_MAIN)) {}, abil)
+            result.move shouldBe base.move
+        }
+
+        test("an ability activated from hand counts: Visionary's Dance discards itself to look at two") {
+            val position = { scenario: ScenarioBuilder ->
+                scenario.withPlayers()
+                    .withActivePlayer(2)
+                    .withLandsOnBattlefield(1, "Island", 2)
+                    .withCardInHand(1, "Visionary's Dance")
+                    .build().advanceToPriority(1, Step.END)
+            }
+            val result = runner.run(puzzle("abil-03", position) { shouldActivate("Visionary's Dance") }, abil)
+            withClue(result.move) { result.failure shouldBe null }
+        }
+
         test("mana beyond what a held instant needs is spent") {
             val result = runner.run(
                 puzzle("idle-04", sleightAt(Step.POSTCOMBAT_MAIN, "Opt", islands = 2)) { shouldCast("Sleight of Hand") },

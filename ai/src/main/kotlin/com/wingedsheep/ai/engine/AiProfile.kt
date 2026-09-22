@@ -321,6 +321,21 @@ data class AiProfile(
      */
     val spendIdleManaInTheirEndStep: Double = 0.0,
     /**
+     * [spendIdleManaInTheirEndStep] for **activated abilities**: in the opponent's end step with an empty stack, a
+     * non-mana activated ability whose source is a card in hand or a non-creature permanent (a Clue, a draw
+     * artifact, a card that discards itself to look at the top of the library) needs to beat passing only by
+     * `-spendIdleManaOnAbilitiesInTheirEndStep`. Every untapped land is about to untap, and a card-neutral
+     * ability ties passing, so without this the AI leaves them unused. It is the same tie as
+     * [spendIdleManaAtSorcerySpeed]'s, but for abilities, which neither mirror reads because both are
+     * written for casts.
+     *
+     * Measured from the other side first: mtg-draft-ai `docs/49` §6.11's anchored override beat this pilot where
+     * it fired, and 69 of its 93 firings were "the pilot passes, activate an ability instead", led by
+     * Visionary's Dance, Terramorphic Expanse and Clue. A creature's own abilities are left out: tapping or
+     * sacrificing one has board costs that a tie should not decide. 0 is off.
+     */
+    val spendIdleManaOnAbilitiesInTheirEndStep: Double = 0.0,
+    /**
      * Stop deploying a **flash creature on our own turn** when the ambush window is still ahead.
      *
      * The target is `instants-09`, taken from a real game: turn 7, our own precombat main, a
