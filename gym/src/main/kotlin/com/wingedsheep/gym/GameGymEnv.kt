@@ -336,22 +336,34 @@ class GameGymEnv(
 
         val started = System.nanoTime()
         val intents = IntentCatalog.of(environment.cardRegistry)
-        val candidates = picked.map { i ->
-            val leaf = leaves.leaves[i]
-            val outcomes = StringBuilder()
-            var illegal = 0
-            var truncated = 0
-            var turns = 0
-            for (seed in request.worldSeeds) {
+        val labelled = picked.map { leaves.leaves[it] }
+        // Worlds outermost: a budget that stops between worlds leaves every candidate with the same
+        // ones, so the comparison stays paired (`docs/49` §6.1).
+        val outcomes = labelled.map { StringBuilder() }
+        val illegal = IntArray(labelled.size)
+        val truncated = IntArray(labelled.size)
+        val turns = IntArray(labelled.size)
+        val played = mutableListOf<Long>()
+        for (seed in request.worldSeeds) {
+            if (played.isNotEmpty() && request.timeBudgetSeconds > 0 &&
+                (System.nanoTime() - started) / 1e9 >= request.timeBudgetSeconds
+            ) {
+                break
+            }
+            played += seed
+            for ((i, leaf) in labelled.withIndex()) {
+                // A fork holds no resources of its own: it shares the immutable state and is collected.
                 val branch = fork() as GameGymEnv
                 branch.determinize(seed)
                 val turnAtStart = branch.environment.turnNumber
                 val outcome = if (!branch.submitAsAi(leaf.action.action)) {
-                    illegal++
+                    illegal[i]++
                     'U'
                 } else {
-                    if (!branch.isTerminal && branch.truncation == null) branch.drive(learnerActions = Int.MAX_VALUE)
-                    turns += branch.environment.turnNumber - turnAtStart
+                    if (!branch.isTerminal && branch.truncation == null) {
+                        branch.drive(learnerActions = Int.MAX_VALUE)
+                    }
+                    turns[i] += branch.environment.turnNumber - turnAtStart
                     when {
                         branch.isTerminal -> when (branch.environment.terminalRewards()[learner]) {
                             1.0 -> 'W'
@@ -359,18 +371,20 @@ class GameGymEnv(
                             else -> 'U'
                         }
                         else -> {
-                            truncated++
+                            truncated[i]++
                             'U'
                         }
                     }
                 }
-                outcomes.append(outcome)
+                outcomes[i].append(outcome)
             }
-            val labels = outcomes.toString()
+        }
+        val candidates = labelled.mapIndexed { i, leaf ->
+            val labels = outcomes[i].toString()
             candidate(leaf, learner, leaves.evaluationState, intents).copy(
                 roll = ValueRoll(
                     n = labels.length, wins = labels.count { it == 'W' }, undecided = labels.count { it == 'U' },
-                    illegal = illegal, truncated = truncated, turns = turns, outcomes = labels,
+                    illegal = illegal[i], truncated = truncated[i], turns = turns[i], outcomes = labels,
                 ),
             )
         }
@@ -382,8 +396,8 @@ class GameGymEnv(
             candidates = candidates,
             unlabelled = leaves.leaves.size - picked.size,
             pilotIndex = picked.indexOf(leaves.chosenIndex),
-            worldSeeds = request.worldSeeds,
-            branches = picked.size * request.worldSeeds.size,
+            worldSeeds = played,
+            branches = picked.size * played.size,
             seconds = (System.nanoTime() - started) / 1e9,
         )
     }

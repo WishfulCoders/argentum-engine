@@ -83,6 +83,18 @@ class ValueLabelTest : FunSpec({
         again.pilotIndex shouldBe first.pilotIndex
     }
 
+    test("a time budget cuts whole worlds, so the candidates stay paired") {
+        val svc = MultiEnvService(registry())
+        val env = svc.create(anchored(seed = 24L)).envId
+        // A budget of essentially nothing still plays the first world: a label of no worlds is useless.
+        val label = firstLabel(svc, env, ValueLabelRequest(worldSeeds = worlds, timeBudgetSeconds = 1e-9))
+
+        label.worldSeeds shouldHaveSize 1
+        label.worldSeeds shouldBe worlds.take(1)
+        label.candidates.map { it.roll.n }.toSet() shouldBe setOf(1)
+        label.branches shouldBe label.candidates.size
+    }
+
     test("a cap keeps the pass and the pilot's choice") {
         val svc = MultiEnvService(registry())
         val env = svc.create(anchored(seed = 23L)).envId

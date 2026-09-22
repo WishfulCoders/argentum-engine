@@ -11,12 +11,18 @@ import kotlinx.serialization.Serializable
  *   always among them; the rest are a uniform sample, so a capped decision is still an unbiased
  *   comparison (taking the best-scoring ones would label only what the evaluator already likes).
  * @property sampleSeed seeds that sample.
+ * @property timeBudgetSeconds stop starting new worlds once the label has taken this long, and return
+ *   the worlds that finished; 0 is no budget. A pathological position can take hours (mtg-draft-ai
+ *   `docs/36` §9 lost days to one), and a budget bounds it without discarding the work already done.
+ *   Worlds are played in the outer loop, so a cut-off leaves every candidate the same worlds and the
+ *   labels stay paired.
  */
 @Serializable
 data class ValueLabelRequest(
     val worldSeeds: List<Long>,
     val maxCandidates: Int = Int.MAX_VALUE,
     val sampleSeed: Long = 0,
+    val timeBudgetSeconds: Double = 0.0,
 )
 
 /**
@@ -25,6 +31,7 @@ data class ValueLabelRequest(
  *
  * @property features [RawBoardFeatures] names, in the order of every candidate's `f`.
  * @property candidates the scored candidates that were labelled, pass first when present.
+ * @property worldSeeds the worlds actually played, a prefix of the request's when a budget cut it short.
  * @property unlabelled scored candidates left out by [ValueLabelRequest.maxCandidates].
  * @property pilotIndex index into [candidates] of the pilot's choice.
  */
