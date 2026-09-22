@@ -88,6 +88,30 @@ class IdleManaTest : ScenarioTestBase() {
             withClue(result.move) { result.failure shouldBe null }
         }
 
+        // The 2026-09-22 play session: the pilot held Midnight Tilling for the whole game, through turns with six
+        // lands open and nothing else to cast. Mill four and return one is card-neutral, so it tied passing and lost.
+        // The pilot's own token stack (less the fitted correction, which needs its artifact).
+        val pilot = com.wingedsheep.ai.engine.profileFromTokens("raceclock+timing+determinize+fixing+grants+locked")
+
+        fun tillingInTheirEndStep() = { scenario: ScenarioBuilder ->
+            var b = scenario.withPlayers()
+                .withActivePlayer(2)
+                .withLandsOnBattlefield(1, "Forest", 6)
+                .withCardInHand(1, "Midnight Tilling")
+            for (card in listOf("Forest", "Lys Alana Informant", "Forest", "Moonglove Extractor", "Forest", "Forest")) {
+                b = b.withCardInLibrary(1, card)
+            }
+            b.build().advanceToPriority(1, Step.END)
+        }
+
+        test("the pilot casts Midnight Tilling in the opponent's end step with idle and eot, and holds it without") {
+            val withRules = com.wingedsheep.ai.engine.profileFromTokens("raceclock+timing+determinize+fixing+grants+locked+idle+eot")
+            val on = runner.run(puzzle("eot-tilling", tillingInTheirEndStep()) { shouldCast("Midnight Tilling") }, withRules)
+            withClue(on.move) { on.failure shouldBe null }
+            val off = runner.run(puzzle("eot-tilling-off", tillingInTheirEndStep()) { shouldPass() }, pilot)
+            withClue(off.move) { off.failure shouldBe null }
+        }
+
         test("mana beyond what a held instant needs is spent") {
             val result = runner.run(
                 puzzle("idle-04", sleightAt(Step.POSTCOMBAT_MAIN, "Opt", islands = 2)) { shouldCast("Sleight of Hand") },

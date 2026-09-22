@@ -158,6 +158,15 @@ object ArenaAgents {
                 creatureValuation = AiProfile.PRODUCTION.creatureValuation.copy(lockedCreaturesAreInert = true),
             ),
         ),
+        // `idle` + `eot` at their token defaults (1.0 / 3.0) on top of `production`: docs/33 §13's idle-mana rules,
+        // never in the pilot's profile until the 2026-09-22 play session (a Midnight Tilling held all game).
+        // `just arena production production-idle 600 ECL`.
+        ArenaAgent(
+            "production-idle",
+            AiProfile.PRODUCTION.copy(
+                id = "production-idle", spendIdleManaAtSorcerySpeed = 1.0, spendIdleManaInTheirEndStep = 3.0,
+            ),
+        ),
         ArenaAgent(
             "production-grants-order",
             AiProfile.PRODUCTION_EXPIRING.copy(id = "production-grants-order", tapCostsKeepBlockersUp = true),
