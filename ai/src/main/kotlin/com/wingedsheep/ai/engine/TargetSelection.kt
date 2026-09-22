@@ -58,7 +58,7 @@ object TargetSelection {
             // Player target — prefer opponent
             if (isOpponent) 5.0 else -5.0
         } else if (card != null && zoneOfCardTarget(state, entityId) != null) {
-            offBattlefieldWorth(card)
+            offBattlefieldWorth(state, entityId)
         } else if (projected.isCreature(entityId)) {
             val value = if (card != null) {
                 BoardPresence.permanentValue(state, projected, entityId, card, intents)
@@ -333,16 +333,36 @@ object TargetSelection {
      * every such card ranked 0, so the first in zone order won, which in a flooded graveyard is a
      * land (`GraveyardReturnTargetTest`).
      *
-     * A land is 0; any other card is 1 plus its mana value, the cheapest proxy for what it does.
+     * A spell is 1 plus its mana value, the cheapest proxy for what it does. A land depends on its
+     * owner's mana: when the lands they have in play and in hand cannot reach a spell stranded in
+     * their hand, the land is what they need and ranks above every spell; otherwise it ranks below
+     * them. This is a prior for when nothing better is known, not a judgement of the position — a
+     * creature whose ability wins the game next turn needs lookahead or a learned value to see.
      */
-    fun offBattlefieldWorth(card: CardComponent): Double =
-        if (card.isLand) 0.0 else 1.0 + card.manaValue
+    fun offBattlefieldWorth(state: GameState, card: CardComponent, ownerId: EntityId?): Double {
+        if (!card.isLand) return 1.0 + card.manaValue
+        return if (ownerId != null && isShortOfLands(state, ownerId)) LAND_WHEN_SHORT else 0.0
+    }
 
     /** [offBattlefieldWorth] of [entityId], or 0 when it is not a card in a card-target zone. */
     fun offBattlefieldWorth(state: GameState, entityId: EntityId): Double {
-        val card = state.getEntity(entityId)?.get<CardComponent>() ?: return 0.0
-        return if (zoneOfCardTarget(state, entityId) != null) offBattlefieldWorth(card) else 0.0
+        val entity = state.getEntity(entityId) ?: return 0.0
+        val card = entity.get<CardComponent>() ?: return 0.0
+        if (zoneOfCardTarget(state, entityId) == null) return 0.0
+        return offBattlefieldWorth(state, card, entity.get<OwnerComponent>()?.playerId ?: card.ownerId)
     }
+
+    /** Whether [playerId]'s lands in play and in hand fall short of the costliest spell in their hand. */
+    private fun isShortOfLands(state: GameState, playerId: EntityId): Boolean {
+        val hand = state.getHand(playerId).mapNotNull { state.getEntity(it)?.get<CardComponent>() }
+        val stranded = hand.filterNot { it.isLand }.maxOfOrNull { it.manaValue } ?: return false
+        val lands = state.getBattlefield(playerId).count { state.getEntity(it)?.get<CardComponent>()?.isLand == true } +
+            hand.count { it.isLand }
+        return lands < stranded
+    }
+
+    /** Above any spell's [offBattlefieldWorth] (1 + mana value). */
+    private const val LAND_WHEN_SHORT = 100.0
 
     /**
      * The [ZoneKey] of [entityId] when it is a card in a non-battlefield "card target" zone
