@@ -459,9 +459,13 @@ server:
 # `grants` and `locked` are from the first play session (2026-09-20): an end-of-turn pump needs a combat
 # to spend it on and must not tap away the last blocker (puzzles +4, arena parity), and a creature
 # locked tapped by Blossombind is not a creature that fights (+1.8 pp, CI clear of parity).
+# `idle` and `eot` (docs/33 §13's idle-mana rules) from the 2026-09-22 session, where the pilot held Midnight
+# Tilling all game: a card-neutral spell ties passing, so it never cast it. They cast leftover spells in our
+# last main phase or their end step — a floor, not good timing (Tilling before a main-phase cast is better,
+# and only lookahead or a learned value sees that). Arena 51.1 % paired over production, CI touching parity.
 # Pair with `just client`, or use `just dev-pilot` for both.
 [group: 'dev']
-pilot PROFILE="raceclock+timing+correction-actions+determinize+fixing+grants+locked" DIR="$HOME/mtg/models/rc2_actions":
+pilot PROFILE="raceclock+timing+correction-actions+determinize+fixing+grants+locked+idle+eot" DIR="$HOME/mtg/models/rc2_actions":
     @if [ -f .env ]; then set -a && . ./.env && set +a; fi && \
       GAME_AI_PROFILE="{{PROFILE}}" \
       GAME_REPLAY_EXPORT_DIR="${GAME_REPLAY_EXPORT_DIR:-$HOME/mtg/artifacts/engine_games/$(date +%Y-%m-%d)/replays}" \
@@ -472,7 +476,7 @@ pilot PROFILE="raceclock+timing+correction-actions+determinize+fixing+grants+loc
 
 # `just pilot` and the web client together
 [group: 'dev']
-dev-pilot PROFILE="raceclock+timing+correction-actions+determinize+fixing+grants+locked":
+dev-pilot PROFILE="raceclock+timing+correction-actions+determinize+fixing+grants+locked+idle+eot":
     #!/usr/bin/env bash
     set -euo pipefail
     just pilot "{{PROFILE}}" &
