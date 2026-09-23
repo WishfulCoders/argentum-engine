@@ -19,7 +19,10 @@ import com.wingedsheep.ai.engine.rollout.RolloutSettings
  *   `shared-apprentice.json` under `-Dargentum.ai.apprentice.dir` (the gameplay pilot, `docs/28`);
  *   `correction`: priority choices add the linear term in `shared-correction.json` (same directory) to the
  *   profile's own score; `correction-actions`: the same term choosing only which action once the
- *   uncorrected score has chosen to act (`docs/28` §5).
+ *   uncorrected score has chosen to act (`docs/28` §5). `tcorrection` / `tcorrection-actions` are the
+ *   same two over `target-correction.json` in that directory, which is how a one-sided arena screen
+ *   gives the **target seat** a different correction from the anchor every other seat plays
+ *   (mtg-draft-ai `docs/50` §4): one JVM, two artifacts, `-Darena.targetProfile` picking the second.
  *
  * - `rollout`: upstream's rollout evaluator on every decision; `holdup`: the same only where keeping mana up is
  *   the question ([AiProfile.rolloutsOnlyWhenHolding], `docs/28` §7), with the static leaf's share of a gated score at
@@ -132,6 +135,16 @@ private fun withToken(p: AiProfile, token: String): AiProfile {
             p.copy(
                 id = id, priorityCorrectionId = "shared-correction",
                 priorityCorrectionChoosesActionOnly = token == "correction-actions",
+            )
+        }
+        // The same two tokens over `target-correction.json`, for the seat a one-sided screen changes.
+        "tcorrection", "tcorrection-actions" -> {
+            requireNotNull(EvalWeights.correction("target-correction")) {
+                "no valid target-correction.json under -Dargentum.ai.apprentice.dir"
+            }
+            p.copy(
+                id = id, priorityCorrectionId = "target-correction",
+                priorityCorrectionChoosesActionOnly = token == "tcorrection-actions",
             )
         }
         // A misspelled token is the caller's mistake, not the server's state: throwing

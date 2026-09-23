@@ -124,7 +124,12 @@ object EvalWeights {
     private val apprenticeWeights: Map<String, RawEvaluationWeights> by lazy {
         val directory = System.getProperty("argentum.ai.apprentice.dir")?.takeIf { it.isNotBlank() }
             ?: return@lazy emptyMap()
-        listOf("shared-apprentice", "ecl-apprentice", "ecl-overlay", "shared-correction").mapNotNull { id ->
+        // `target-correction` is the one-sided screen's second slot: the arena gives it to the target
+        // seat alone (`tcorrection`), so an arm whose correction differs in content from the anchor's
+        // can be measured against the anchor rather than against itself (mtg-draft-ai `docs/50` §4).
+        listOf(
+            "shared-apprentice", "ecl-apprentice", "ecl-overlay", "shared-correction", "target-correction",
+        ).mapNotNull { id ->
             val path = Path.of(directory, "$id.json")
             if (!Files.isRegularFile(path)) return@mapNotNull null
             val expectedSet = if (id.startsWith("ecl-")) "ECL" else null
