@@ -110,7 +110,15 @@ private fun withToken(p: AiProfile, token: String): AiProfile {
             val allowance = System.getProperty("arena.eotAllowance")?.toDouble() ?: 3.0
             p.copy(id = "$id-$allowance", spendIdleManaInTheirEndStep = allowance)
         }
-        "rollout" -> p.copy(id = id, rollouts = RolloutSettings.DEFAULT, determinizeHiddenInformation = true)
+        "rollout" -> {
+            // mtg-draft-ai docs/52: stop a playout once its leaf is this far from even. Unset keeps the default.
+            val cutoff = System.getProperty("arena.rolloutCutoff")?.toDouble()
+            p.copy(
+                id = id + (cutoff?.let { "-cut$it" } ?: ""),
+                rollouts = RolloutSettings.DEFAULT.copy(earlyCutoffMargin = cutoff),
+                determinizeHiddenInformation = true,
+            )
+        }
         "holdup" -> {
             val staticWeight = System.getProperty("arena.holdupStaticWeight")?.toDouble()
             p.copy(

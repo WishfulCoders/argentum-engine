@@ -95,6 +95,18 @@ class PlayoutEngineTest : ScenarioTestBase() {
             values.distinct().size shouldBeGreaterThan 1
         }
 
+        test("an early cutoff that can never fire changes nothing, and one that always fires stops at the root") {
+            val (state, playerId) = evenPosition()
+            val full = engineFor().run(state, playerId, seed = 42L, horizonPlayerTurns = 2, baseline = 0.0)
+            // |p - 0.5| is at most 0.5, so a margin of 0.5 is never exceeded.
+            engineFor(RolloutSettings.DEFAULT.copy(earlyCutoffMargin = 0.5))
+                .run(state, playerId, seed = 42L, horizonPlayerTurns = 2, baseline = 0.0) shouldBe full
+            // A zero margin fires on the first leaf that is not exactly even: the root itself.
+            val root = engineFor().run(state, playerId, seed = 42L, horizonPlayerTurns = 0, baseline = 0.0)
+            engineFor(RolloutSettings.DEFAULT.copy(earlyCutoffMargin = 0.0))
+                .run(state, playerId, seed = 42L, horizonPlayerTurns = 2, baseline = 0.0) shouldBe root
+        }
+
         test("every value a playout returns is a probability") {
             val (state, playerId) = evenPosition()
             val engine = engineFor()
