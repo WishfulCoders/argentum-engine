@@ -150,6 +150,12 @@ class GameRunner(
         seatProfiles: List<AiProfile>? = null,
         /** Seat to run [StrandedProbe] for; null (the default) costs nothing at all. */
         probeSeat: Int? = null,
+        /**
+         * `(seat, model)`: what that seat's AI assumes about the other seat's deck, in place of the true
+         * decklist every AI gets otherwise (mtg-draft-ai `docs/51_ptcg_style_selfplay` §9). Its own deck
+         * stays known, and the other seat's AI is untouched. Only a determinizing profile reads it.
+         */
+        opponentModel: Pair<Int, OpponentModel>? = null,
     ): Outcome {
         val init = initializer.initializeGame(
             GameConfig(
@@ -163,7 +169,15 @@ class GameRunner(
         val decklists = seatIds.mapIndexed { seat, id ->
             id to OpponentModel.KnownDecklist(decks[seat].groupingBy { it }.eachCount())
         }.toMap()
-        return playFrom(init.state, seatIds.indices.map { seatProfiles?.get(it) ?: profile }, decklists, probeSeat)
+        val seatDecklists = opponentModel?.let { (modelSeat, model) ->
+            seatIds.mapIndexed { seat, _ ->
+                if (seat != modelSeat) decklists
+                else decklists + seatIds.filterIndexed { other, _ -> other != seat }.associateWith { model }
+            }
+        }
+        return playFrom(
+            init.state, seatIds.indices.map { seatProfiles?.get(it) ?: profile }, decklists, probeSeat, seatDecklists,
+        )
     }
 
     /**
@@ -176,6 +190,8 @@ class GameRunner(
         seatProfiles: List<AiProfile>,
         decklists: Map<EntityId, OpponentModel>,
         probeSeat: Int? = null,
+        /** Per-seat replacement for [decklists], in `turnOrder`; null gives every seat [decklists]. */
+        seatDecklists: List<Map<EntityId, OpponentModel>>? = null,
     ): Outcome {
         val seatIds = start.turnOrder
         val bySeat = seatIds.withIndex().associate { (seat, id) -> id to seat }
@@ -196,7 +212,7 @@ class GameRunner(
                     }
                 }
             }
-            AIPlayer.create(registry, id, seatProfiles[seat], decklists, insightSink = sink)
+            AIPlayer.create(registry, id, seatProfiles[seat], seatDecklists?.get(seat) ?: decklists, insightSink = sink)
         }
         fun aiFor(playerId: EntityId) = players[bySeat.getValue(playerId)]
 
