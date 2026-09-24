@@ -1,5 +1,7 @@
 package com.wingedsheep.ai.engine
 
+import com.wingedsheep.ai.engine.budget.LegacyBudgetPolicy
+import com.wingedsheep.ai.engine.budget.RolloutBudgetPolicy
 import com.wingedsheep.ai.engine.evaluation.EvalWeights
 import com.wingedsheep.ai.engine.rollout.RolloutSettings
 
@@ -24,7 +26,9 @@ import com.wingedsheep.ai.engine.rollout.RolloutSettings
  * - `rollout`: upstream's rollout evaluator on every decision; `holdup`: the same only where keeping mana up is
  *   the question ([AiProfile.rolloutsOnlyWhenHolding], `docs/28` §7), with the static leaf's share of a gated score at
  *   `-Darena.holdupStaticWeight` (default upstream's 0.75). Both sample the opponent's hidden cards
- *   ([AiProfile.determinizeHiddenInformation]), so a playout never plays their real hand.
+ *   ([AiProfile.determinizeHiddenInformation]), so a playout never plays their real hand. `rollout` also reads
+ *   `-Darena.rolloutCutoff` (the playout's early cutoff margin) and `-Darena.rolloutPlayouts` (playouts per
+ *   decision, default 16), both mtg-draft-ai `docs/54`.
  *
  * - `determinize`: the AI samples the opponent's hidden cards instead of reading them
  *   ([AiProfile.determinizeHiddenInformation]) — the fairness token for playing a human, see below.
@@ -111,11 +115,18 @@ private fun withToken(p: AiProfile, token: String): AiProfile {
             p.copy(id = "$id-$allowance", spendIdleManaInTheirEndStep = allowance)
         }
         "rollout" -> {
-            // mtg-draft-ai docs/52: stop a playout once its leaf is this far from even. Unset keeps the default.
+            // mtg-draft-ai docs/54: stop a playout once its leaf is this far from even. Unset keeps the default.
             val cutoff = System.getProperty("arena.rolloutCutoff")?.toDouble()
+            // docs/54 §5: playouts per decision. RolloutBudgetPolicy(n) is the legacy budget with only the playout
+            // count changed, so it is a single knob only on a legacy-budget profile; 16 reproduces the default.
+            val playouts = System.getProperty("arena.rolloutPlayouts")?.toInt()
+            if (playouts != null) {
+                require(p.budgetPolicy === LegacyBudgetPolicy) { "arena.rolloutPlayouts needs the legacy budget policy" }
+            }
             p.copy(
-                id = id + (cutoff?.let { "-cut$it" } ?: ""),
+                id = id + (cutoff?.let { "-cut$it" } ?: "") + (playouts?.let { "-p$it" } ?: ""),
                 rollouts = RolloutSettings.DEFAULT.copy(earlyCutoffMargin = cutoff),
+                budgetPolicy = playouts?.let { RolloutBudgetPolicy(it) } ?: p.budgetPolicy,
                 determinizeHiddenInformation = true,
             )
         }
