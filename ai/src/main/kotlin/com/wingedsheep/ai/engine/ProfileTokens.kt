@@ -27,8 +27,8 @@ import com.wingedsheep.ai.engine.rollout.RolloutSettings
  *   the question ([AiProfile.rolloutsOnlyWhenHolding], `docs/28` §7), with the static leaf's share of a gated score at
  *   `-Darena.holdupStaticWeight` (default upstream's 0.75). Both sample the opponent's hidden cards
  *   ([AiProfile.determinizeHiddenInformation]), so a playout never plays their real hand. `rollout` also reads
- *   `-Darena.rolloutCutoff` (the playout's early cutoff margin) and `-Darena.rolloutPlayouts` (playouts per
- *   decision, default 16), both mtg-draft-ai `docs/54`.
+ *   `-Darena.rolloutCutoff` (the playout's early cutoff margin), `-Darena.rolloutHorizon` (player turns per playout,
+ *   default 2) and `-Darena.rolloutPlayouts` (playouts per decision, default 16), all mtg-draft-ai `docs/54`.
  *
  * - `determinize`: the AI samples the opponent's hidden cards instead of reading them
  *   ([AiProfile.determinizeHiddenInformation]) — the fairness token for playing a human, see below.
@@ -123,9 +123,15 @@ private fun withToken(p: AiProfile, token: String): AiProfile {
             if (playouts != null) {
                 require(p.budgetPolicy === LegacyBudgetPolicy) { "arena.rolloutPlayouts needs the legacy budget policy" }
             }
+            // docs/54 §8: player turns a playout runs before the static leaf scores it (default 2).
+            val horizon = System.getProperty("arena.rolloutHorizon")?.toInt()
             p.copy(
-                id = id + (cutoff?.let { "-cut$it" } ?: "") + (playouts?.let { "-p$it" } ?: ""),
-                rollouts = RolloutSettings.DEFAULT.copy(earlyCutoffMargin = cutoff),
+                id = id + (cutoff?.let { "-cut$it" } ?: "") + (playouts?.let { "-p$it" } ?: "") +
+                    (horizon?.let { "-h$it" } ?: ""),
+                rollouts = RolloutSettings.DEFAULT.copy(
+                    earlyCutoffMargin = cutoff,
+                    horizonPlayerTurns = horizon ?: RolloutSettings.DEFAULT.horizonPlayerTurns,
+                ),
                 budgetPolicy = playouts?.let { RolloutBudgetPolicy(it) } ?: p.budgetPolicy,
                 determinizeHiddenInformation = true,
             )
