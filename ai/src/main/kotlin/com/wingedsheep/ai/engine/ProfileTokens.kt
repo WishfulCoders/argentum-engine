@@ -3,6 +3,7 @@ package com.wingedsheep.ai.engine
 import com.wingedsheep.ai.engine.budget.LegacyBudgetPolicy
 import com.wingedsheep.ai.engine.budget.RolloutBudgetPolicy
 import com.wingedsheep.ai.engine.evaluation.EvalWeights
+import com.wingedsheep.ai.engine.rollout.RolloutGate
 import com.wingedsheep.ai.engine.rollout.RolloutSettings
 
 /**
@@ -31,6 +32,9 @@ import com.wingedsheep.ai.engine.rollout.RolloutSettings
  *   default 2), `-Darena.rolloutPlayouts` (playouts per decision, default 16), `-Darena.rolloutStaticWeight` (the
  *   static leaf's share of the score, default 0.75) and `-Darena.rolloutTemperature` (the playout policy's softmax
  *   temperature, default 1.0), all mtg-draft-ai `docs/54`.
+ *   `-Darena.rolloutGate=M` rolls out only where the static best two candidates are within M raw units, and `diag`
+ *   rolls out every decision like the plain token; `-Darena.rolloutGateLog=PATH` appends a line per scored decision
+ *   (mtg-draft-ai `docs/55`, [com.wingedsheep.ai.engine.rollout.MarginGatedEvaluator]).
  *
  * - `determinize`: the AI samples the opponent's hidden cards instead of reading them
  *   ([AiProfile.determinizeHiddenInformation]) — the fairness token for playing a human, see below.
@@ -131,10 +135,16 @@ private fun withToken(p: AiProfile, token: String): AiProfile {
             // softmax temperature (default 1.0).
             val staticWeight = System.getProperty("arena.rolloutStaticWeight")?.toDouble()
             val temperature = System.getProperty("arena.rolloutTemperature")?.toDouble()
+            // docs/55: roll out only where the static best two are within this many raw units ("diag" = every decision,
+            // logged), and where to log each scored decision.
+            val gateSpec = System.getProperty("arena.rolloutGate")
+            val gate = gateSpec?.let {
+                RolloutGate(margin = if (it == "diag") null else it.toDouble(), logPath = System.getProperty("arena.rolloutGateLog"))
+            }
             p.copy(
                 id = id + (cutoff?.let { "-cut$it" } ?: "") + (playouts?.let { "-p$it" } ?: "") +
                     (horizon?.let { "-h$it" } ?: "") + (staticWeight?.let { "-sw$it" } ?: "") +
-                    (temperature?.let { "-t$it" } ?: ""),
+                    (temperature?.let { "-t$it" } ?: "") + (gateSpec?.let { "-gate$it" } ?: ""),
                 rollouts = RolloutSettings.DEFAULT.copy(
                     earlyCutoffMargin = cutoff,
                     horizonPlayerTurns = horizon ?: RolloutSettings.DEFAULT.horizonPlayerTurns,
@@ -142,6 +152,7 @@ private fun withToken(p: AiProfile, token: String): AiProfile {
                     temperature = temperature ?: RolloutSettings.DEFAULT.temperature,
                 ),
                 budgetPolicy = playouts?.let { RolloutBudgetPolicy(it) } ?: p.budgetPolicy,
+                rolloutGate = gate,
                 determinizeHiddenInformation = true,
             )
         }

@@ -12,6 +12,7 @@ import com.wingedsheep.ai.engine.rollout.FastDecisionResponder
 import com.wingedsheep.ai.engine.rollout.PlayoutEngine
 import com.wingedsheep.ai.engine.rollout.PlayoutPolicy
 import com.wingedsheep.ai.engine.rollout.HoldingGatedEvaluator
+import com.wingedsheep.ai.engine.rollout.MarginGatedEvaluator
 import com.wingedsheep.ai.engine.rollout.RolloutCandidateEvaluator
 import com.wingedsheep.ai.engine.rollout.RolloutSettings
 import com.wingedsheep.ai.engine.rollout.StaticCandidateEvaluator
@@ -416,6 +417,10 @@ class AIPlayer(
                 settings = settings,
                 winProbabilityScale = winProbabilityScale,
             )
+            profile.rolloutGate?.let { gate ->
+                require(!profile.rolloutsOnlyWhenHolding) { "a rollout gate and the holdup gate are two gates" }
+                return MarginGatedEvaluator(rollout, StaticCandidateEvaluator(evaluator), gate, IntentCatalog.of(cardRegistry))
+            }
             if (!profile.rolloutsOnlyWhenHolding) return rollout
             return HoldingGatedEvaluator(IntentCatalog.of(cardRegistry), rollout, StaticCandidateEvaluator(evaluator))
         }

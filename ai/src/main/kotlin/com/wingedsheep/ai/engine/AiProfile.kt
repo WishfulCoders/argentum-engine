@@ -82,6 +82,12 @@ data class AiProfile(
      */
     val rolloutsOnlyWhenHolding: Boolean = false,
     /**
+     * Spend [rollouts] only where the static leaf's best two candidates are close
+     * ([com.wingedsheep.ai.engine.rollout.MarginGatedEvaluator], mtg-draft-ai `docs/55`), and optionally log every
+     * scored decision. Needs [rollouts]; ignored without them, and not combinable with [rolloutsOnlyWhenHolding].
+     */
+    val rolloutGate: com.wingedsheep.ai.engine.rollout.RolloutGate? = null,
+    /**
      * Phase 8: sample opponent hand identities and library order before rollout evaluation.
      * Off preserves the historical full-information agents used as arena controls.
      */
