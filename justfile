@@ -463,9 +463,15 @@ server:
 # Tilling all game: a card-neutral spell ties passing, so it never cast it. They cast leftover spells in our
 # last main phase or their end step — a floor, not good timing (Tilling before a main-phase cast is better,
 # and only lookahead or a learned value sees that). Arena 51.1 % paired over production, CI touching parity.
+# `rollout` (mtg-draft-ai docs/53, made the play default 2026-09-25): each candidate is scored by 16 two-turn
+# playouts mixed with the static leaf. +3.66 pp on SOS and +3.39 on ECL over the same pilot without it, and all of
+# that is search (a determinize-only arm is flat). Every rollout dial is at its best value (docs/54 §11). It costs
+# ~15× the compute per game, which is milliseconds per decision against a human. It also turns on determinizing, so
+# `determinize` is redundant beside it and stays for the record. This is the PLAY default only: the arena baselines,
+# the value self-play labeller and the gym opponent keep the pilot without rollout, where 15× would be days.
 # Pair with `just client`, or use `just dev-pilot` for both.
 [group: 'dev']
-pilot PROFILE="raceclock+timing+correction-actions+determinize+fixing+grants+locked+idle+eot" DIR="$HOME/mtg/models/rc2_actions":
+pilot PROFILE="raceclock+timing+correction-actions+determinize+fixing+grants+locked+idle+eot+rollout" DIR="$HOME/mtg/models/rc2_actions":
     @if [ -f .env ]; then set -a && . ./.env && set +a; fi && \
       GAME_AI_PROFILE="{{PROFILE}}" \
       GAME_REPLAY_EXPORT_DIR="${GAME_REPLAY_EXPORT_DIR:-$HOME/mtg/artifacts/engine_games/$(date +%Y-%m-%d)/replays}" \
@@ -476,7 +482,7 @@ pilot PROFILE="raceclock+timing+correction-actions+determinize+fixing+grants+loc
 
 # `just pilot` and the web client together
 [group: 'dev']
-dev-pilot PROFILE="raceclock+timing+correction-actions+determinize+fixing+grants+locked+idle+eot":
+dev-pilot PROFILE="raceclock+timing+correction-actions+determinize+fixing+grants+locked+idle+eot+rollout":
     #!/usr/bin/env bash
     set -euo pipefail
     just pilot "{{PROFILE}}" &
