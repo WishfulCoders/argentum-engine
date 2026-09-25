@@ -90,6 +90,9 @@ class Determinizer internal constructor(
                 is OpponentModel.KnownDecklist -> fromKnownDecklist(state, opponentId, hidden, model, currentRng)
                     .also { currentRng = it.second }
                     .first
+                is OpponentModel.DecklistMixture -> fromMixture(state, opponentId, hidden, model, currentRng)
+                    .also { currentRng = it.second }
+                    .first
                 OpponentModel.IdentityPermutation -> {
                     val existing = hidden.mapNotNull { id ->
                         state.getEntity(id)?.get<CardComponent>()?.let { cardRegistry.getCard(it.cardDefinitionId) }
@@ -167,19 +170,62 @@ class Determinizer internal constructor(
         model: OpponentModel.KnownDecklist,
         rng: GameRng,
     ): Pair<List<CardDefinition>, GameRng> {
-        val remaining = model.cards.toMutableMap()
+        val pool = unseenPool(state, opponentId, hidden, model.cards)
+        if (pool.size < hidden.size) return emptyList<CardDefinition>() to rng
+        val (shuffled, next) = rng.shuffle(pool)
+        return shuffled.take(hidden.size) to next
+    }
+
+    /**
+     * One list of the mixture, then [fromKnownDecklist]'s draw from it — except that a short pool is
+     * topped up from the list itself rather than abandoned. A list that is not the opponent's deck can
+     * run short (a 40-card list whose names cover more of the seen cards than it has copies of, or a
+     * shorter list), and abandoning the sample would leave the slots at their *real* identities: the
+     * one outcome a prior must never produce.
+     */
+    private fun fromMixture(
+        state: GameState,
+        opponentId: EntityId,
+        hidden: List<EntityId>,
+        model: OpponentModel.DecklistMixture,
+        rng: GameRng,
+    ): Pair<List<CardDefinition>, GameRng> {
+        val (list, afterPick) = rng.pick(model.lists)
+        var next = afterPick
+        val pool = unseenPool(state, opponentId, hidden, list).toMutableList()
+        if (pool.size < hidden.size) {
+            val whole = definitionsOf(list)
+            if (whole.isEmpty()) return emptyList<CardDefinition>() to rng
+            while (pool.size < hidden.size) {
+                val (card, r) = next.pick(whole)
+                pool += card
+                next = r
+            }
+        }
+        val (shuffled, after) = next.shuffle(pool)
+        return shuffled.take(hidden.size) to after
+    }
+
+    /** [cards] less one copy of each name the opponent owns outside [hidden], as definitions. */
+    private fun unseenPool(
+        state: GameState,
+        opponentId: EntityId,
+        hidden: List<EntityId>,
+        cards: Map<String, Int>,
+    ): List<CardDefinition> {
+        val remaining = cards.toMutableMap()
         val sampledIds = hidden.toSet()
         for ((id, container) in state.entities) {
             if (id in sampledIds || container.get<OwnerComponent>()?.playerId != opponentId) continue
             val name = container.get<CardComponent>()?.name ?: continue
             remaining.computeIfPresent(name) { _, n -> (n - 1).coerceAtLeast(0) }
         }
-        val pool = remaining.flatMap { (name, copies) ->
+        return definitionsOf(remaining)
+    }
+
+    private fun definitionsOf(cards: Map<String, Int>): List<CardDefinition> =
+        cards.flatMap { (name, copies) ->
             val definition = cardRegistry.getCard(name) ?: return@flatMap emptyList()
             List(copies) { definition }
         }
-        if (pool.size < hidden.size) return emptyList<CardDefinition>() to rng
-        val (shuffled, next) = rng.shuffle(pool)
-        return shuffled.take(hidden.size) to next
-    }
 }

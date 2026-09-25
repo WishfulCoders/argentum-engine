@@ -4,6 +4,7 @@ import com.wingedsheep.ai.engine.AiProfile
 import com.wingedsheep.ai.engine.ResponseLookaheadStats
 import com.wingedsheep.ai.engine.profileFromTokens
 import com.wingedsheep.ai.engine.evaluation.EvalWeights
+import com.wingedsheep.ai.engine.hidden.OpponentModel
 import com.wingedsheep.ai.engine.rollout.HoldingGatedEvaluator
 import com.wingedsheep.ai.engine.rollout.RolloutSettings
 import com.wingedsheep.engine.registry.CardRegistry
@@ -57,6 +58,28 @@ fun main(args: Array<String>) {
     val opponents = known.filter { it.role == "opponent" }.take(maxOpponents)
     val byId = known.associateBy { it.id }
 
+    // `-Darena.opponentModel`: what the target's AI assumes about the opponent's deck when its profile
+    // determinizes (mtg-draft-ai `docs/51_ptcg_style_selfplay` §9). `truth` (the default) is the real
+    // decklist, as every arena run before it; `colours` is every other deck in the file with the
+    // opponent's main colours; `set` is every other deck in the file. The target's and the opponent's
+    // own decks are never in a mixture.
+    val opponentModelMode = System.getProperty("arena.opponentModel") ?: "truth"
+    require(opponentModelMode in setOf("truth", "colours", "set")) { "unknown arena.opponentModel $opponentModelMode" }
+    val deckCounts = known.associate { it.id to it.cards.groupingBy { c -> c }.eachCount() }
+    fun colourKey(d: DeckSpec) = requireNotNull(d.mainColors) { "deck ${d.id} has no main_colors" }
+        .uppercase().toSortedSet().joinToString("")
+    val byColour = if (opponentModelMode == "colours") known.groupBy(::colourKey) else emptyMap()
+    fun opponentModelFor(target: DeckSpec, opponent: DeckSpec): OpponentModel? {
+        if (opponentModelMode == "truth") return null
+        val population = if (opponentModelMode == "colours") byColour.getValue(colourKey(opponent)) else known
+        val lists = population.filter { it.id != target.id && it.id != opponent.id }.map { deckCounts.getValue(it.id) }
+        require(lists.isNotEmpty()) { "no other ${colourKey(opponent)} deck for ${opponent.id}" }
+        return OpponentModel.DecklistMixture(lists)
+    }
+    if (opponentModelMode == "colours") {
+        println("opponent model colours: " + byColour.entries.sortedBy { it.key }.joinToString { "${it.key}=${it.value.size}" })
+    }
+
     // Resume, tolerantly. A spot VM copies `out/` to the bucket once a minute while the arena is
     // still writing to it, so the copy that comes back after a preemption routinely ends in a
     // *partial line*. Parsing strictly threw there and killed the arm — on 2026-09-19 that cost
@@ -94,7 +117,7 @@ fun main(args: Array<String>) {
     }
     println(
         "arena: ${targets.size} targets x ${opponents.size} opponents x $gamesPerPair games, " +
-            "${jobs.size} to play (${done.size} already done), profile ${profile.id}, target ${targetProfile.id}, $threads threads",
+            "${jobs.size} to play (${done.size} already done), profile ${profile.id}, target ${targetProfile.id}, opponent model $opponentModelMode, $threads threads",
     )
     if (jobs.isEmpty()) return
 
@@ -122,6 +145,7 @@ fun main(args: Array<String>) {
                     seats, job.seed,
                     if (targetSeat == 0) listOf(targetProfile, profile) else listOf(profile, targetProfile),
                     probeSeat = if (probeStranded) targetSeat else null,
+                    opponentModel = opponentModelFor(job.target, job.opponent)?.let { targetSeat to it },
                 )
                 base.copy(
                     winnerSeat = o.winnerSeat,

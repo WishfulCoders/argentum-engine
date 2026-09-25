@@ -9,13 +9,15 @@ import kotlinx.serialization.json.JsonNamingStrategy
  * One deck as written by `mtgdraft engine-export` (RL-MTG-drafts, `engine/export.py`).
  * [cards] lists canonical front-face names with multiplicity, basics included (40 entries).
  * [role] is `"target"` (a held-out deck whose engine win rate is measured) or `"opponent"`
- * (one of the fixed opponents every target plays).
+ * (one of the fixed opponents every target plays). [mainColors] is 17Lands' main colours (`"BG"`), read
+ * only by `-Darena.opponentModel=colours`.
  */
 @Serializable
 data class DeckSpec(
     val id: String,
     val role: String,
     val cards: List<String>,
+    val mainColors: String? = null,
 )
 
 /** One game. [game] indexes the games of a (target, opponent) pair; even games seat the target first. */

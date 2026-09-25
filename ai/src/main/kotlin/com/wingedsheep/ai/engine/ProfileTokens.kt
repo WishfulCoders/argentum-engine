@@ -1,5 +1,7 @@
 package com.wingedsheep.ai.engine
 
+import com.wingedsheep.ai.engine.budget.LegacyBudgetPolicy
+import com.wingedsheep.ai.engine.budget.RolloutBudgetPolicy
 import com.wingedsheep.ai.engine.evaluation.EvalWeights
 import com.wingedsheep.ai.engine.rollout.RolloutSettings
 
@@ -24,7 +26,11 @@ import com.wingedsheep.ai.engine.rollout.RolloutSettings
  * - `rollout`: upstream's rollout evaluator on every decision; `holdup`: the same only where keeping mana up is
  *   the question ([AiProfile.rolloutsOnlyWhenHolding], `docs/28` §7), with the static leaf's share of a gated score at
  *   `-Darena.holdupStaticWeight` (default upstream's 0.75). Both sample the opponent's hidden cards
- *   ([AiProfile.determinizeHiddenInformation]), so a playout never plays their real hand.
+ *   ([AiProfile.determinizeHiddenInformation]), so a playout never plays their real hand. `rollout` also reads
+ *   `-Darena.rolloutCutoff` (the playout's early cutoff margin), `-Darena.rolloutHorizon` (player turns per playout,
+ *   default 2), `-Darena.rolloutPlayouts` (playouts per decision, default 16), `-Darena.rolloutStaticWeight` (the
+ *   static leaf's share of the score, default 0.75) and `-Darena.rolloutTemperature` (the playout policy's softmax
+ *   temperature, default 1.0), all mtg-draft-ai `docs/54`.
  *
  * - `determinize`: the AI samples the opponent's hidden cards instead of reading them
  *   ([AiProfile.determinizeHiddenInformation]) — the fairness token for playing a human, see below.
@@ -110,7 +116,35 @@ private fun withToken(p: AiProfile, token: String): AiProfile {
             val allowance = System.getProperty("arena.eotAllowance")?.toDouble() ?: 3.0
             p.copy(id = "$id-$allowance", spendIdleManaInTheirEndStep = allowance)
         }
-        "rollout" -> p.copy(id = id, rollouts = RolloutSettings.DEFAULT, determinizeHiddenInformation = true)
+        "rollout" -> {
+            // mtg-draft-ai docs/54: stop a playout once its leaf is this far from even. Unset keeps the default.
+            val cutoff = System.getProperty("arena.rolloutCutoff")?.toDouble()
+            // docs/54 §5: playouts per decision. RolloutBudgetPolicy(n) is the legacy budget with only the playout
+            // count changed, so it is a single knob only on a legacy-budget profile; 16 reproduces the default.
+            val playouts = System.getProperty("arena.rolloutPlayouts")?.toInt()
+            if (playouts != null) {
+                require(p.budgetPolicy === LegacyBudgetPolicy) { "arena.rolloutPlayouts needs the legacy budget policy" }
+            }
+            // docs/54 §8: player turns a playout runs before the static leaf scores it (default 2).
+            val horizon = System.getProperty("arena.rolloutHorizon")?.toInt()
+            // docs/54 §9-§10: the static leaf's share of a candidate's score (default 0.75) and the playout policy's
+            // softmax temperature (default 1.0).
+            val staticWeight = System.getProperty("arena.rolloutStaticWeight")?.toDouble()
+            val temperature = System.getProperty("arena.rolloutTemperature")?.toDouble()
+            p.copy(
+                id = id + (cutoff?.let { "-cut$it" } ?: "") + (playouts?.let { "-p$it" } ?: "") +
+                    (horizon?.let { "-h$it" } ?: "") + (staticWeight?.let { "-sw$it" } ?: "") +
+                    (temperature?.let { "-t$it" } ?: ""),
+                rollouts = RolloutSettings.DEFAULT.copy(
+                    earlyCutoffMargin = cutoff,
+                    horizonPlayerTurns = horizon ?: RolloutSettings.DEFAULT.horizonPlayerTurns,
+                    staticWeight = staticWeight ?: RolloutSettings.DEFAULT.staticWeight,
+                    temperature = temperature ?: RolloutSettings.DEFAULT.temperature,
+                ),
+                budgetPolicy = playouts?.let { RolloutBudgetPolicy(it) } ?: p.budgetPolicy,
+                determinizeHiddenInformation = true,
+            )
+        }
         "holdup" -> {
             val staticWeight = System.getProperty("arena.holdupStaticWeight")?.toDouble()
             p.copy(
