@@ -896,6 +896,10 @@ internal class AffectsFilterResolver(
         is CardPredicate.PowerAtMost -> (projected?.power ?: card.baseStats?.basePower ?: 0) <= predicate.max
         is CardPredicate.PowerAtLeast -> (projected?.power ?: card.baseStats?.basePower ?: 0) >= predicate.min
         is CardPredicate.PowerEquals -> (projected?.power ?: card.baseStats?.basePower) == predicate.value
+        // Null until layer 7 has snapshotted it; an affects-filter resolved before then (layers 2–6)
+        // falls back to the printed value, which is what a base P/T is before 7a/7b apply.
+        is CardPredicate.BasePowerEquals -> (projected?.basePower ?: card.baseStats?.basePower) == predicate.value
+        is CardPredicate.BaseToughnessEquals -> (projected?.baseToughness ?: card.baseStats?.baseToughness) == predicate.value
         // PowerEqualsX / PowerAtLeastX are resolution-time only; layer-projection has no
         // chosen-number context.
         CardPredicate.PowerEqualsX -> false

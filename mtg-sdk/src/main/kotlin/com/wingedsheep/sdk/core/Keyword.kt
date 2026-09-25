@@ -642,6 +642,30 @@ enum class Keyword(val displayName: String) {
      */
     TRAINING("Training"),
 
+    /**
+     * Evolve (CR 702.100, Gatecrash). A triggered ability: "Whenever a creature you control enters,
+     * if that creature's power is greater than this creature's power and/or that creature's
+     * toughness is greater than this creature's toughness, put a +1/+1 counter on this creature."
+     *
+     * The keyword itself is display-only; the behavior is composed by the `evolve()` DSL helper on
+     * [com.wingedsheep.sdk.dsl.CardBuilder] — an enters trigger with an intervening-if comparing the
+     * entering creature's P/T to the source's (both value reads, so they fall back to last-known
+     * information when either creature has left by resolution). Multiple instances trigger
+     * separately (CR 702.100d).
+     */
+    EVOLVE("Evolve"),
+
+    /**
+     * Ravenous (CR 702.156, Warhammer 40,000 Commander). "This permanent enters with X +1/+1
+     * counters on it" and "When this permanent enters, if X is 5 or more, draw a card", where X is
+     * the value chosen as the spell was cast (CR 107.3m) — 0 if the permanent wasn't cast.
+     *
+     * Display-only; the `ravenous()` DSL helper composes the enters-with-counters replacement and
+     * the intervening-if draw trigger, both reading the cast-time X
+     * ([com.wingedsheep.sdk.scripting.values.DynamicAmount.CastX]).
+     */
+    RAVENOUS("Ravenous"),
+
     // ── Damage modification ──────────────────────────────
     WITHER("Wither"),
     TOXIC("Toxic"),

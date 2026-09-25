@@ -1277,15 +1277,16 @@ Types that are not effects no longer carry the `Effect` suffix, so the rule has 
   (default target: controller). One-shot resolution effect that confers a permanent, player-scoped
   property via `PlayerNoMaximumHandSizeComponent` — unlike the battlefield-only `NoMaximumHandSize`
   *static ability* (§9, Reliquary Tower / Thought Vessel), it survives the source leaving any zone
-  (e.g. Wisdom of Ages exiles itself on resolution). Idempotent. `CleanupPhaseManager` checks both
-  this component and the static ability when discarding to hand size.
+  (e.g. Wisdom of Ages exiles itself on resolution). The component carries the effect's timestamp
+  (a repeat application restamps it), because maximum-hand-size effects apply in timestamp order
+  (CR 613.11) — see `SetMaximumHandSize` (§9).
 - `ReduceMaximumHandSize(amount, target?)` — "target's maximum hand size is reduced by `amount` for
   the rest of the game" (Inspired Idea; default target: controller). `amount` is an `Int` (fixed)
   or `DynamicAmount` overload, evaluated once at resolution and *accumulated* into
   `PlayerMaximumHandSizeReductionComponent` — repeat applications stack (two Inspired Ideas → −6).
   A permanent, player-scoped reduction that survives the source leaving the stack, distinct from the
   battlefield-only `SetMaximumHandSize` static (§9). `MaximumHandSize.effective` subtracts the
-  accumulated total after the `SetMaximumHandSize` statics pick the most restrictive base, floored
+  accumulated total after the timestamp-ordered set / no-maximum effects pick the base, floored
   at 0; a player with no maximum hand size has nothing to reduce (the reduction is inert while that
   holds).
 - `WinGame(target, message?)` — target wins the game.
@@ -4939,6 +4940,16 @@ This is the player-arm prerequisite for the planned composable mixed `TargetUnio
   one or more creatures you control each with power greater than its base power deals combat damage to a
   player, draw a card"), pairing `GameObjectFilter.Creature.powerGreaterThanBase()` with the
   `OneOrMoreDealCombatDamageToPlayerEvent` batch trigger (§8).
+- `.basePower(n)` / `.baseToughness(n)` / `.basePowerOrToughness(n)` — **base** P/T equals `n`
+  (`CardPredicate.BasePowerEquals` / `BaseToughnessEquals`; the last is their `Or`). Base P/T is the value after
+  copy effects, CDAs and effects that *set* P/T (layers 1–7b) and before any 7c modification, 7d counter or 7e
+  switch — the Bloomburrow rulings' definition, so a 1/1 with counters and a Giant Growth still has base power 1,
+  and a creature under "has base power and toughness 1/1" (Perfected Theory) has base power 1 whatever it printed.
+  On the battlefield it reads `ProjectedState.getBasePower` / `getBaseToughness`, which `StateProjector` snapshots
+  just before the first 7c effect (so a 7c static counting "base power 1" creatures — Sword of the Squeak's
+  `GrantDynamicStats` — sees it); elsewhere it reads the printed value. Rapid Augmenter ("another creature you
+  control with base power 1 enters"), Sword of the Squeak ("for each creature you control with base power or
+  toughness 1"). Distinct from `.powerGreaterThanBase()` above, which compares against the *printed* base.
 - `.manaValueAtMostEntityManaSpent(ref)` — mana value ≤ the mana **actually spent** to cast a referenced
   entity. Reads the live `SpellOnStackComponent` buckets while the entity is still a spell, or the
   `CastRecordComponent` snapshot once it has resolved onto the battlefield (0 if it was never cast).
@@ -8335,8 +8346,10 @@ staticAbility {
   `GrantHexproofToController` / `GrantShroudToController`.
 - `SetMaximumHandSize(player, amount)` — sets the maximum hand size of a `player` scope (`You` /
   `EachOpponent` / `Each`, resolved relative to the source's controller) to a `DynamicAmount`, read at
-  cleanup. Most restrictive (smallest) value wins when several apply; a `NoMaximumHandSize` controlled
-  by that player still removes the cap entirely. Gate it behind a `ConditionalStaticAbility` for an "as
+  cleanup (Twenty-Toed Toad: `SetMaximumHandSize(Player.You, DynamicAmounts.fixed(20))`). It, `NoMaximumHandSize` and
+  the rest-of-game `RemoveMaximumHandSize` apply in **timestamp order** (CR 613.11; a static takes its
+  permanent's battlefield-entry timestamp) and the latest wins — Spellbook then Toad is twenty, Toad
+  then Spellbook is no maximum. Gate it behind a `ConditionalStaticAbility` for an "as
   long as …" form — the cleanup read unwraps the conditional and evaluates its condition against the
   source's controller. (Winter, Misanthropic Guide — `ConditionalStaticAbility(SetMaximumHandSize(
   EachOpponent, Subtract(Fixed(7), AggregateZone(You, GRAVEYARD, Any, DISTINCT_TYPES))), Delirium())`.)
@@ -9587,7 +9600,7 @@ Flying, Menace, Intimidate, Fear, Shadow, Horsemanship, all basic landwalks (Pla
 Strike, Trample, Deathtouch, Lifelink, Vigilance, Reach, Provoke, Defender, Indestructible, Hexproof, Shroud, Haste,
 Flash, Prowess, Flurry, Changeling, Devoid (**not** display-only — see the note above: the engine
 derives `CardDefinition.colors` from it), Convoke, Delve, Improvise, Affinity, Emerge, Storm, Flashback, Harmonize, Mayhem, Disturb, Evoke, Sneak, Ninjutsu, Web-slinging, Impending, Conspire, Casualty, Miracle, Hideaway, Cascade, Plot,
-Offspring, Persist, Undying, Enduring, Ascend, Storied, Start your engines!, Max speed, Wither, Toxic, Eerie, Vivid, Fateful Bite, Exploit, Champion, Soulbond, Daybound, Nightbound, … (display-only — engine effect lives in handlers or
+Offspring, Persist, Undying, Enduring, Ascend, Storied, Start your engines!, Max speed, Wither, Toxic, Eerie, Vivid, Fateful Bite, Exploit, Champion, Evolve, Ravenous, Soulbond, Daybound, Nightbound, … (display-only — engine effect lives in handlers or
 composite abilities).
 
 **Parameterized `KeywordAbility.*`**
@@ -10089,6 +10102,19 @@ composite abilities).
   counter-placed watcher (which would fire for non-training counters too). `EmitTrainedEventEffect` is an internal `data object`
   (no player-facing text) wired into `training()`; do not use it directly. See `EventPattern.TrainedEvent` under counter triggers
   for the watcher form (Savior of Ollenbock).
+- `Evolve` — "Evolve (Whenever a creature you control enters, if that creature has greater power or toughness than
+  this creature, put a +1/+1 counter on this creature.)" (CR 702.100, Gatecrash; Pollywog Prodigy). Display-only keyword;
+  wire it with `card { evolve() }`, which adds the keyword plus `evolveTriggeredAbility()`:
+  `Triggers.a(Creature.youControl()).enters()` with an intervening-if `Conditions.Any(power of TriggeringEntity > power
+  of Self, toughness of TriggeringEntity > toughness of Self)` → one +1/+1 counter on `Self`. P is compared to P and T to
+  T only (a 0/4 evolves a 1/3). Both sides are value reads, so the recheck on resolution uses last-known P/T if either
+  creature has left (the Gatecrash ruling). Multiple instances trigger separately (CR 702.100d); the standalone
+  `evolveTriggeredAbility()` lets a token carry it.
+- `Ravenous` — "Ravenous (This creature enters with X +1/+1 counters on it. If X is 5 or more, draw a card when it
+  enters.)" (CR 702.156; Jacked Rabbit). Display-only keyword; wire it with `card { ravenous() }`: an
+  `EntersWithDynamicCounters(DynamicAmounts.castX())` replacement plus a `Triggers.self.enters()` draw gated by the
+  intervening-if `castX() >= 5`. Both read the cast-time X (CR 107.3m), so a ravenous creature put onto the battlefield
+  without being cast enters with no counters and draws nothing.
 - `Job select` — "Job select (When this Equipment enters, create a 1/1 colorless Hero creature token, then attach
   this to it.)" (Final Fantasy). Equipment keyword; display-only. Wire it with the `card { jobSelect() }` builder
   helper, which adds the keyword plus an `EntersBattlefield` triggered ability composing two existing primitives

@@ -228,6 +228,17 @@ interface ObjectFilterBuilder<out Self> {
     /** Power exactly equal to the X chosen for the source spell/ability (Ent-Draught Basin) */
     fun powerEqualsX() = withCardPredicate(CardPredicate.PowerEqualsX)
 
+    /** "with base power [value]" — see [CardPredicate.BasePowerEquals]. */
+    fun basePower(value: Int) = withCardPredicate(CardPredicate.BasePowerEquals(value))
+
+    /** "with base toughness [value]" — see [CardPredicate.BaseToughnessEquals]. */
+    fun baseToughness(value: Int) = withCardPredicate(CardPredicate.BaseToughnessEquals(value))
+
+    /** "with base power or toughness [value]" (Sword of the Squeak) — either half qualifies. */
+    fun basePowerOrToughness(value: Int) = withCardPredicate(
+        CardPredicate.Or(listOf(CardPredicate.BasePowerEquals(value), CardPredicate.BaseToughnessEquals(value)))
+    )
+
     /** Power at most */
     fun powerAtMost(max: Int) = withCardPredicate(CardPredicate.PowerAtMost(max))
 

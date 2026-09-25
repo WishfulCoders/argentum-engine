@@ -2,7 +2,7 @@
 
 **Set Size:** 312 cards
 **Release Date:** August 2, 2024
-**Implemented:** 129 / 312
+**Implemented:** 139 / 312
 | Color      | Total | Done |
 |------------|-------|------|
 | White      | 37    | 0    |
@@ -21,7 +21,7 @@
 - [x] Adarkar Wastes
 - [ ] Aether Channeler
 - [x] Aetherize
-- [ ] Agate Instigator
+- [x] Agate Instigator
 - [x] Alchemist's Talent
 - [ ] An Offer You Can't Refuse
 - [ ] Angel of the Ruins
@@ -46,7 +46,7 @@
 - [ ] Birds of Paradise
 - [ ] Blade Splicer
 - [x] Blasphemous Act
-- [ ] Bloodroot Apothecary
+- [x] Bloodroot Apothecary
 - [ ] Body of Knowledge
 - [ ] Bojuka Bog
 - [x] Bootleggers' Stash
@@ -150,7 +150,7 @@
 - [ ] Ishai, Ojutai Dragonspeaker
 - [ ] Izzet Signet
 - [x] Jace, the Mind Sculptor
-- [ ] Jacked Rabbit
+- [x] Jacked Rabbit
 - [ ] Jazal Goldmane
 - [ ] Jolrael, Mwonvuli Recluse
 - [x] Jungle Hollow
@@ -177,7 +177,7 @@
 - [ ] Maskwood Nexus
 - [x] Mind Stone
 - [ ] Moldervine Reclamation
-- [ ] Moonstone Eulogist
+- [x] Moonstone Eulogist
 - [ ] Morbid Opportunist
 - [x] Mossfire Valley
 - [x] Mosswort Bridge
@@ -204,7 +204,7 @@
 - [x] Plaguecrafter
 - [ ] Plumb the Forbidden
 - [ ] Poison-Tip Archer
-- [ ] Pollywog Prodigy
+- [x] Pollywog Prodigy
 - [ ] Prairie Stream
 - [x] Primeval Bounty
 - [ ] Promise of Loyalty
@@ -218,7 +218,7 @@
 - [x] Rain of Riches
 - [x] Rampaging Baloths
 - [x] Rampant Growth
-- [ ] Rapid Augmenter
+- [x] Rapid Augmenter
 - [ ] Rapid Hybridization
 - [ ] Ravenous Squirrel
 - [x] Razorverge Thicket
@@ -274,9 +274,9 @@
 - [ ] Sunscorch Regent
 - [ ] Sunscorched Divide
 - [ ] Swarmyard
-- [ ] Swarmyard Massacre
+- [x] Swarmyard Massacre
 - [ ] Swiftfoot Boots
-- [ ] Sword of the Squeak
+- [x] Sword of the Squeak
 - [x] Swords to Plowshares
 - [ ] Tainted Wood
 - [x] Talisman of Impulse
@@ -298,7 +298,7 @@
 - [x] Terramorphic Expanse
 - [x] Tetsuko Umezawa, Fugitive
 - [x] The Gitrog Monster
-- [ ] The Odd Acorn Gang
+- [x] The Odd Acorn Gang
 - [x] Thickest in the Thicket
 - [ ] Thopter Engineer
 - [x] Thought Vessel
@@ -313,7 +313,7 @@
 - [x] Trailtracker Scout
 - [x] Tranquil Thicket
 - [ ] Triskaidekaphile
-- [ ] Twenty-Toed Toad
+- [x] Twenty-Toed Toad
 - [ ] Twilight Mire
 - [x] Unnatural Growth
 - [ ] Viridescent Bog

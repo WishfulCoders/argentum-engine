@@ -5,6 +5,7 @@ import com.wingedsheep.engine.handlers.DynamicAmountEvaluator
 import com.wingedsheep.engine.handlers.EffectContext
 import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
+import com.wingedsheep.engine.state.components.battlefield.BattlefieldEntryTimestampComponent
 import com.wingedsheep.engine.state.components.battlefield.chosenOpponent
 import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.engine.state.components.identity.RoomFaceStatics
@@ -34,21 +35,25 @@ object MaximumHandSize {
     const val DEFAULT = 7
 
     /**
-     * The effective maximum hand size for [playerId], or `null` when they have no maximum
-     * (Reliquary Tower / Wisdom of Ages — [hasNoMaximum]).
+     * The effective maximum hand size for [playerId], or `null` when they have no maximum.
      *
-     * Starts from [DEFAULT] (CR 402.2) and applies every [SetMaximumHandSize] static ability on the
-     * battlefield whose [SetMaximumHandSize.player] scope (resolved relative to the source's
-     * controller) includes [playerId]. A [ConditionalStaticAbility] wrapper is unwrapped and its
-     * condition evaluated against the source's controller, so "as long as …" gates (Winter's
-     * Delirium) are honored.
+     * Every effect that sets a player's maximum hand size or removes it is a rules-modifying
+     * continuous effect, and CR 613.11 applies those in timestamp order — the latest one wins,
+     * whichever kind it is. So with Spellbook ("no maximum hand size") entering before Twenty-Toed
+     * Toad ("your maximum hand size is twenty"), the limit is twenty; the other way round, there is
+     * none. The candidates are:
      *
-     * CR 613.11 says these effects apply in timestamp order (the latest wins), and each *sets* the
-     * value — so an effect can raise the limit above [DEFAULT] as readily as lower it (Doctor
-     * Octopus, Master Planner sets it to eight). The base [DEFAULT] must therefore not clamp the
-     * set effects: it is only the value when *no* set effect applies. When several set effects
-     * apply to one player at once (rare), we take the most restrictive (smallest) rather than
-     * threading true timestamps — a deliberate simplification that matches every real collision.
+     * - [SetMaximumHandSize] statics on the battlefield whose [SetMaximumHandSize.player] scope
+     *   (resolved relative to the source's controller) includes [playerId]. A
+     *   [ConditionalStaticAbility] wrapper is unwrapped and its condition evaluated against the
+     *   source's controller, so "as long as …" gates (Winter's Delirium) are honored. A set effect
+     *   can raise the limit above [DEFAULT] as readily as lower it (Doctor Octopus sets eight).
+     * - [NoMaximumHandSize] statics on permanents [playerId] controls (Reliquary Tower).
+     * - The rest-of-game [PlayerNoMaximumHandSizeComponent] (Wisdom of Ages).
+     *
+     * A static ability's effect takes its permanent's battlefield-entry timestamp (CR 613.7a).
+     * With no candidate the limit is the CR 402.2 default of seven. Player-scoped rest-of-game
+     * reductions (Inspired Idea) then apply to a finite limit, never below 0.
      */
     fun effective(
         state: GameState,
@@ -57,27 +62,39 @@ object MaximumHandSize {
         conditionEvaluator: ConditionEvaluator,
         dynamicAmountEvaluator: DynamicAmountEvaluator,
     ): Int? {
-        if (hasNoMaximum(state, playerId, cardRegistry)) return null
-        var setValue: Int? = null
+        // (timestamp, limit) — a null limit is "no maximum hand size".
+        val candidates = mutableListOf<Pair<Long, Int?>>()
+        state.getEntity(playerId)?.get<PlayerNoMaximumHandSizeComponent>()?.let {
+            candidates += it.timestamp to null
+        }
         val projected = state.projectedState
         for (permanentId in state.getBattlefield()) {
-            val card = state.getEntity(permanentId)?.get<CardComponent>() ?: continue
+            val container = state.getEntity(permanentId) ?: continue
+            val card = container.get<CardComponent>() ?: continue
             val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
             if (cardDef.script.staticAbilities.isEmpty()) continue
             val controllerId = projected.getController(permanentId) ?: continue
+            val timestamp = container.get<BattlefieldEntryTimestampComponent>()?.timestamp ?: 0L
             val context = EffectContext(sourceId = permanentId, controllerId = controllerId)
+            // Routed through RoomFaceStatics so a Room face's "You have no maximum hand size"
+            // (e.g. Steaming Sauna) counts only while that door is unlocked (CR 709.5).
+            if (controllerId == playerId &&
+                RoomFaceStatics.activeStaticAbilities(container, cardDef).any { it is NoMaximumHandSize }
+            ) {
+                candidates += timestamp to null
+            }
             for (raw in cardDef.script.staticAbilities) {
                 val setAbility = activeSetMaximumHandSize(state, raw, context, conditionEvaluator) ?: continue
                 if (!playerScopeIncludes(setAbility.player, playerId, controllerId, state, permanentId)) continue
                 val value = dynamicAmountEvaluator.evaluate(state, setAbility.amount, context)
                     .coerceAtLeast(0)
-                setValue = if (setValue == null) value else minOf(setValue, value)
+                candidates += timestamp to value
             }
         }
-        // No set effect → the CR 402.2 default of seven. Player-scoped rest-of-game reductions
-        // (Inspired Idea) apply after the SetMaximumHandSize statics have chosen the base, and never
-        // below 0. A no-maximum player short-circuited above, so there is always a finite base here.
-        val max = setValue ?: DEFAULT
+        // sortedBy is stable, so two effects sharing a timestamp keep scan order.
+        val latest = candidates.sortedBy { it.first }.lastOrNull()
+        if (latest != null && latest.second == null) return null
+        val max = latest?.second ?: DEFAULT
         val reduction = reductionFor(state, playerId)
         return (max - reduction).coerceAtLeast(0)
     }
@@ -130,27 +147,4 @@ object MaximumHandSize {
             Player.ChosenOpponent -> state.getEntity(sourceId)?.chosenOpponent() == playerId
             else -> false
         }
-
-    /**
-     * Check if [playerId] has no maximum hand size — either from a permanent they control with the
-     * [NoMaximumHandSize] static ability (Thought Vessel, Reliquary Tower) or from a player-scoped
-     * rest-of-game effect ([PlayerNoMaximumHandSizeComponent], conferred by Wisdom of Ages).
-     */
-    fun hasNoMaximum(state: GameState, playerId: EntityId, cardRegistry: CardRegistry): Boolean {
-        if (state.getEntity(playerId)?.has<PlayerNoMaximumHandSizeComponent>() == true) {
-            return true
-        }
-        val projected = state.projectedState
-        for (permanentId in projected.getBattlefieldControlledBy(playerId)) {
-            val container = state.getEntity(permanentId) ?: continue
-            val card = container.get<CardComponent>() ?: continue
-            val cardDef = cardRegistry.getCard(card.cardDefinitionId) ?: continue
-            // Routed through RoomFaceStatics so a Room face's "You have no maximum hand size"
-            // (e.g. Steaming Sauna) counts only while that door is unlocked (CR 709.5).
-            if (RoomFaceStatics.activeStaticAbilities(container, cardDef).any { it is NoMaximumHandSize }) {
-                return true
-            }
-        }
-        return false
-    }
 }

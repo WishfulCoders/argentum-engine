@@ -683,6 +683,28 @@ sealed interface CardPredicate : TextReplaceable<CardPredicate> {
     }
 
     /**
+     * **Base** power exactly equal to [value] — "a creature with base power 1" (Rapid Augmenter,
+     * Zinnia, Valley's Voice). A creature's base power is its power after copy effects,
+     * characteristic-defining abilities and effects that *set* power (layers 1–7b), but before
+     * any modification, counter or switch (7c–7e): a 1/1 with two +1/+1 counters and an anthem
+     * still has base power 1, while a 3/3 turned into a 1/1 by a set-P/T effect has base power 1
+     * too. Off the battlefield (no projection) it reads the printed power. An object with no
+     * power never matches.
+     */
+    @SerialName("BasePowerEquals")
+    @Serializable
+    data class BasePowerEquals(val value: Int) : CardPredicate {
+        override val description: String = "with base power $value"
+    }
+
+    /** The toughness sibling of [BasePowerEquals] — "base toughness 1" (Sword of the Squeak). */
+    @SerialName("BaseToughnessEquals")
+    @Serializable
+    data class BaseToughnessEquals(val value: Int) : CardPredicate {
+        override val description: String = "with base toughness $value"
+    }
+
+    /**
      * Power exactly equal to the X chosen for the source spell/ability. Resolves against
      * `PredicateContext.xValue` at evaluation time — the power analogue of [ManaValueEqualsX].
      * Used by an X-cost activated ability that targets "a creature with power X"

@@ -742,6 +742,9 @@ sealed interface Modification {
 internal data class MutableProjectedValues(
     var power: Int? = null,
     var toughness: Int? = null,
+    /** See [com.wingedsheep.engine.mechanics.layers.ProjectedValues.basePower]. */
+    var basePower: Int? = null,
+    var baseToughness: Int? = null,
     var name: String? = null,
     val keywords: MutableSet<String> = mutableSetOf(),
     val colors: MutableSet<String> = mutableSetOf(),
