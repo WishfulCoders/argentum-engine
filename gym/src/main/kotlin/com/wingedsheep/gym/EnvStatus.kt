@@ -61,6 +61,13 @@ data class EnvStatus(
      * stepped and played-out decisions says how many of each it holds instead of blending them.
      */
     val playedOut: Int = 0,
+
+    /**
+     * The seat the current observation was built for. It is the perspective seat except in a
+     * learner-versus-learner env, where it is whichever learner has the decision
+     * (mtg-draft-ai `docs/51` §4). A trainer maps it to the policy playing that seat.
+     */
+    val actingSeat: Int? = null,
 ) {
     /** True once the episode is over for either reason. A caller should reset or dispose it. */
     val done: Boolean get() = terminated || truncated

@@ -103,6 +103,23 @@ class GameGymEnv(
 
     override val isTerminal: Boolean get() = environment.state.gameOver
 
+    /**
+     * The seat an observation is built for: the acting learner when two or more seats learn, and
+     * [perspectivePlayerIndex] otherwise (mtg-draft-ai `docs/51` §4, learner-versus-learner).
+     *
+     * With one learner seat the env only ever stops at that seat, so the two agree. With two, the
+     * env stops at whichever learner has something to decide, and an observation built from the
+     * other seat would hand the actor its opponent's hand and the wrong seat's legal actions. An env
+     * with no agent spec keeps the original contract (the caller drives every seat from one fixed
+     * perspective), which search callers rely on.
+     */
+    private fun observedSeat(): Int {
+        if (agents.count { it is AgentSpec.Learner } < 2) return perspectivePlayerIndex
+        val acting = environment.agentToAct ?: return perspectivePlayerIndex
+        val index = environment.playerIds.indexOf(acting)
+        return if (index >= 0 && agentAt(index) is AgentSpec.Learner) index else perspectivePlayerIndex
+    }
+
     override fun observe(revealAll: Boolean?): ObservationResult =
         build(revealAll ?: defaultRevealAll)
 
@@ -138,6 +155,7 @@ class GameGymEnv(
         autoAdvanced = autoAdvanced,
         delegatedDecisions = delegatedDecisions,
         playedOut = playedOut,
+        actingSeat = observedSeat(),
         // A truncated episode pays nothing: its outcome was never decided.
         reward = if (isTerminal) {
             environment.terminalRewards().map { (playerId, value) -> PlayerReward(playerId, value) }
@@ -539,8 +557,9 @@ class GameGymEnv(
     }
 
     private fun build(revealAll: Boolean): ObservationResult {
-        val perspective = environment.playerIds.getOrNull(perspectivePlayerIndex)
-            ?: throw IllegalStateException("Env has no player at index $perspectivePlayerIndex")
+        val seat = observedSeat()
+        val perspective = environment.playerIds.getOrNull(seat)
+            ?: throw IllegalStateException("Env has no player at index $seat")
         val legal = environment.legalActions()
         val learnerActions = if (agents.isNotEmpty() && environment.agentToAct?.let(::isLearner) == true) {
             PolicyActionBoundary.mask(legal, environment.state, policySimulator)
