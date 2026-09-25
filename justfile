@@ -216,6 +216,12 @@ kill-daemons MIN_AGE="60" *ARGS:
 check:
     ./gradlew check
 
+# Waits out subscription usage limits; stop with `touch .claude/loop-runs/<code>.stop`.
+# Implement a whole set with headless Claude Code, one fresh session per step (e.g. just set-loop ecl)
+[group: 'ai']
+set-loop CODE:
+    scripts/set-loop {{CODE}}
+
 # Report implemented vs missing cards for a set (e.g., just card-status --set BLB --list)
 [group: 'build']
 card-status *ARGS:
