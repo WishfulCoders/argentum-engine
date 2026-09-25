@@ -376,6 +376,8 @@ class PredicateEvaluator(
             is CardPredicate.PowerEqualsDynamic,
             CardPredicate.PowerEqualsX,
             CardPredicate.PowerGreaterThanBase,
+            is CardPredicate.BasePowerEquals,
+            is CardPredicate.BaseToughnessEquals,
             is CardPredicate.PowerGreaterThanEntity,
             is CardPredicate.PowerLessThanEntity,
             is CardPredicate.PowerOrToughnessAtLeast,
@@ -867,6 +869,16 @@ class PredicateEvaluator(
                 // the object's color, which layer 5 can change. Face-down: no mana cost (CR 708.2).
                 if (projectedValues?.isFaceDown == true) false
                 else card.manaCost.coloredSymbolCount(predicate.colors.toSet()) >= predicate.min
+            }
+
+            // Base P/T — the layer-7b snapshot on the battlefield, the printed value elsewhere.
+            is CardPredicate.BasePowerEquals -> {
+                val basePower = projectedValues?.basePower ?: card.baseStats?.basePower
+                basePower == predicate.value
+            }
+            is CardPredicate.BaseToughnessEquals -> {
+                val baseToughness = projectedValues?.baseToughness ?: card.baseStats?.baseToughness
+                baseToughness == predicate.value
             }
 
             // Power/toughness predicates - use projected P/T
@@ -2310,6 +2322,8 @@ class PredicateEvaluator(
             is CardPredicate.PowerAtMostEntity,
             is CardPredicate.PowerLessThanEntity,
             CardPredicate.PowerGreaterThanBase,
+            is CardPredicate.BasePowerEquals,
+            is CardPredicate.BaseToughnessEquals,
             CardPredicate.ToughnessGreaterThanPower -> false
 
             // Name predicates — matched against the record's card name; a record without a

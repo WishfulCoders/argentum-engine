@@ -380,12 +380,21 @@ class StateProjector {
             effect.copy(affectedEntities = lockAffected(effect, resolved))
         }
 
-        // Apply layer 7 continuous effects
+        // Apply layer 7 continuous effects. Just before the first 7c modification, snapshot each
+        // object's *base* power/toughness: its value after copy effects (layer 1), CDAs (7a) and
+        // effects that set P/T (7b), but before any modification, counter or switch — the Bloomburrow
+        // rulings' definition of "base power" (Zinnia, Valley's Voice; Sword of the Squeak).
+        var baseStatsCaptured = false
         for (effect in resolvedLayer7Effects) {
             if (effect.layer == Layer.POWER_TOUGHNESS) {
+                if (!baseStatsCaptured && effect.sublayer.isAfterBaseStats()) {
+                    captureBaseStats(projectedValues)
+                    baseStatsCaptured = true
+                }
                 effectApplicator.applyEffect(effect, state, projectedValues)
             }
         }
+        if (!baseStatsCaptured) captureBaseStats(projectedValues)
 
         // Apply counters (layer 7d)
         effectApplicator.applyCounters(state, projectedValues)
@@ -411,6 +420,8 @@ class StateProjector {
             ProjectedValues(
                 power = v.power,
                 toughness = v.toughness,
+                basePower = v.basePower,
+                baseToughness = v.baseToughness,
                 name = v.name,
                 keywords = v.keywords,
                 colors = v.colors,
@@ -452,6 +463,16 @@ class StateProjector {
         }
 
         return ProjectedState(state, finalValues, crossZoneGrants)
+    }
+
+    private fun Sublayer?.isAfterBaseStats(): Boolean =
+        this != null && this != Sublayer.CHARACTERISTIC_DEFINING && this != Sublayer.SET_VALUES
+
+    private fun captureBaseStats(projectedValues: Map<EntityId, MutableProjectedValues>) {
+        for (values in projectedValues.values) {
+            values.basePower = values.power
+            values.baseToughness = values.toughness
+        }
     }
 
     fun getProjectedPower(state: GameState, entityId: EntityId): Int {

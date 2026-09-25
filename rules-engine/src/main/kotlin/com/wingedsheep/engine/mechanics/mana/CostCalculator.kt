@@ -1318,6 +1318,8 @@ class CostCalculator(
                 cardDef.manaCost.coloredSymbolCount(predicate.colors.toSet()) >= predicate.min
 
             is CardPredicate.PowerEquals -> cardDef.creatureStats?.basePower == predicate.value
+            is CardPredicate.BasePowerEquals -> cardDef.creatureStats?.basePower == predicate.value
+            is CardPredicate.BaseToughnessEquals -> cardDef.creatureStats?.baseToughness == predicate.value
             // CostCalculator has no X context; predicate has no static answer here.
             CardPredicate.PowerEqualsX -> false
             is CardPredicate.PowerAtMost -> (cardDef.creatureStats?.basePower ?: 0) <= predicate.max

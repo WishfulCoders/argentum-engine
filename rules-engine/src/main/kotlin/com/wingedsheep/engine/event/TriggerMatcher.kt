@@ -1369,6 +1369,17 @@ class TriggerMatcher(
                     else lastKnownToughness ?: projected.getToughness(entityId) ?: cardComponent.baseStats?.baseToughness ?: 0
                 toughness > power
             }
+            is com.wingedsheep.sdk.scripting.predicates.CardPredicate.BasePowerEquals -> {
+                // Face-down: a 2/2 set by CR 708.2a, so its base power is 2.
+                val basePower = if (isFaceDown) 2
+                    else projected.getBasePower(entityId) ?: cardComponent.baseStats?.basePower
+                basePower == predicate.value
+            }
+            is com.wingedsheep.sdk.scripting.predicates.CardPredicate.BaseToughnessEquals -> {
+                val baseToughness = if (isFaceDown) 2
+                    else projected.getBaseToughness(entityId) ?: cardComponent.baseStats?.baseToughness
+                baseToughness == predicate.value
+            }
             is com.wingedsheep.sdk.scripting.predicates.CardPredicate.PowerGreaterThanBase -> {
                 // Self-relative: last-known/projected power at event time vs the object's own
                 // printed base power. Face-down (base 2/2, power 2) never exceeds its base.

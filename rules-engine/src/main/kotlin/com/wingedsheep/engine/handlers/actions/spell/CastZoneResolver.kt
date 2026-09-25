@@ -894,6 +894,9 @@ class CastZoneResolver(
                     card.manaCost.coloredSymbolCount(predicate.colors.toSet()) >= predicate.min
                 // --- Power / toughness (null base P/T — e.g. */noncreature — never matches) ---
                 is CardPredicate.PowerEquals -> power == predicate.value
+                // A card in a zone has no projection, so its base P/T is its printed P/T.
+                is CardPredicate.BasePowerEquals -> power == predicate.value
+                is CardPredicate.BaseToughnessEquals -> toughness == predicate.value
                 is CardPredicate.PowerAtMost -> power != null && power <= predicate.max
                 is CardPredicate.PowerAtLeast -> power != null && power >= predicate.min
                 is CardPredicate.ToughnessEquals -> toughness == predicate.value

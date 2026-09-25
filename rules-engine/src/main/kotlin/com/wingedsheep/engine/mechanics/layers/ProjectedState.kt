@@ -40,6 +40,15 @@ data class CrossZoneSubtypeGrant(
 data class ProjectedValues(
     val power: Int? = null,
     val toughness: Int? = null,
+    /**
+     * The object's *base* power — its power after copy effects, characteristic-defining abilities
+     * and effects that set power (layers 1 through 7b), before any 7c modification, counter or
+     * 7e switch. Null until layer 7 has run (an intermediate projection built before it), and for
+     * objects with no power.
+     */
+    val basePower: Int? = null,
+    /** The toughness sibling of [basePower]. */
+    val baseToughness: Int? = null,
     val name: String? = null,
     val keywords: Set<String> = emptySet(),
     val colors: Set<String> = emptySet(),
@@ -118,6 +127,12 @@ class ProjectedState(
     }
 
     fun getPower(entityId: EntityId): Int? = projectedValues[entityId]?.power
+
+    /** See [ProjectedValues.basePower]. */
+    fun getBasePower(entityId: EntityId): Int? = projectedValues[entityId]?.basePower
+
+    /** See [ProjectedValues.baseToughness]. */
+    fun getBaseToughness(entityId: EntityId): Int? = projectedValues[entityId]?.baseToughness
 
     fun getToughness(entityId: EntityId): Int? = projectedValues[entityId]?.toughness
 
@@ -250,6 +265,8 @@ internal fun buildIntermediateProjectedState(
         ProjectedValues(
             power = v.power,
             toughness = v.toughness,
+            basePower = v.basePower,
+            baseToughness = v.baseToughness,
             keywords = v.keywords.toSet(),
             colors = v.colors.toSet(),
             types = v.types.toSet(),
