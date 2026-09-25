@@ -735,9 +735,14 @@ data object PlayerEnduringStoryComponent : Component
  * [com.wingedsheep.sdk.scripting.NoMaximumHandSize] static ability (Reliquary Tower, Thought
  * Vessel), which only applies while its permanent is in play. Like the city's blessing, this is
  * permanent for the rest of the game — cleanup never removes it, so it has no `removeOn` field.
+ *
+ * [timestamp] is the [com.wingedsheep.engine.state.GameState.timestamp] of the effect that
+ * conferred it: maximum-hand-size effects apply in timestamp order (CR 613.11), so a later
+ * "your maximum hand size is N" static still sets a limit (see
+ * [com.wingedsheep.engine.core.MaximumHandSize.effective]).
  */
 @Serializable
-data object PlayerNoMaximumHandSizeComponent : Component
+data class PlayerNoMaximumHandSizeComponent(val timestamp: Long) : Component
 
 /**
  * Reduces a player's maximum hand size by [amount] for the rest of the game (Inspired Idea,
