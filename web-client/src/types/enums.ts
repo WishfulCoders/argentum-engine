@@ -254,6 +254,10 @@ export enum Keyword {
   DECAYED = 'DECAYED',
   // Attack-triggered self-buff (Innistrad: Midnight Hunt)
   TRAINING = 'TRAINING',
+  // Enters-triggered self-buff (Gatecrash, CR 702.100)
+  EVOLVE = 'EVOLVE',
+  // Enters with X +1/+1 counters, draws at X >= 5 (CR 702.156)
+  RAVENOUS = 'RAVENOUS',
   // Day/night transforming DFCs (Innistrad, CR 702.145)
   DAYBOUND = 'DAYBOUND',
   NIGHTBOUND = 'NIGHTBOUND',
@@ -374,6 +378,8 @@ export const KeywordDisplayNames: Record<Keyword, string> = {
   [Keyword.MAX_SPEED]: 'Max speed',
   [Keyword.DECAYED]: 'Decayed',
   [Keyword.TRAINING]: 'Training',
+  [Keyword.EVOLVE]: 'Evolve',
+  [Keyword.RAVENOUS]: 'Ravenous',
   [Keyword.DAYBOUND]: 'Daybound',
   [Keyword.NIGHTBOUND]: 'Nightbound',
   [Keyword.JOB_SELECT]: 'Job select',
