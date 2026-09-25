@@ -4,7 +4,10 @@ import com.wingedsheep.ai.engine.GameSimulator
 import com.wingedsheep.engine.core.ActivateAbility
 import com.wingedsheep.engine.core.CastSpell
 import com.wingedsheep.engine.legalactions.LegalAction
+import com.wingedsheep.engine.registry.CardRegistry
 import com.wingedsheep.engine.state.GameState
+import com.wingedsheep.engine.state.components.battlefield.ClassLevelComponent
+import com.wingedsheep.engine.state.components.identity.CardComponent
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.ManaCost
 import com.wingedsheep.sdk.core.ManaSymbol
@@ -12,6 +15,10 @@ import com.wingedsheep.sdk.model.EntityId
 import com.wingedsheep.sdk.scripting.AdditionalCostPayment
 import com.wingedsheep.sdk.scripting.AlternativePaymentChoice
 import com.wingedsheep.sdk.scripting.ConvokePayment
+import com.wingedsheep.sdk.scripting.CostModification
+import com.wingedsheep.sdk.scripting.CostReductionSource
+import com.wingedsheep.sdk.scripting.ModifySpellCost
+import com.wingedsheep.sdk.scripting.SpellCostTarget
 
 /** The action mask shared by the arena BC bridge and learner-seat gym observations. */
 object PolicyActionBoundary {
@@ -55,9 +62,10 @@ object PolicyActionBoundary {
     }
 
     /** Share the same bounded, engine-checked convoke choices with arena and learner gym. */
-    fun mask(actions: List<LegalAction>, state: GameState, simulator: GameSimulator): List<LegalAction> =
-        mask(actions.map { action ->
-            var prepared = action
+    fun mask(actions: List<LegalAction>, state: GameState, simulator: GameSimulator): List<LegalAction> {
+        val battlefieldPricesTargets by lazy { battlefieldPricesTargets(state, simulator.cardRegistry) }
+        return mask(actions.map { action ->
+            var prepared = targetPriced(action, state, simulator) { battlefieldPricesTargets }
             if (action.hasConvoke && !action.canPayWithoutConvoke) {
                 prepared = prepared.copy(policyConvokePaymentOptions = convokeOptions(action, state, simulator))
             }
@@ -70,8 +78,108 @@ object PolicyActionBoundary {
             if (action.additionalCostInfo?.costType == "Behold") {
                 prepared = prepared.copy(policyBeholdPaymentOptions = beholdOptions(action, state, simulator))
             }
-            prepared
+            preflightParameterFree(prepared, state, simulator)
         })
+    }
+
+    /**
+     * A cast or non-mana activation the policy submits exactly as enumerated, run through the final
+     * preflight here, and masked if the engine would refuse it at the step.
+     *
+     * With no targets, X or payment to choose, there is exactly one submission, so the step's own check
+     * ([PolicyActionStager]: accepted directly, or after floating Treasure mana) can be run in advance.
+     * Enumerated affordability misses costs it does not model: the first live PPO iterations
+     * (mtg-draft-ai `docs/51` §3.1) found Group Project's flashback, whose "tap three untapped creatures"
+     * the flashback enumerator prices as {0}, and a {R}{R/W}{W} creature the mana solver passes and the
+     * cast refuses. Each rejected the whole step batch. Checking every parameter-free action is what closes
+     * the class rather than one card.
+     *
+     * A simple single-target cast is checked the same way with its first advertised target: whether the
+     * cost can be paid does not depend on which legal target is named, unless the target prices the spell,
+     * and [targetPriced] has already checked those target by target. Dismember ({1}{B/P}{B/P}) was the
+     * case: advertised as affordable, refused at every target.
+     */
+    private fun preflightParameterFree(action: LegalAction, state: GameState, simulator: GameSimulator): LegalAction {
+        if (!action.affordable || !callable(action) || action.isManaAbility) return action
+        val fixedShape = !action.hasXCost && action.additionalCostInfo == null && !action.hasConvoke &&
+            action.modalEnumeration == null && !action.requiresDamageDistribution
+        if (!fixedShape) return action
+        if (action.action !is CastSpell && action.action !is ActivateAbility) return action
+        val params = when {
+            !action.requiresTargets -> ActionParams()
+            action.action is CastSpell && (action.action as CastSpell).targets.isEmpty() &&
+                action.minTargets == 1 && action.targetCount == 1 &&
+                action.targetRequirements.orEmpty().isEmpty() && !action.validTargets.isNullOrEmpty() ->
+                ActionParams(targets = listOf(action.validTargets!!.first()))
+            else -> return action
+        }
+        val completed = ActionParameterizer.apply(action.action, params, state)
+        return if (PolicyActionStager(simulator).begin(state, completed) != null) action else action.copy(affordable = false)
+    }
+
+    /**
+     * A cast whose cost the chosen target changes, narrowed to the targets the engine accepts.
+     *
+     * Affordability is enumerated before targets are chosen. For a target-conditional reduction the
+     * enumerator assumes the cheapest target (`CostCalculator.calculateMinPossibleCost`): Ajani's Response
+     * shows as castable for {1}{W} whenever any creature is tapped, but it still offers every creature, and an
+     * untapped one costs {4}{W} and fails the final preflight. Found by the first live PPO iteration
+     * (mtg-draft-ai `docs/51` §3.1). A simple single-target cast is preflighted target by target and keeps the
+     * accepted ones; a multi-target, X or modal cast priced by its targets is masked, since its advertised
+     * targets cannot be checked one at a time. Casts whose cost no target changes are untouched, so an
+     * ordinary observation pays nothing.
+     */
+    private fun targetPriced(
+        action: LegalAction,
+        state: GameState,
+        simulator: GameSimulator,
+        battlefieldPricesTargets: () -> Boolean,
+    ): LegalAction {
+        val cast = action.action as? CastSpell ?: return action
+        if (!action.affordable || !action.requiresTargets || cast.targets.isNotEmpty()) return action
+        if (!selfPricedByTarget(cast, state, simulator.cardRegistry) && !battlefieldPricesTargets()) return action
+        val simple = !action.hasXCost && action.minTargets == 1 && action.targetCount == 1 &&
+            action.targetRequirements.orEmpty().isEmpty() && action.modalEnumeration == null &&
+            !action.requiresDamageDistribution && action.additionalCostInfo == null && !action.hasConvoke &&
+            action.validTargets.orEmpty().size in 1..MAX_PRICED_TARGETS
+        if (!simple) return action.copy(affordable = false)
+        val accepted = action.validTargets.orEmpty().distinct().filter { target ->
+            val completed = ActionParameterizer.apply(cast, ActionParams(targets = listOf(target)), state)
+            PolicyActionStager(simulator).begin(state, completed) != null
+        }
+        return if (accepted.isEmpty()) action.copy(affordable = false) else action.copy(validTargets = accepted)
+    }
+
+    private fun staticAbilitiesOf(state: GameState, entityId: EntityId, registry: CardRegistry) =
+        state.getEntity(entityId)?.let { container ->
+            val card = container.get<CardComponent>() ?: return@let null
+            registry.getCard(card.cardDefinitionId)?.script
+                ?.effectiveStaticAbilities(container.get<ClassLevelComponent>()?.currentLevel)
+        }.orEmpty()
+
+    private fun pricesByTarget(ability: ModifySpellCost): Boolean =
+        ability.target is SpellCostTarget.OpponentsCastTargeting || when (val modification = ability.modification) {
+            is CostModification.ReduceColoredIfAnyTargetMatches,
+            is CostModification.IncreaseGenericIfAnyTargetMatches -> true
+            is CostModification.ReduceGenericBy -> modification.source is CostReductionSource.FixedIfAnyTargetMatches
+            else -> false
+        }
+
+    /** The spell's own "costs less (or more) if it targets ..." ability. */
+    private fun selfPricedByTarget(cast: CastSpell, state: GameState, registry: CardRegistry): Boolean =
+        staticAbilitiesOf(state, cast.cardId, registry).any {
+            it is ModifySpellCost && it.target == SpellCostTarget.SelfCast && pricesByTarget(it)
+        }
+
+    /** A permanent that prices other spells by what they target ("spells that target ... cost more"). */
+    private fun battlefieldPricesTargets(state: GameState, registry: CardRegistry): Boolean =
+        state.turnOrder.any { player ->
+            state.getBattlefield(player).any { permanent ->
+                staticAbilitiesOf(state, permanent, registry).any {
+                    it is ModifySpellCost && it.target != SpellCostTarget.SelfCast && pricesByTarget(it)
+                }
+            }
+        }
 
     /** Bound the cross product and preflight each complete target/payment pair. */
     private fun beholdOptions(
@@ -258,6 +366,7 @@ object PolicyActionBoundary {
     private const val MAX_BEHOLD_CANDIDATES = 6
     private const val MAX_BEHOLD_TARGETS = 4
     private const val MAX_BEHOLD_COUNT = 3
+    private const val MAX_PRICED_TARGETS = 16
 
     private fun additionalCostCallable(action: LegalAction): Boolean {
         val info = action.additionalCostInfo ?: return true

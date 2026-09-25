@@ -21,7 +21,8 @@ import com.wingedsheep.sdk.scripting.AbilityCost
  * on the same state — no rollback or cleanup needed.
  */
 class GameSimulator(
-    private val cardRegistry: CardRegistry,
+    /** Read by the gym's policy boundary, which needs card scripts to see a target-priced cast. */
+    val cardRegistry: CardRegistry,
     private val processor: ActionProcessor = ActionProcessor(EngineServices(cardRegistry), computeUndo = false),
     private val enumerator: LegalActionEnumerator = LegalActionEnumerator.create(cardRegistry),
     /**

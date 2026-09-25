@@ -24,6 +24,9 @@ import com.wingedsheep.mtg.sets.tokens.PredefinedTokens
 import com.wingedsheep.mtg.sets.definitions.ecl.cards.GristleGlutton
 import com.wingedsheep.mtg.sets.definitions.lci.cards.AdaptiveGemguard
 import com.wingedsheep.mtg.sets.definitions.tdm.cards.MoltenExhale
+import com.wingedsheep.mtg.sets.definitions.sos.cards.AjanisResponse
+import com.wingedsheep.mtg.sets.definitions.sos.cards.GroupProject
+import com.wingedsheep.mtg.sets.definitions.nph.cards.Dismember
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.CounterType
 import com.wingedsheep.sdk.core.Step
@@ -446,6 +449,102 @@ class PolicyActionBoundaryTest : FunSpec({
         }
         gym.step(option.actionId, ActionParams(targets = listOf(ogre), beheldCards = listOf(dragon)))
         environment.lastRejection shouldBe null
+    }
+
+    test("a cast priced by its target offers only the targets the engine accepts") {
+        // Ajani's Response costs {3} less if it targets a tapped creature. The enumerator calls it castable
+        // for {1}{W} while any creature is tapped, and the first live PPO iteration (mtg-draft-ai docs/51 §3.1)
+        // picked the untapped one, which costs {4}{W} and failed the final preflight.
+        val driver = GameTestDriver()
+        driver.registerCards(TestCards.all)
+        driver.registerCard(AjanisResponse)
+        driver.initMirrorMatch(deck = Deck.of("Plains" to 40), skipMulligans = true)
+        val player = driver.activePlayer!!
+        val opponent = driver.getOpponent(player)
+        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
+        val tapped = driver.putCreatureOnBattlefield(opponent, "Grizzly Bears")
+        val untapped = driver.putCreatureOnBattlefield(opponent, "Grizzly Bears")
+        driver.tapPermanent(tapped)
+        val spell = driver.putCardInHand(player, "Ajani's Response")
+        driver.giveMana(player, Color.WHITE, 2)
+        val simulator = GameSimulator(driver.cardRegistry)
+        val legal = LegalActionEnumerator.create(driver.cardRegistry)
+            .enumerate(driver.state, player, EnumerationMode.ACTIONS_ONLY)
+        val bare = legal.first { (it.action as? CastSpell)?.cardId == spell }
+        bare.affordable shouldBe true
+        bare.validTargets.orEmpty().toSet() shouldBe setOf(tapped, untapped)
+
+        val cast = PolicyActionBoundary.mask(legal, driver.state, simulator)
+            .first { (it.action as? CastSpell)?.cardId == spell }
+        cast.affordable shouldBe true
+        cast.validTargets shouldBe listOf(tapped)
+        simulator.accepts(
+            driver.state, ActionParameterizer.apply(cast.action, ActionParams(targets = listOf(untapped)), driver.state),
+        ) shouldBe false
+
+        // Every other action keeps the targets it was enumerated with.
+        val masked = PolicyActionBoundary.mask(legal, driver.state, simulator)
+        legal.zip(masked).filter { (original, _) -> (original.action as? CastSpell)?.cardId != spell }
+            .forEach { (original, after) -> after.validTargets shouldBe original.validTargets }
+    }
+
+    test("a parameter-free cast the engine would refuse is masked before the policy sees it") {
+        // Group Project's flashback costs "tap three untapped creatures", which the flashback enumerator
+        // prices as {0}: it was advertised as affordable with nothing to tap (mtg-draft-ai docs/51 §3.1).
+        val driver = GameTestDriver()
+        driver.registerCards(TestCards.all)
+        driver.registerCard(GroupProject)
+        driver.initMirrorMatch(deck = Deck.of("Plains" to 40), skipMulligans = true)
+        val player = driver.activePlayer!!
+        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
+        val spell = driver.putCardInGraveyard(player, "Group Project")
+        val simulator = GameSimulator(driver.cardRegistry)
+        val legal = LegalActionEnumerator.create(driver.cardRegistry)
+            .enumerate(driver.state, player, EnumerationMode.ACTIONS_ONLY)
+        val bare = legal.first { (it.action as? CastSpell)?.cardId == spell }
+        bare.affordable shouldBe true
+        simulator.accepts(driver.state, bare.action) shouldBe false
+
+        val masked = PolicyActionBoundary.mask(legal, driver.state, simulator)
+        masked.first { (it.action as? CastSpell)?.cardId == spell }.affordable shouldBe false
+        // Everything the engine accepts stays callable.
+        legal.zip(masked).filter { (original, _) -> (original.action as? CastSpell)?.cardId != spell }
+            .forEach { (original, after) ->
+                if (PolicyActionBoundary.callable(original)) after.affordable shouldBe original.affordable
+            }
+    }
+
+    test("a single-target cast the engine refuses at its first target is masked") {
+        // Dismember ({1}{B/P}{B/P}) was advertised as affordable and refused at every target
+        // (mtg-draft-ai docs/51 §3.1). Whatever the engine accepts must stay callable.
+        fun castable(color: Color, amount: Int): Pair<Boolean, Boolean> {
+            val driver = GameTestDriver()
+            driver.registerCards(TestCards.all)
+            driver.registerCard(Dismember)
+            driver.initMirrorMatch(deck = Deck.of("Swamp" to 40), skipMulligans = true)
+            val player = driver.activePlayer!!
+            driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
+            driver.putCreatureOnBattlefield(driver.getOpponent(player), "Grizzly Bears")
+            val spell = driver.putCardInHand(player, "Dismember")
+            driver.giveMana(player, color, amount)
+            val simulator = GameSimulator(driver.cardRegistry)
+            val legal = LegalActionEnumerator.create(driver.cardRegistry)
+                .enumerate(driver.state, player, EnumerationMode.ACTIONS_ONLY)
+            val bare = legal.first { (it.action as? CastSpell)?.cardId == spell }
+            val masked = PolicyActionBoundary.mask(legal, driver.state, simulator)
+                .first { (it.action as? CastSpell)?.cardId == spell }
+            val accepted = simulator.accepts(
+                driver.state,
+                ActionParameterizer.apply(bare.action, ActionParams(targets = listOf(bare.validTargets!!.first())), driver.state),
+            )
+            masked.affordable shouldBe (bare.affordable && accepted)
+            return bare.affordable to masked.affordable
+        }
+        // Paid in black mana, it stays callable.
+        castable(Color.BLACK, 3) shouldBe (true to true)
+        // Only {1}: the Phyrexian symbols need 4 life, which the policy cannot choose to pay. The
+        // enumerator calls it affordable and the engine refuses it, so the mask removes it.
+        castable(Color.RED, 1) shouldBe (true to false)
     }
 
     test("learner gym action views match the arena-style mask entry by entry") {
