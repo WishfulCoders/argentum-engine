@@ -12,28 +12,53 @@ RUNS="$REPO/.claude/loop-runs"
 mkdir -p "$RUNS"
 
 PROMPT="You are one iteration of an unattended loop implementing MTG set '$CODE' (Scryfall code).
-You are a fresh session: your memory is the ledger at $RUNS/$CODE-cards.md (create it if missing)
-plus GitHub. Do exactly ONE of the steps below, then stop.
+You are a fresh session: your memory is the ledger at $RUNS/$CODE-cards.md (create it if missing),
+the gap analysis at $RUNS/$CODE-gaps.md, and GitHub. Do exactly ONE of the steps below, then stop.
+
+The set is built in three phases: gap analysis once, then every engine gap one PR at a time, then the
+cards in big batches — by then every remaining card composes from existing primitives.
 
 Find our open PR for this set: \`gh pr list --author @me --state open --search 'agent-loop in:title'\`
-and keep only one whose files touch definitions/$CODE/. Work on it in its worktree under
-$REPO/.claude/worktrees/ (create one with \`git worktree add\` if missing). Never work in the main checkout.
+and keep only one whose files touch definitions/$CODE/ or whose title names this set. Work on it in its
+worktree under $REPO/.claude/worktrees/ (create one with \`git worktree add\` if missing). Never work in the
+main checkout.
 
+0. No $RUNS/$CODE-gaps.md yet -> gap analysis, no PR. From a fresh worktree off origin/main, list the
+   unimplemented cards (\`just card-status --set $CODE --list\`; \`just assay-ready $CODE\` marks the ones that are
+   already free). If backlog/$CODE-engine-gaps.md or the set's backlog/sets/*/mechanics.md exists, start from
+   it but re-verify every claim against the current SDK — they go stale. Fan the cards out to subagents in
+   chunks (by colour), each checking Scryfall oracle text against docs/card-sdk-language-reference.md and the
+   source, and returning one line per card: READY, or BLOCKED on a named missing capability. Merge the answers
+   into $RUNS/$CODE-gaps.md with two sections:
+   '## Gaps' — one line per distinct missing capability: \`- [ ] G<n> <capability> — unlocks <k>: <cards> — deps: <G ids or none>\`,
+     ordered by dependencies first, then most cards unlocked. Collapse near-duplicates into one gap; a gap is
+     engine/SDK vocabulary, never a single card's quirk that composition can express.
+   '## Ready' — every card that composes from existing primitives today.
+   Stop after writing it.
 1. PR open, CI failed -> read only the failing log tail (\`gh run view <id> --log-failed | tail -200\`),
    fix it, re-run the affected gate per the verify skill, push. A known-flaky test: \`gh run rerun --failed\` instead.
 2. PR open, has merge conflicts -> rebase on origin/main (re-bless snapshot goldens instead of hand-merging), gate, push.
 3. PR open, CI green, not yet reviewed (no 'loop-reviewed' comment) -> review it with the review-changes skill,
    fix what holds up, gate, push, and post a PR comment starting 'loop-reviewed' listing fixes and declines.
 4. PR open, CI green, reviewed, nothing pushed since -> \`gh pr merge --squash --delete-branch\` (from $REPO, after
-   \`git worktree remove\` of its worktree), mark the unit done in the ledger.
-5. No PR open -> \`git fetch\`, make a new worktree + branch from origin/main. Pick up to 5 unimplemented cards
-   (\`just card-status --set $CODE --list\`) that compose from existing primitives — or ONE card needing new
-   engine vocabulary (add-feature skill). Skip cards the ledger marks needs-feature/needs-human. Implement each
-   with the add-card skill (one scenario test file per card), gate once per the verify skill, commit, push, open a
-   PR titled '[agent-loop: $MODEL] Add <N> <set name> cards' whose body lists the cards, the gate run, and
-   that nothing was play-tested. Record the unit in the ledger.
+   \`git worktree remove\` of its worktree), mark the unit done in the ledger. If it closed a gap, tick it \`[x]\`
+   in the gaps file and move the cards it unlocked (minus any it shipped) into '## Ready'.
+5. No PR open, an unticked gap whose deps are all \`[x]\` -> engine gap. \`git fetch\`, new worktree + branch from
+   origin/main. Take the first such gap, mark it \`[~]\`, and build it with the add-feature skill: the capability,
+   its SDK reference entry, engine tests, plus one or two of the cards it unlocks as proof (one scenario test file
+   per card). Gate, commit, push, open a PR titled '[agent-loop: $MODEL] <capability> for <set name>' whose body
+   names the gap, the cards it unlocks, the gate run, and that nothing was play-tested. Record the unit in the ledger.
+6. No PR open, no buildable gap left -> card batch. \`git fetch\`, new worktree + branch from origin/main. Take up
+   to 15 unimplemented cards from '## Ready', grouped by colour or theme. Fan them out to subagents, one card each,
+   with the add-card skill (one definition file and one scenario test file per card). A card that turns out to need
+   new vocabulary is dropped from the batch and added to '## Gaps' as a new \`[ ]\` gap — the next iteration builds
+   it before more cards. Gate once per the verify skill, commit, push, open a PR titled
+   '[agent-loop: $MODEL] Add <N> <set name> cards' whose body lists the cards, the gate run, and that nothing was
+   play-tested. Record the unit in the ledger.
 
-If a step fails twice for the same PR, comment on it, mark it needs-human in the ledger, and move on to step 5.
+If a step fails twice for the same PR, comment on it, mark it needs-human in the ledger (and the gap \`[!]\` if it
+was one), and move on. Cards blocked on a \`[!]\` gap are skipped. When the only cards left are blocked on \`[!]\`
+gaps, answer STUCK naming those gaps; when \`card-status\` shows the set complete, answer SET_COMPLETE.
 Follow AGENTS.md. Never revert or stash work that isn't yours.
 End your reply with exactly one line: STEP <n> DONE | SET_COMPLETE | STUCK <reason>"
 
