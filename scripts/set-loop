@@ -37,24 +37,52 @@ If a step fails twice for the same PR, comment on it, mark it needs-human in the
 Follow AGENTS.md. Never revert or stash work that isn't yours.
 End your reply with exactly one line: STEP <n> DONE | SET_COMPLETE | STUCK <reason>"
 
+# Everything the loop prints also goes to the run log.
+LOGDIR="$RUNS/$CODE-logs"
+mkdir -p "$LOGDIR"
+exec > >(tee -a "$RUNS/$CODE.log") 2>&1
+log() { echo "[$(date '+%F %T')] $*"; }
+
+# One line per action the session takes, streamed live: its messages and each tool call.
+PRETTY='select(.type == "assistant") | .message.content[]? |
+  (if .type == "text" then "   💬 " + (.text | split("\n")[0] | .[0:160])
+   elif .type == "tool_use" then "   → " + .name + ": " +
+     ((.input.description // .input.command // .input.skill // .input.file_path // .input.pattern
+       // .input.prompt // "") | tostring | split("\n")[0] | .[0:140])
+   else empty end)'
+
+log "set-loop $CODE started (model $MODEL, log $RUNS/$CODE.log)"
+N=0
 while [ ! -e "$RUNS/$CODE.stop" ]; do
+  N=$((N + 1))
   # Wait on CI for free instead of spending a session on it.
   PR=$(gh pr list --author @me --state open --search 'agent-loop in:title' --json number,files \
         --jq "[.[] | select([.files[].path] | any(test(\"definitions/$CODE/\")))][0].number // empty")
-  [ -n "$PR" ] && { sleep 60; gh pr checks "$PR" --watch >/dev/null 2>&1; }
-
-  echo "== $(date '+%F %T') iteration (PR: ${PR:-none})"
-  OUT=$(cd "$REPO" && claude -p "$PROMPT" --model "$MODEL" --permission-mode "${PERMISSION_MODE:-auto}" \
-          --output-format json 2>&1)
-  RESULT=$(echo "$OUT" | jq -r '.result // empty' 2>/dev/null || echo "$OUT")
-  echo "$RESULT" | tail -1
-
-  if echo "$OUT" | grep -qiE 'usage limit|hit your limit|rate limit|overloaded'; then
-    echo "   limit reached, waiting 30 min"; sleep 1800; continue
+  if [ -n "$PR" ]; then
+    log "waiting for CI on PR #$PR"
+    sleep 60
+    gh pr checks "$PR" --watch >/dev/null 2>&1
+    log "CI on PR #$PR: $(gh pr checks "$PR" --json bucket --jq '[.[].bucket] | group_by(.) | map("\(.[0])=\(length)") | join(" ")' 2>/dev/null)"
   fi
-  case $(echo "$RESULT" | tail -1) in
-    SET_COMPLETE*) echo "Set $CODE complete."; exit 0 ;;
-    STUCK*)        echo "Stuck — see the ledger at $RUNS/$CODE-cards.md"; exit 1 ;;
+
+  TRANSCRIPT="$LOGDIR/$(date '+%Y%m%d-%H%M%S')-iter$N.jsonl"
+  log "iteration $N (PR: ${PR:-none}) — transcript $TRANSCRIPT"
+  (cd "$REPO" && claude -p "$PROMPT" --model "$MODEL" --permission-mode "${PERMISSION_MODE:-auto}" \
+      --output-format stream-json --verbose 2>&1) \
+    | tee "$TRANSCRIPT" | jq -Rr --unbuffered "fromjson? | $PRETTY"
+
+  FINAL=$(jq -Rc 'fromjson? | select(.type == "result")' "$TRANSCRIPT" 2>/dev/null | tail -1)
+  RESULT=$(echo "$FINAL" | jq -r '.result // empty' 2>/dev/null)
+  LAST=$(echo "$RESULT" | tail -1)
+  log "iteration $N finished: ${LAST:-<no result>} ($(echo "$FINAL" | jq -r '"\(.num_turns // "?") turns, \((.duration_ms // 0) / 60000 | floor) min"' 2>/dev/null))"
+
+  if [ -z "$FINAL" ] || grep -qiE 'usage limit|hit your limit|rate limit|overloaded' <<<"$RESULT$(tail -5 "$TRANSCRIPT")"; then
+    log "no result or limit reached — waiting 30 min"; sleep 1800; continue
+  fi
+  case $LAST in
+    SET_COMPLETE*) log "set $CODE complete"; exit 0 ;;
+    STUCK*)        log "stuck — see the ledger at $RUNS/$CODE-cards.md"; exit 1 ;;
   esac
 done
+log "stop file found — stopping"
 rm -f "$RUNS/$CODE.stop"
