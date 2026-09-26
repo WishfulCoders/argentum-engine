@@ -27,6 +27,8 @@ import com.wingedsheep.mtg.sets.definitions.tdm.cards.MoltenExhale
 import com.wingedsheep.mtg.sets.definitions.sos.cards.AjanisResponse
 import com.wingedsheep.mtg.sets.definitions.sos.cards.GroupProject
 import com.wingedsheep.mtg.sets.definitions.sos.cards.RubbleRouser
+import com.wingedsheep.mtg.sets.definitions.sos.cards.HydroChanneler
+import com.wingedsheep.mtg.sets.definitions.sos.cards.Pterafractyl
 import com.wingedsheep.mtg.sets.definitions.sos.cards.ShatteredAcolyte
 import com.wingedsheep.mtg.sets.definitions.sos.cards.SuspendAggression
 import com.wingedsheep.mtg.sets.definitions.nph.cards.Dismember
@@ -637,6 +639,57 @@ class PolicyActionBoundaryTest : FunSpec({
             .first { (it.action as? ActivateAbility)?.sourceId == acolyte && !it.isManaAbility }
         masked.affordable shouldBe true
         masked.validTargets shouldBe listOf(theirs)
+    }
+
+    test("an X cost is capped at the largest X the engine accepts") {
+        // Hydro-Channeler's mana is for instants and sorceries only, but the enumerator counts it toward a
+        // creature's X: Pterafractyl ({X}{G}{U}) was offered at an X it could not pay (mtg-draft-ai docs/43 §5.3).
+        val driver = GameTestDriver()
+        driver.registerCards(TestCards.all + listOf(Pterafractyl, HydroChanneler))
+        driver.initMirrorMatch(deck = Deck.of("Swamp" to 40), skipMulligans = true)
+        val player = driver.activePlayer!!
+        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
+        driver.putPermanentOnBattlefield(player, "Forest")
+        driver.putPermanentOnBattlefield(player, "Forest")
+        driver.putPermanentOnBattlefield(player, "Island")
+        driver.removeSummoningSickness(driver.putCreatureOnBattlefield(player, "Hydro-Channeler"))
+        val spell = driver.putCardInHand(player, "Pterafractyl")
+        val simulator = GameSimulator(driver.cardRegistry)
+        val legal = LegalActionEnumerator.create(driver.cardRegistry)
+            .enumerate(driver.state, player, EnumerationMode.ACTIONS_ONLY)
+        val bare = legal.first { (it.action as? CastSpell)?.cardId == spell }
+        fun accepts(x: Int) = PolicyActionStager(simulator).begin(
+            driver.state, ActionParameterizer.apply(bare.action, ActionParams(xValue = x), driver.state),
+        ) != null
+        val masked = PolicyActionBoundary.mask(legal, driver.state, simulator)
+            .first { (it.action as? CastSpell)?.cardId == spell }
+        // Three lands pay {G}{U} and X = 1; the Channeler's restricted {U} cannot make it 2.
+        bare.maxAffordableX shouldBe 2
+        accepts(1) shouldBe true
+        accepts(2) shouldBe false
+        masked.affordable shouldBe true
+        masked.maxAffordableX shouldBe 1
+    }
+
+    test("a parameter-free activation with a self-sacrifice cost is preflighted") {
+        // A Clue's "{2}, Sacrifice this permanent: Draw a card" was advertised as affordable when the only other
+        // mana was restricted to instants and sorceries (mtg-draft-ai docs/43 §5.3's mask sweep).
+        val driver = GameTestDriver()
+        driver.registerCards(TestCards.all + listOf(HydroChanneler, PredefinedTokens.Clue))
+        driver.initMirrorMatch(deck = Deck.of("Swamp" to 40), skipMulligans = true)
+        val player = driver.activePlayer!!
+        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
+        driver.putPermanentOnBattlefield(player, "Island")
+        driver.removeSummoningSickness(driver.putCreatureOnBattlefield(player, "Hydro-Channeler"))
+        val clue = driver.putPermanentOnBattlefield(player, "Clue")
+        val simulator = GameSimulator(driver.cardRegistry)
+        val legal = LegalActionEnumerator.create(driver.cardRegistry)
+            .enumerate(driver.state, player, EnumerationMode.ACTIONS_ONLY)
+        val bare = legal.first { (it.action as? ActivateAbility)?.sourceId == clue }
+        val accepted = PolicyActionStager(simulator).begin(driver.state, bare.action) != null
+        accepted shouldBe false
+        PolicyActionBoundary.mask(legal, driver.state, simulator)
+            .first { (it.action as? ActivateAbility)?.sourceId == clue }.affordable shouldBe false
     }
 
     test("learner gym action views match the arena-style mask entry by entry") {

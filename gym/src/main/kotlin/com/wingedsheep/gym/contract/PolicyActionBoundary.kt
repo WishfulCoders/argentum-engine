@@ -84,7 +84,7 @@ object PolicyActionBoundary {
             if (action.additionalCostInfo?.costType == "Behold") {
                 prepared = prepared.copy(policyBeholdPaymentOptions = beholdOptions(action, state, simulator))
             }
-            preflightParameterFree(prepared, state, simulator)
+            preflightParameterFree(cappedX(prepared, state, simulator), state, simulator)
         })
     }
 
@@ -108,7 +108,11 @@ object PolicyActionBoundary {
     private fun preflightParameterFree(action: LegalAction, state: GameState, simulator: GameSimulator): LegalAction {
         if (!action.affordable || !callable(action)) return action
         if (action.isManaAbility && !costsMoreThanTap(action, state, simulator.cardRegistry)) return action
-        val fixedShape = !action.hasXCost && action.additionalCostInfo == null && !action.hasConvoke &&
+        // A callable activation cost (a self-sacrifice with nothing to choose) needs no parameter: a Clue's
+        // "{2}, Sacrifice this permanent" was advertised as affordable with every land tapped (docs/43 §5.3).
+        val costFree = action.additionalCostInfo == null ||
+            (action.action is ActivateAbility && action.additionalCostInfo?.costType == "SacrificeSelf")
+        val fixedShape = !action.hasXCost && costFree && !action.hasConvoke &&
             action.modalEnumeration == null && !action.requiresDamageDistribution
         if (!fixedShape) return action
         if (action.action !is CastSpell && action.action !is ActivateAbility) return action
@@ -122,6 +126,42 @@ object PolicyActionBoundary {
         }
         val completed = ActionParameterizer.apply(action.action, params, state)
         return if (PolicyActionStager(simulator).begin(state, completed) != null) action else action.copy(affordable = false)
+    }
+
+    /**
+     * An X cost narrowed to the values the engine accepts: `maxAffordableX` becomes the largest accepted X, and
+     * the action is masked if not even `minX` is accepted.
+     *
+     * The enumerator overestimates the largest X. Pterafractyl and Mind into Matter ({X}{G}{U}) were offered at
+     * X = 5 and 10 and refused (mtg-draft-ai `docs/43` §5.3's mask sweep). Payability is monotone in X, so a
+     * binary search costs a few preflights per X action. An X cast with a simple single target is checked at its
+     * first target, as a parameter-free cast is; any other targeted or choice-bearing X action is left as enumerated.
+     */
+    private fun cappedX(action: LegalAction, state: GameState, simulator: GameSimulator): LegalAction {
+        val high = action.maxAffordableX ?: return action
+        if (!action.affordable || !action.hasXCost || !callable(action)) return action
+        if (action.action !is CastSpell && action.action !is ActivateAbility) return action
+        if (action.additionalCostInfo != null || action.hasConvoke || action.modalEnumeration != null ||
+            action.requiresDamageDistribution
+        ) return action
+        val targets = when {
+            !action.requiresTargets -> emptyList()
+            action.minTargets == 1 && action.targetCount == 1 && action.targetRequirements.orEmpty().isEmpty() &&
+                !action.validTargets.isNullOrEmpty() -> listOf(action.validTargets!!.first())
+            else -> return action
+        }
+        fun accepts(x: Int): Boolean {
+            val completed = ActionParameterizer.apply(action.action, ActionParams(targets = targets, xValue = x), state)
+            return PolicyActionStager(simulator).begin(state, completed) != null
+        }
+        if (high < action.minX || !accepts(action.minX)) return action.copy(affordable = false)
+        var lo = action.minX
+        var hi = high
+        while (lo < hi) {
+            val mid = (lo + hi + 1) / 2
+            if (accepts(mid)) lo = mid else hi = mid - 1
+        }
+        return if (lo == high) action else action.copy(maxAffordableX = lo)
     }
 
     /**
@@ -173,8 +213,9 @@ object PolicyActionBoundary {
         val pricedByTarget = cast != null &&
             (selfPricedByTarget(cast, state, simulator.cardRegistry) || battlefieldPricesTargets())
         if (!pricedByTarget && action.validTargets.orEmpty().none { it in manaSources() }) return action
-        // An activation's own callable cost (a self-sacrifice with nothing to choose) needs no parameter.
-        val costFree = action.additionalCostInfo == null || (activation != null && callable(action))
+        // An activation's own callable self-sacrifice has nothing to choose; Blight and tap payments do.
+        val costFree = action.additionalCostInfo == null ||
+            (activation != null && action.additionalCostInfo?.costType == "SacrificeSelf" && callable(action))
         val simple = !action.hasXCost && action.minTargets == 1 && action.targetCount == 1 &&
             action.targetRequirements.orEmpty().isEmpty() && action.modalEnumeration == null &&
             !action.requiresDamageDistribution && costFree && !action.hasConvoke &&
