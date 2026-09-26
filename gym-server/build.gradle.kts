@@ -31,3 +31,13 @@ dependencies {
 springBoot {
     mainClass.set("com.wingedsheep.gym.server.GymServerApplicationKt")
 }
+
+// The Scryfall-derived booster catalogue game-server builds its limited pools from. The gym reads
+// the same file (config/BoosterCatalogue.kt) so a set Scryfall has not yet flagged `booster: true`
+// — Reality Fracture before release — still opens its whole card list. Copied, not moved, so the
+// file keeps its upstream home.
+tasks.processResources {
+    from(rootProject.layout.projectDirectory.file("game-server/src/main/resources/coverage/set-totals.json")) {
+        into("coverage")
+    }
+}

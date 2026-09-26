@@ -52,11 +52,22 @@ class GymBeansConfig {
         }
     }
 
+    /**
+     * Pools are built the way `game-server`'s `GameBeansConfig.boosterGenerator` builds them: a
+     * set's own cards plus its reprints, limited to the names Scryfall puts in the set's booster
+     * ([BoosterCatalogue]) with those forced `inBooster`. Reading the per-card flag alone left a set
+     * Scryfall has not yet flagged (Reality Fracture, before release) drawing from ~15 cards, and
+     * left every reprint (a set's fetch and shock lands) unopenable.
+     */
     @Bean
-    fun boosterGenerator(): BoosterGenerator = BoosterGenerator(
+    fun boosterGenerator(cardRegistry: CardRegistry): BoosterGenerator = BoosterGenerator(
         MtgSetCatalog.all
             .filter { it.sealedSupported }
-            .associate { it.code to it.toBoosterSetConfig() }
+            .mapNotNull { set ->
+                val pool = set.boosterCardPool(cardRegistry, BoosterCatalogue.limitedCardNames(set.code))
+                if (pool.isEmpty()) null else set.code to set.toBoosterSetConfig(pool)
+            }
+            .toMap()
     )
 
     @Bean
@@ -70,11 +81,53 @@ class GymBeansConfig {
 private fun List<CardDefinition>.stampSetCode(setCode: String): List<CardDefinition> =
     map { if (it.setCode == null) it.copy(setCode = setCode) else it }
 
-private fun MtgSet.toBoosterSetConfig(): BoosterGenerator.SetConfig =
+/**
+ * The cards [this] set contributes to booster / sealed generation — the gym's copy of
+ * `game-server`'s `MtgSet.boosterCardPool` (private there, and `gym-server` cannot see
+ * `game-server`). Own cards and each distinct reprint resolved to its canonical definition via
+ * [registry], overlaid with the reprint's presentation and rarity. With [limitedCardNames] from
+ * [BoosterCatalogue], only those names are kept and they are marked `inBooster`; with null, the
+ * cards' own `inBooster` flags decide, as before.
+ */
+private fun MtgSet.boosterCardPool(
+    registry: CardRegistry,
+    limitedCardNames: Set<String>?,
+): List<CardDefinition> {
+    val eligibleOwnCards = cards.stampSetCode(code)
+        .asSequence()
+        .filter { limitedCardNames == null || it.name in limitedCardNames }
+        .map { card ->
+            if (limitedCardNames == null) card
+            else card.copy(metadata = card.metadata.copy(inBooster = true))
+        }
+        .toList()
+    val ownNames = eligibleOwnCards.asSequence().map { it.name }.toHashSet()
+    val resolvedReprints = printings
+        .asSequence()
+        .filter { limitedCardNames == null || it.name in limitedCardNames }
+        .filter { it.name !in ownNames }
+        .groupBy { it.name }
+        .mapNotNull { (_, treatments) ->
+            val printing = treatments.firstOrNull { !it.isAlternateFrame && !it.isPromo }
+                ?: treatments.first()
+            registry.getCardsByName(printing.name).firstOrNull()?.let { canonical ->
+                val withArt = canonical.withPrinting(printing)
+                withArt.copy(
+                    metadata = withArt.metadata.copy(
+                        rarity = printing.rarity,
+                        inBooster = limitedCardNames != null || withArt.metadata.inBooster,
+                    ),
+                )
+            }
+        }
+    return (eligibleOwnCards + resolvedReprints).sortedBy { it.name }
+}
+
+private fun MtgSet.toBoosterSetConfig(pool: List<CardDefinition>): BoosterGenerator.SetConfig =
     BoosterGenerator.SetConfig(
         setCode = code,
         setName = displayName,
-        cards = cards,
+        cards = pool,
         basicLands = (basicLandsFallback ?: this).basicLands,
         incomplete = incomplete,
         block = block,
