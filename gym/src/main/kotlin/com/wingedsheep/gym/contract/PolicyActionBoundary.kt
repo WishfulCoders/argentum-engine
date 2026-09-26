@@ -65,8 +65,13 @@ object PolicyActionBoundary {
     /** Share the same bounded, engine-checked convoke choices with arena and learner gym. */
     fun mask(actions: List<LegalAction>, state: GameState, simulator: GameSimulator): List<LegalAction> {
         val battlefieldPricesTargets by lazy { battlefieldPricesTargets(state, simulator.cardRegistry) }
+        // Every permanent the auto-payer could tap or sacrifice for mana: a spell that may target one is paid
+        // for differently depending on the target.
+        val manaSources by lazy {
+            actions.filter { it.isManaAbility }.mapNotNull { (it.action as? ActivateAbility)?.sourceId }.toSet()
+        }
         return mask(actions.map { action ->
-            var prepared = targetPriced(action, state, simulator) { battlefieldPricesTargets }
+            var prepared = targetPriced(action, state, simulator, { battlefieldPricesTargets }, { manaSources })
             if (action.hasConvoke && !action.canPayWithoutConvoke) {
                 prepared = prepared.copy(policyConvokePaymentOptions = convokeOptions(action, state, simulator))
             }
@@ -146,16 +151,23 @@ object PolicyActionBoundary {
      * accepted ones; a multi-target, X or modal cast priced by its targets is masked, since its advertised
      * targets cannot be checked one at a time. Casts whose cost no target changes are untouched, so an
      * ordinary observation pays nothing.
+     *
+     * A cast that may target one of the caster's own mana sources is checked the same way, because paying for
+     * it may need that source: Suspend Aggression ({1}{R}{W}) aimed at the caster's only Treasure, with two
+     * other lands, was advertised as affordable and refused (mtg-draft-ai `docs/43` §5.3).
      */
     private fun targetPriced(
         action: LegalAction,
         state: GameState,
         simulator: GameSimulator,
         battlefieldPricesTargets: () -> Boolean,
+        manaSources: () -> Set<EntityId>,
     ): LegalAction {
         val cast = action.action as? CastSpell ?: return action
         if (!action.affordable || !action.requiresTargets || cast.targets.isNotEmpty()) return action
-        if (!selfPricedByTarget(cast, state, simulator.cardRegistry) && !battlefieldPricesTargets()) return action
+        if (!selfPricedByTarget(cast, state, simulator.cardRegistry) && !battlefieldPricesTargets() &&
+            action.validTargets.orEmpty().none { it in manaSources() }
+        ) return action
         val simple = !action.hasXCost && action.minTargets == 1 && action.targetCount == 1 &&
             action.targetRequirements.orEmpty().isEmpty() && action.modalEnumeration == null &&
             !action.requiresDamageDistribution && action.additionalCostInfo == null && !action.hasConvoke &&

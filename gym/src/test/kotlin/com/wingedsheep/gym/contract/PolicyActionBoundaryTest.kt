@@ -27,6 +27,7 @@ import com.wingedsheep.mtg.sets.definitions.tdm.cards.MoltenExhale
 import com.wingedsheep.mtg.sets.definitions.sos.cards.AjanisResponse
 import com.wingedsheep.mtg.sets.definitions.sos.cards.GroupProject
 import com.wingedsheep.mtg.sets.definitions.sos.cards.RubbleRouser
+import com.wingedsheep.mtg.sets.definitions.sos.cards.SuspendAggression
 import com.wingedsheep.mtg.sets.definitions.nph.cards.Dismember
 import com.wingedsheep.sdk.core.Color
 import com.wingedsheep.sdk.core.CounterType
@@ -577,6 +578,37 @@ class PolicyActionBoundaryTest : FunSpec({
         }
         rouser(graveyard = true) shouldBe (true to true)
         rouser(graveyard = false).second shouldBe false
+    }
+
+    test("a cast that may target the caster's own mana source offers only the targets it can still pay for") {
+        // Suspend Aggression ({1}{R}{W}) aimed at the caster's only Treasure, with a Plains and a Mountain, was
+        // advertised as affordable and refused: the Treasure is both the target and the third mana
+        // (mtg-draft-ai docs/43 §5.3).
+        val driver = GameTestDriver()
+        driver.registerCards(TestCards.all + listOf(SuspendAggression, PredefinedTokens.Treasure))
+        driver.initMirrorMatch(deck = Deck.of("Island" to 40), skipMulligans = true)
+        val player = driver.activePlayer!!
+        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
+        driver.putPermanentOnBattlefield(player, "Plains")
+        driver.putPermanentOnBattlefield(player, "Mountain")
+        val treasure = driver.putPermanentOnBattlefield(player, "Treasure")
+        val bears = driver.putCreatureOnBattlefield(driver.getOpponent(player), "Grizzly Bears")
+        val spell = driver.putCardInHand(player, "Suspend Aggression")
+        val simulator = GameSimulator(driver.cardRegistry)
+        val legal = LegalActionEnumerator.create(driver.cardRegistry)
+            .enumerate(driver.state, player, EnumerationMode.ACTIONS_ONLY)
+        val bare = legal.first { (it.action as? CastSpell)?.cardId == spell }
+        bare.affordable shouldBe true
+        // As the step does: accepted directly, or after floating the Treasure's mana (auto-pay never sacrifices it).
+        fun accepts(target: EntityId) = PolicyActionStager(simulator).begin(
+            driver.state, ActionParameterizer.apply(bare.action, ActionParams(targets = listOf(target)), driver.state),
+        ) != null
+        accepts(bears) shouldBe true
+        accepts(treasure) shouldBe false
+        val masked = PolicyActionBoundary.mask(legal, driver.state, simulator)
+            .first { (it.action as? CastSpell)?.cardId == spell }
+        masked.affordable shouldBe true
+        masked.validTargets shouldBe bare.validTargets.orEmpty().filter { accepts(it) }
     }
 
     test("learner gym action views match the arena-style mask entry by entry") {
