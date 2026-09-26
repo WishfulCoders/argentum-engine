@@ -792,16 +792,14 @@ class MiscContinuationResumer(
                     container.with(targetCounters.withAdded(counterType, modifiedAmount))
                 }
                 // The distributing effect's controller is the placer (CR 122.5 for the "move"
-                // shape, plain placement for the "distribute N new counters" one); record the kind
-                // and the placer so the scoped readings of ReceivedCounterThisTurn see this.
+                // shape, plain placement for the "distribute N new counters" one). Stamp every
+                // recipient with the kind and placer for the scoped readings of
+                // ReceivedCounterThisTurn, and credit "you put a counter on a creature this turn"
+                // when the recipient is a creature.
                 val (afterMark, firstThisTurn) = com.wingedsheep.engine.handlers.effects.DamageUtils
-                    .recordCounterPlacement(
-                        newState,
-                        targetId,
-                        counterType,
-                        placerId = continuation.controllerId,
-                    )
-                newState = afterMark
+                    .recordCounterPlacement(newState, targetId, counterType, placerId = continuation.controllerId)
+                newState = com.wingedsheep.engine.handlers.effects.DamageUtils
+                    .markCounterPlacedOnCreature(afterMark, continuation.controllerId, targetId, counterType)
 
                 val targetName = newState.getEntity(targetId)
                     ?.get<com.wingedsheep.engine.state.components.identity.CardComponent>()?.name ?: ""
