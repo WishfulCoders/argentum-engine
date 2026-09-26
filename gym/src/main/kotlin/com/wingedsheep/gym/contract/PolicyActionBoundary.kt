@@ -152,9 +152,11 @@ object PolicyActionBoundary {
      * targets cannot be checked one at a time. Casts whose cost no target changes are untouched, so an
      * ordinary observation pays nothing.
      *
-     * A cast that may target one of the caster's own mana sources is checked the same way, because paying for
-     * it may need that source: Suspend Aggression ({1}{R}{W}) aimed at the caster's only Treasure, with two
-     * other lands, was advertised as affordable and refused (mtg-draft-ai `docs/43` §5.3).
+     * A cast or activation that may target one of the player's own mana sources is checked the same way,
+     * because paying for it may need that source: Suspend Aggression ({1}{R}{W}) aimed at the caster's only
+     * Treasure, with two other lands, and Shattered Acolyte's "{1}, Sacrifice this creature: Destroy target
+     * artifact" aimed at the only Treasure were advertised as affordable and refused (mtg-draft-ai `docs/43`
+     * §5.3, and the stage-A dry run of `docs/51` §4.4a).
      */
     private fun targetPriced(
         action: LegalAction,
@@ -163,18 +165,23 @@ object PolicyActionBoundary {
         battlefieldPricesTargets: () -> Boolean,
         manaSources: () -> Set<EntityId>,
     ): LegalAction {
-        val cast = action.action as? CastSpell ?: return action
-        if (!action.affordable || !action.requiresTargets || cast.targets.isNotEmpty()) return action
-        if (!selfPricedByTarget(cast, state, simulator.cardRegistry) && !battlefieldPricesTargets() &&
-            action.validTargets.orEmpty().none { it in manaSources() }
-        ) return action
+        val cast = action.action as? CastSpell
+        val activation = action.action as? ActivateAbility
+        if (cast == null && activation == null) return action
+        if (!action.affordable || !action.requiresTargets) return action
+        if ((cast?.targets ?: activation!!.targets).isNotEmpty()) return action
+        val pricedByTarget = cast != null &&
+            (selfPricedByTarget(cast, state, simulator.cardRegistry) || battlefieldPricesTargets())
+        if (!pricedByTarget && action.validTargets.orEmpty().none { it in manaSources() }) return action
+        // An activation's own callable cost (a self-sacrifice with nothing to choose) needs no parameter.
+        val costFree = action.additionalCostInfo == null || (activation != null && callable(action))
         val simple = !action.hasXCost && action.minTargets == 1 && action.targetCount == 1 &&
             action.targetRequirements.orEmpty().isEmpty() && action.modalEnumeration == null &&
-            !action.requiresDamageDistribution && action.additionalCostInfo == null && !action.hasConvoke &&
+            !action.requiresDamageDistribution && costFree && !action.hasConvoke &&
             action.validTargets.orEmpty().size in 1..MAX_PRICED_TARGETS
         if (!simple) return action.copy(affordable = false)
         val accepted = action.validTargets.orEmpty().distinct().filter { target ->
-            val completed = ActionParameterizer.apply(cast, ActionParams(targets = listOf(target)), state)
+            val completed = ActionParameterizer.apply(action.action, ActionParams(targets = listOf(target)), state)
             PolicyActionStager(simulator).begin(state, completed) != null
         }
         return if (accepted.isEmpty()) action.copy(affordable = false) else action.copy(validTargets = accepted)

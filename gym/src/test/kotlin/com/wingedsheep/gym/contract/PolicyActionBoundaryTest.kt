@@ -27,6 +27,7 @@ import com.wingedsheep.mtg.sets.definitions.tdm.cards.MoltenExhale
 import com.wingedsheep.mtg.sets.definitions.sos.cards.AjanisResponse
 import com.wingedsheep.mtg.sets.definitions.sos.cards.GroupProject
 import com.wingedsheep.mtg.sets.definitions.sos.cards.RubbleRouser
+import com.wingedsheep.mtg.sets.definitions.sos.cards.ShatteredAcolyte
 import com.wingedsheep.mtg.sets.definitions.sos.cards.SuspendAggression
 import com.wingedsheep.mtg.sets.definitions.nph.cards.Dismember
 import com.wingedsheep.sdk.core.Color
@@ -609,6 +610,33 @@ class PolicyActionBoundaryTest : FunSpec({
             .first { (it.action as? CastSpell)?.cardId == spell }
         masked.affordable shouldBe true
         masked.validTargets shouldBe bare.validTargets.orEmpty().filter { accepts(it) }
+    }
+
+    test("an activation that may target the player's own mana source offers only the targets it can pay for") {
+        // Shattered Acolyte ({1}, sacrifice it: destroy target artifact or enchantment) aimed at the player's only
+        // Treasure was advertised as affordable and refused (mtg-draft-ai docs/51 §4.4a's dry run).
+        val driver = GameTestDriver()
+        driver.registerCards(TestCards.all + listOf(ShatteredAcolyte, PredefinedTokens.Treasure))
+        driver.initMirrorMatch(deck = Deck.of("Island" to 40), skipMulligans = true)
+        val player = driver.activePlayer!!
+        driver.passPriorityUntil(Step.PRECOMBAT_MAIN)
+        val acolyte = driver.putCreatureOnBattlefield(player, "Shattered Acolyte")
+        val mine = driver.putPermanentOnBattlefield(player, "Treasure")
+        val theirs = driver.putPermanentOnBattlefield(driver.getOpponent(player), "Treasure")
+        val simulator = GameSimulator(driver.cardRegistry)
+        val legal = LegalActionEnumerator.create(driver.cardRegistry)
+            .enumerate(driver.state, player, EnumerationMode.ACTIONS_ONLY)
+        val bare = legal.first { (it.action as? ActivateAbility)?.sourceId == acolyte && !it.isManaAbility }
+        bare.affordable shouldBe true
+        fun accepts(target: EntityId) = PolicyActionStager(simulator).begin(
+            driver.state, ActionParameterizer.apply(bare.action, ActionParams(targets = listOf(target)), driver.state),
+        ) != null
+        accepts(theirs) shouldBe true
+        accepts(mine) shouldBe false
+        val masked = PolicyActionBoundary.mask(legal, driver.state, simulator)
+            .first { (it.action as? ActivateAbility)?.sourceId == acolyte && !it.isManaAbility }
+        masked.affordable shouldBe true
+        masked.validTargets shouldBe listOf(theirs)
     }
 
     test("learner gym action views match the arena-style mask entry by entry") {
