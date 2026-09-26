@@ -31,7 +31,7 @@ val NessianHornbeetle = card("Nessian Hornbeetle") {
     toughness = 2
     triggeredAbility {
         trigger = Triggers.you.beginningOf(Step.BEGIN_COMBAT)
-        interveningIf = Conditions.YouControl(GameObjectFilter.Creature.powerAtLeast(4))
+        interveningIf = Conditions.YouControl(GameObjectFilter.Creature.powerAtLeast(4), excludeSelf = true)
         effect = Effects.AddCounters(counterType = CounterType.PLUS_ONE_PLUS_ONE, count = 1, target = EffectTarget.Self)
     }
     metadata {
