@@ -6,6 +6,7 @@ import com.wingedsheep.sdk.dsl.Effects
 import com.wingedsheep.sdk.dsl.Triggers
 import com.wingedsheep.sdk.dsl.card
 import com.wingedsheep.sdk.model.Rarity
+import com.wingedsheep.sdk.scripting.effects.ManaExpiry
 
 /**
  * Savage Ventmaw
@@ -17,10 +18,8 @@ import com.wingedsheep.sdk.model.Rarity
  * Whenever this creature attacks, add {R}{R}{R}{G}{G}{G}. Until end of turn, you don't
  * lose this mana as steps and phases end.
  *
- * The "until end of turn, you don't lose this mana as steps and phases end" clause is the
- * engine's default mana behavior: mana pools empty at end-of-turn cleanup, not per step
- * (see [com.wingedsheep.sdk.scripting.effects.ManaExpiry.END_OF_TURN]), so the plain
- * end-of-turn mana produced here already matches the oracle text.
+ * Pools empty as each step and phase ends, so the "until end of turn, you don't lose this mana"
+ * clause is [ManaExpiry.UNTIL_END_OF_TURN] on each colour's mana.
  */
 val SavageVentmaw = card("Savage Ventmaw") {
     manaCost = "{4}{R}{G}"
@@ -36,7 +35,8 @@ val SavageVentmaw = card("Savage Ventmaw") {
 
     triggeredAbility {
         trigger = Triggers.self.attacks()
-        effect = Effects.AddMana(Color.RED, 3) then Effects.AddMana(Color.GREEN, 3)
+        effect = Effects.AddMana(Color.RED, 3, expiry = ManaExpiry.UNTIL_END_OF_TURN) then
+            Effects.AddMana(Color.GREEN, 3, expiry = ManaExpiry.UNTIL_END_OF_TURN)
     }
 
     metadata {

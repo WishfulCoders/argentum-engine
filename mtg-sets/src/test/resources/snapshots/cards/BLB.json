@@ -1791,7 +1791,8 @@
                 "trigger": "AttackEvent",
                 "effect": {
                     "type": "AddMana",
-                    "color": "RED"
+                    "color": "RED",
+                    "expiry": "UNTIL_END_OF_TURN"
                 }
             }
         ]

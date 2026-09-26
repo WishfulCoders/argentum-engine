@@ -2519,6 +2519,9 @@ object Effects {
      * (Pyromancer's Goggles: "When that mana is spent to cast a red instant or sorcery spell, copy
      * that spell"). See [com.wingedsheep.sdk.scripting.effects.ManaSpellRider].
      * [expiry] is when the mana leaves the pool if unspent ("until end of combat" — Firebending).
+     *
+     * [expiry] [com.wingedsheep.sdk.scripting.effects.ManaExpiry.UNTIL_END_OF_TURN] is "Until end of
+     * turn, you don't lose this mana as steps and phases end" (Brazen Collector).
      */
     fun AddMana(
         color: Color,
